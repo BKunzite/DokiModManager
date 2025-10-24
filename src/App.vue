@@ -1,0 +1,1125 @@
+<script setup>
+</script>
+
+<template>
+  <body>
+  <div id="loader" class="smooth-hide">
+
+    <div class="background"></div>
+    <header class="load-subtitle" id="loadingsub">PLEASE REFRESH THIS APPLICATION (Control + R)</header>
+    <header class="load-title" id="loadinghead">Doki Doki Mod Manager</header>
+    <div class="wheel" id="throbber"></div>
+
+  </div>
+    <div id="main" class="hide smooth-hide">
+      <div data-tauri-drag-region class="bg" id="bg"></div>
+      <header class="title"><span style="color: #ffbde1">Doki Doki</span> Mod Manager</header>
+      <div class="container-a smooth-hide" id="modlist">
+        <header class="sidetext sticky">Main <span style="font-weight: normal; font-size: 0.75rem;">(v1.0.0-release)</span></header>
+        <button class="sidebutton sidebutton2 sticky" id="options"><span style="font-family: Icon,serif; padding-right: 10px;">&#61669;</span> Home </button>
+        <button class="sidebutton sidebutton2 sticky" id="reddit"><span style="font-family: Icon,serif; padding-right: 10px">&#61537;</span> Reddit</button>
+        <button class="sidebutton sidebutton2 sticky" id="dokimods"><span style="font-family: Icon,serif; padding-right: 10px">&#62051;</span> DokiMods</button>
+        <button class="sidebutton sidebutton2 sticky" id="spreadsheet"><span style="font-family: Icon,serif; padding-right: 10px">&#61375;</span> SpreadSheet</button>
+        <button class="sidebutton sidebutton2 sticky" id="update"><span style="font-family: Icon,serif; padding-right: 10px">&#61126; </span> Updates</button>
+
+        <header class="sidetext sticky" id="modcount">Mods <span style="font-weight: normal; font-size: 0.75rem;" id="nummods">0</span></header>
+      </div>
+
+      <div class="container-a-border smooth-hide" id="container-boarder"></div>
+      <div class="container-a-shadow smooth-hide" id="container-shadow"></div>
+
+      <input class="search smooth-hide" placeholder="Search" id="search">
+
+      <div class="container-b smooth-hide" id="container">
+        <div class="cover hide" id="cove">
+          <p id="covertext"></p>
+          <div class="cover-update" style="left: 8vh;" id="cover-next">&#60014;</div>
+          <div class="cover-update" id="cover-last">&#60004;</div>
+        </div>
+        <div class="covers" id="covers">
+          <div class="covers2" id="images">
+
+          </div>
+        </div>
+        <header class="header hide" id="modtitle">BROKEN</header>
+        <header class="subheader hide" id="modinfo">BROKEN</header>
+        <button class="play hide" id="play">Play</button>
+        <button class="path hide" id="path">&#60792;</button>
+        <button class="delete hide" id="delete">&#60450;</button>
+        <header class="rename-header hide" id="rename-header"><span style="font-family: Icon;">&#61678;</span> Rename Mod</header>
+        <header class="rename-header hide" style="bottom:7.05vw" id="setauthor-header"><span style="font-family: Icon;">&#62062;</span> Set Author</header>
+        <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62847;</span> Info</header>
+        <div class="info hide" id="info"></div>
+        <input class="rename hide" placeholder="Rename" id="rename">
+        <input class="rename hide" style="bottom: 2vw;" placeholder="unknown" id="setauthor">
+
+        <div id="optionsmenu" class="hide">
+          <button class="set-source" id="source"> <span style="font-family: Icon,serif; font-size: 8vh">&#60786;</span><br>Set Install Location</button>
+          <button class="set-source" id="import" style="left: 31.5vw"> <span style="font-family: Icon,serif; font-size: 8vh">&#60802;</span><br>Import Mod</button>
+          <button class="set-source" id="importimage" style="left: 43vw"> <span style="font-family: Icon,serif; font-size: 8vh">&#60802;</span><br>Import Image</button>
+        </div>
+
+      </div>
+      <div class="update-log hide smooth-hide" id="update-log">
+        <header class="update-msg update-title">Update 1.0.0-release</header>
+        <header class="update-msg update-header">THANK YOU</header>
+        <header class="update-msg">[+] Encore! Thank You For Using This Mod Manager!</header>
+
+        <header class="update-msg update-header">UX</header>
+
+        <header class="update-msg">[+] Rust Cleanup</header>
+        <header class="update-msg">[+] Javascript Cleanup</header>
+        <header class="update-msg">[+] Custom Images Implemented</header>
+        <header class="update-msg">[+] Drag&Drop Implemented</header>
+
+        <header class="update-msg update-header">UI</header>
+        <header class="update-msg">[+] Covers List On Home Screen</header>
+        <header class="update-msg">[+] Placeholder Backgrounds Replaced</header>
+
+      </div>
+      <button class="close" id="close">&#60313;</button>
+      <button class="minimize" id="min">&#61870;</button>
+      <div class="alert smooth-hide hide" id="alert">
+        <header class="alert-title">Download Watcher</header>
+        <header class="alert-subtitle">Allow this mod to be extracted and imported?</header>
+        <header class="alert-subtitle2"><span style="font-family: Icon;">&#60792;</span>  <span id="alert-name" style="position: absolute; font-size: 1rem; padding-top: 10px; padding-left: 10px;">BrokenPoet.zip</span></header>
+        <header class="alert-subtitle3" id="sub3"><span style="font-family: Icon;">&#60766;</span> Size: <span id="alert-size" style="color: cornflowerblue">800mb</span><br><span style="font-family: Icon;">&#60901;</span> Path: <span id="alert-pth" style="color: cornflowerblue">800mb</span><br><span style="color: cornflowerblue">Goto File</span></header>
+        <button class="alert-button" id="download">Yes</button>
+        <button class="alert-button2" id="cancel">No</button>
+
+      </div>
+
+    </div>
+
+  </body>
+  <div id="pill" class="pill-container smooth-hide hide">
+    <span style="font-family: Icon; font-size: 0.5rem; padding-top: 0.3rem; left: 1.2rem; position: absolute; color: rgb(255,100,100)">&#62401;</span> Playing <span style="font-style: italic; color: rgb(248, 172, 195); mask-image: linear-gradient(90deg, rgb(255,255,255) 100px,rgba(255,255,255,0) 150px); padding-left: 2px; white-space: nowrap; vertical-align: top; overflow: hidden; max-width: 150px; display: inline-block" id="pill-game">Dark On Me LAAAAAAAAA</span>  <span style="padding-left: 4px">by</span> <span style="font-style: italic; color: rgb(248, 172, 195)" id="pill-author">unknown</span>
+    <span style="right: 1.5rem; position: absolute; color: rgb(200,200,200)" id="pill-time">2h 2m</span>
+  </div>
+
+</template>
+
+<style>
+
+@font-face {
+  font-family: "Aller";
+  font-weight: normal;
+  src: url("./assets/Aller_Rg.ttf") format("truetype");
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Aller";
+  font-weight: bold;
+  src: url("./assets/Aller_Bd.ttf") format("truetype");
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Icon";
+  src: url("./assets/remixicon.ttf") format("truetype");
+  font-style: normal;
+  font-display: swap;
+}
+
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin{
+  from {
+    --angle: 0deg;
+  }
+  to {
+    --angle: 360deg;
+  }
+}
+
+.pill-container {
+  position: absolute;
+  text-align: left;
+  padding-top: 1.05rem;
+  padding-left: 2.4rem;
+  font-size: 0.9rem;
+  font-family: "Aller", sans-serif;
+  color: white;
+  content: "";
+  bottom: 10px;
+  left: 10px;
+  width: 30rem;
+  height: 2.2rem;
+  border-radius: 1rem;
+  text-wrap: nowrap;
+  background-color: rgba(0,0,0,0.6);
+  z-index: 10;
+  backdrop-filter: blur(20px) saturate(50%);
+  box-shadow: black 0 0 150px 70px;
+}
+
+.glow {
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -25%);
+  width: 50vw;
+  height: 50vw;
+  position: absolute;
+  border-radius: 100%;
+  background-color: rgba(248, 160, 230, 1);
+  filter: blur(100px);
+  z-index: -1;
+}
+
+.title {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 1.5rem;
+  left: 0.75rem;
+  top: 2vh;
+  text-shadow: rgb(0, 0, 0) 0 0 15px;
+  width: auto;
+  height: auto;
+
+}
+
+.smooth-hide {
+  transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.alert {
+  width: 37.5vw;
+  height: 60vh;
+  background-color: rgba(0,0,0,0.6);
+  backdrop-filter: blur(20px) saturate(50%);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 1.25rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: black 0px 0px 50px 5px;
+
+}
+
+.alert::before {
+  content: "";
+  position: absolute;
+  top: 80%;
+  left: 0;
+  width: 100%;
+  height: 20%;
+  border-radius: 0 0 1rem 1rem;
+  background: rgba(0,0,0,0.1);
+}
+.alert::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  padding: 2px; /* control the border thickness */
+  background: linear-gradient(45deg,rgba(248, 160, 230,0) 0%, rgb(255, 255, 255) 50%, rgba(248, 160, 230,0) 100%);
+  -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.pill-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  padding: 2px; /* control the border thickness */
+  background: linear-gradient(45deg,rgba(248, 160, 230,0) 0%, rgb(255, 255, 255) 50%, rgba(248, 160, 230,0) 100%);
+  -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.alert-title {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+  color: white;
+  font-size: .75rem;
+  left: 2rem;
+  top: 2rem;
+}
+
+.alert-button {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+  color: rgb(255,255,255);
+  text-shadow: black 0px 0px 5px;
+  background: linear-gradient(180deg, rgba(243, 139, 188, 0.1) 0%, rgba(241, 66, 154, 0.1) 100%);
+  border-radius: 0.75rem;
+  border: none;
+  width: 16.75vw;
+  height: 7vh;
+  font-size: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  transition: scale ease-in 0.1s;
+}
+.alert-button2 {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+  color: rgb(255,255,255);
+  text-shadow: black 0px 0px 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  border: none;
+  width: 16.75vw;
+  height: 7vh;
+  font-size: 1rem;
+  transition: scale ease-in 0.1s;
+  left: 1rem;
+  bottom: 1rem;
+}
+
+.alert-button:hover {
+  scale: 0.95;
+}
+
+.alert-button2:hover {
+  scale: 0.95;
+
+}
+
+.alert-subtitle {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+  font-weight: normal;
+  color: white;
+  font-size: 1.5rem;
+  left: 2rem;
+  top: 4rem;
+  width: 90%;
+}
+
+.alert-subtitle2 {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 2rem;
+  left: 2rem;
+  top: 8.5rem;
+  width: 90%;
+}
+
+.alert-subtitle3 {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+  font-weight: normal;
+  color: white;
+  font-size: .75rem;
+  left: 2rem;
+  line-height: 25px;
+  top: 12rem;
+}
+
+.load-subtitle {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+   color: white;
+  font-size: 1rem;
+  left: 5vw;
+  top: 10vw;
+  transform: translateY(-50%);
+  text-align: left;
+  line-height: 2rem;
+}
+.load-title {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 3rem;
+  left: 5vw;
+  top: 5vw;
+  text-align: left;
+  line-height: 2rem;
+}
+
+.wheel {
+  background-image: url("assets/heart3.gif");
+  background-size: cover;
+  width: 15rem;
+  height: 15rem;
+  position: absolute;
+  top: 70%;
+  left: 15vw;
+  transform: translate(-50%, -50%);
+  transition: rotate ease-in 0.1s;
+}
+
+.background {
+  background-image: url("assets/background.png");
+  background-size: cover;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  filter: drop-shadow(0px 0px 50px rgba(0, 0, 0, 0.5));
+  transition: rotate ease-in 0.1s;
+}
+
+.covers {
+  position: absolute;
+  bottom: 5vh;
+  left: 5vh;
+  width: calc(71.75vw - 13vh);
+  height: 35vh;
+  border-radius: 1rem;
+  box-shadow: rgb(60,60,60) 0 0 10px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow-y: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
+  display: flex;
+  align-items: center;
+  gap: 3vh;
+  flex-wrap: nowrap;
+  flex-grow: 1;
+  white-space: nowrap;
+  padding-left: 3vh;
+}
+
+.covers2 {
+  position: absolute;
+  bottom: 2vh;
+  left: 2vh;
+  border-radius: 0.5rem;
+  direction: rtl;
+  width: calc(72vw - 14.75vh);
+  height: 31vh;
+  overflow-y: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
+  display: flex;
+  align-items: center;
+  gap: 3vh;
+  flex-wrap: nowrap;
+  flex-grow: 1;
+  white-space: nowrap;
+}
+
+.covers-cover {
+  height: 31vh;
+  flex: 0 1 auto;
+}
+
+.covers-image {
+  width: auto;
+  height: 31vh;
+  border-radius: 0.5rem;
+  box-shadow: rgb(60,60,60) 0 0 10px;
+}
+
+.covers-text {
+  position: absolute;
+  background: rgba(255,0,0,0.25);
+  backdrop-filter: blur(10px);
+  font-size: 25px;
+  font-family: Icon;
+  color: black;
+  height: 40px;
+  width: 40px;
+  bottom: 1px;
+  border-radius: 100%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  transition: all ease-out 0.1s;
+  border: none;
+}
+
+.covers-text:hover {
+  background: rgba(255,0,0,0.5);
+  box-shadow: red 0px 0px 10px;
+}
+
+body {
+  user-select: none;
+  background: transparent;
+  overflow: hidden;
+}
+
+.hide {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.hide2 {
+  display: none;
+}
+
+.set-source {
+  font-family: "Aller", sans-serif;
+  font-weight: normal;
+  color: white;
+  width: 9vw;
+  height: 9vw;
+  border-radius: 1rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  position: absolute;
+  left: 20vw;
+  top: 25vh;
+  transition: scale ease-in 0.1s;
+  text-align: center;
+  box-shadow: rgb(60,60,60) 0 0 10px;
+}
+
+.path {
+  font-family: "Icon", sans-serif;
+  font-size: 2rem;
+  color: white;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  position: absolute;
+  left: 31.75rem;
+  text-align: center;
+  top: 30vh;
+  transition: scale ease-in 0.1s, rotate ease-in 0.1s;
+  box-shadow: rgb(90,90,90) 0 0 10px;
+}
+
+.play {
+  font-family: "Aller", sans-serif;
+  font-weight: bold;
+  font-size: 3rem;
+  color: white;
+  width: 15rem;
+  height: 5rem;
+  border-radius: 1rem;
+  border: none;
+  position: absolute;
+  left: 15rem;
+  text-align: center;
+  top: 29vh;
+  backdrop-filter: blur(10px);
+  transition: scale ease-in 0.1s, transform ease-in 0.2s;
+}
+
+.play::before {
+  content: "";
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 50%;
+  left: 50%;
+  background: conic-gradient(from var(--angle), rgb(248, 160, 230), rgb(169, 160, 248),rgb(248, 160, 230));
+  transform: translate(-50%, -50%);
+  padding: 3px;
+  z-index: -2;
+  border-radius: 0.5rem;
+  filter: blur(10px);
+  animation: 3s spin linear infinite;
+}
+
+.delete {
+  font-family: "Icon", sans-serif;
+  font-size: 2rem;
+  color: white;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+  border: none;
+  background: rgba(255, 103, 103, 0.25);
+  position: absolute;
+  left: 37.5rem;
+  text-align: center;
+  top: 30vh;
+  transition: scale ease-in 0.1s, rotate ease-in 0.1s;
+  box-shadow: rgba(255, 103, 103, 0.5) 0 0 10px;
+}
+
+.play:hover {
+  transform: rotateZ(-2deg);
+  scale: 1.1
+}
+
+.play:active {
+  scale: 0.95
+}
+
+.delete:hover {
+  rotate: 5deg;
+  scale: 1.05
+}
+
+.delete:active {
+  scale: 0.95
+}
+
+.path:hover {
+  rotate: -5deg;
+  scale: 1.05
+}
+
+.path:active {
+  scale: 0.95
+}
+
+.set-source:hover {
+  scale: 1.02;
+}
+
+.set-source:active {
+  scale: 0.95;
+}
+
+.bg {
+  position: absolute;
+  top: 70%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-image: url("assets/house.webp");
+  background-size: cover;
+  background-position-x: center;
+  width: 120vw;
+  height: 150vh;
+  filter: blur(2px) saturate(0.8);
+  box-shadow: inset black 0 0 50px;
+}
+
+.loader {
+  position: absolute;
+  top: 50%;
+  left: 40%;
+  transform: translate(-50%, -50%);
+  width: 120vw;
+  height: 100vh;
+  filter: blur(2px);
+  box-shadow: inset black 0 0 50px;
+}
+
+.close {
+  position: absolute;
+  font-family: "Icon", sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 1rem;
+  right: 0.75rem;
+  top: 1.5vh;
+  width: 2rem;
+  height: 2rem;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 0.5rem;
+  border: none;
+  transition: all ease-out 0.25s;
+  box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
+
+}
+
+.close:hover {
+  background-color: rgba(255, 0, 0, 0.6);
+  box-shadow: red 0 0 5px;
+
+}
+
+.minimize {
+  position: absolute;
+  font-family: "Icon", sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 1rem;
+  right: 3rem;
+  width: 2rem;
+  height: 2rem;
+  top: 1.5vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 0.5rem;
+  border: none;
+
+  overflow: scroll;
+  scrollbar-width: none;
+  transition: all ease-out 0.25s;
+  box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
+
+}
+
+.cover {
+  background-image: url("assets/natsuki.jpg");
+  background-size: cover;
+  background-position: center;
+  width: 15vw;
+  height: 40vh;
+  position: absolute;
+  top: 5vh;
+  left: 5vh;
+  border-radius: 0.75rem;
+  box-shadow: rgba(0, 0, 0, 0.1) 0 0 20px;
+  font-size: 5rem;
+  text-align: center;
+  font-family: "Icon",serif;
+  color: rgba(248, 160, 230, 0);
+  transition: top ease-in 0.1s, left ease-in 0.1s, transform ease-in 0.1s, box-shadow ease-in 0.1s, text-shadow ease-in 0.1s, -webkit-text-stroke ease-in 0.1s, color ease-in 0.1s, filter ease-in 0.1s, opacity ease-in 0.5s;
+}
+
+.cover-update {
+  font-family: Icon;
+  color: black;
+  font-size: 1rem;
+  text-align: center;
+  padding-top: 1.125vh;
+  background-color: rgba(255, 255, 255, 0.1);
+  width: 5vh;
+  height: 3.875vh;
+  position: absolute;
+  bottom: 2vh;
+  left: 2vh;
+  border-radius: 50%;
+  box-shadow: rgba(0, 0, 0, 0.1) 0 0 10px;
+  z-index: 10;
+  transition: all ease-out 0.25s;
+  backdrop-filter: blur(5px);
+  cursor: grab;
+}
+
+.cover-update:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+  box-shadow: rgba(0, 0, 0, 0.33) 0 0 15px 5px;
+}
+
+
+.cover:hover {
+  top: 4vh;
+  left: 6vh;
+  box-shadow: rgba(0, 0, 0, 0.75) -20px 20px 50px;
+  color: rgba(248, 160, 230, 1);
+  transform: rotateY(-10deg) rotateX(-10deg);
+  text-shadow: rgba(248, 160, 230, 1) 0 0 25px;
+}
+
+.minimize:hover {
+  background-color: rgba(255, 150, 0, 0.6);
+  box-shadow: rgba(255, 150, 0, 0.6) 0 0 5px;
+
+}
+
+.sidetext {
+  flex-shrink: 0;
+  scale: 1;
+  font-family: "Aller", sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 1.2rem;
+  height: 1.5rem;
+  width: 100%;
+  text-align: left;
+}
+
+.sidebutton {
+  flex-shrink: 0;
+  scale: 0.8;
+  font-family: "Aller", sans-serif;
+  color: white;
+  font-size: 1rem;
+  padding-left: 1.25vw;
+  padding-top: 0.75vw;
+  padding-bottom: 0.75vw;
+  height: 1rem;
+  width: 21.5vw;
+  border-radius: 0.25rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: grab;
+  transition: all ease-out 0.2s;
+  text-wrap: nowrap;
+  transform: translateX(-50px);
+  opacity: 0.25;
+}
+
+.sidevisible {
+  scale: 1;
+  transform: translateX(0px);
+  opacity: 1;
+}
+
+
+
+.sidebutton2 {
+  width: 94.75%;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  height: 2rem;
+  transition: all ease-out 0.2s;
+
+}
+
+.sidebutton-text {
+  mask-image: linear-gradient(90deg, rgb(255,255,255) 150px,rgba(255,255,255,0) 215px);
+}
+
+.search {
+  font-family: "Aller", sans-serif;
+  color: white;
+  font-size: 1rem;
+  height: 7vh;
+  left: 2vw;
+  width: 22vw;
+  border-radius: 0.5rem;
+  backdrop-filter: blur(15px);
+  background: rgba(255, 255, 255, 0.1);
+  text-align: left;
+  z-index: 4;
+  position: absolute;
+  bottom: 2vw;
+  outline: none;
+  padding-left: 1vw;
+  box-shadow: inset rgba(0,0,0,0.1) 0 0 50px, rgba(0,0,0,0.25) 0 0 20px;
+  transition: box-shadow ease-in 0.1s, background ease-in 0.1s;
+  border: none;
+}
+
+.search::placeholder {
+  color: rgba(255,255,255,0.75);
+}
+
+.search:focus {
+  box-shadow: inset rgba(0,0,0,0.1) 0 0 50px, rgba(0,0,0,0.5) 0 0 20px;
+
+}
+
+.rename-header {
+  position: absolute;
+  font-family: "Aller", sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 1rem;
+  height: 1.2rem;
+  bottom: 16vw;
+  left: 2rem;
+  width: 20rem;
+  text-align: center;
+}
+
+.rename {
+  font-family: "Aller", sans-serif;
+  color: white;
+  font-size: 1rem;
+  width: 20rem;
+  height: 7.5vh;
+  left: 2vw;
+  border-radius: 1rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  text-align: left;
+  position: absolute;
+  bottom: 22.5vh;
+  outline: none;
+  padding-left: 1.7vw;
+  box-shadow: rgb(60,60,60) 0 0 10px;
+  transition: box-shadow ease-in 0.1s, background ease-in 0.1s;
+}
+
+
+.info {
+  font-family: "Aller", sans-serif;
+  color: white;
+  font-size: 1rem;
+  width: 26rem;
+  height: 20vh;
+  right: 2vw;
+  border-radius: 1rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  text-align: left;
+  position: absolute;
+  bottom: 2vw;
+  outline: none;
+  padding-left: 2vw;
+  box-shadow: rgb(60,60,60) 0 0 10px;
+  overflow-y: auto;
+  padding-top: 1.25rem;
+  padding-bottom: 1rem;
+  scrollbar-width: none;
+  transition: box-shadow ease-in 0.1s, background ease-in 0.1s;
+  user-select: text;
+}
+
+.rename:focus {
+  background-color: rgba(255,255,255, 0.4);
+  box-shadow: white 0 0 5px;
+}
+
+.header {
+  font-family: "Aller", sans-serif;
+  font-weight: bold;
+  color: white;
+  font-size: 3rem;
+  height: 3.5rem;
+  top: 6vh;
+  left: 15rem;
+  position: absolute;
+  display: inline-block;
+  width: 100%;
+  text-align: left;
+  text-shadow: rgb(248, 160, 230) 0 0 10px;
+  mask-image: linear-gradient(90deg, rgb(255,255,255) 390px,rgba(255,255,255,0) 590px);
+}
+
+.sticky {
+  order: -2;
+}
+
+.favorite {
+  height: 1.5vw;
+  padding-top: 1.25vw;
+  padding-bottom: 1.25vw;
+  order: -1;
+  background: none;
+}
+
+.favorite::before, .favorite::after {
+  content: "";
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 50%;
+  left: 50%;
+  background: conic-gradient(from var(--angle), rgb(248, 172, 195), rgb(250, 125, 223), rgb(248, 172, 195));
+  transform: translate(-50%, -50%);
+  padding: 0px;
+  z-index: -2;
+  border-radius: 0.75rem;
+  filter: blur(2px);
+  animation: 3s spin linear infinite;
+}
+
+.subheader {
+  font-family: "Aller", sans-serif;
+  color: white;
+  font-size: 1rem;
+  height: 1.2rem;
+  top: 6rem;
+  left: 15rem;
+  position: absolute;
+  width: 100%;
+  text-align: left;
+}
+
+.sidebutton:hover {
+  scale: 1.05;
+  z-index: 2;
+  font-weight: bold;
+}
+
+.sidebutton:hover::before, .sidebutton:hover::after {
+  content: "";
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 50%;
+  left: 50%;
+  background: conic-gradient(from var(--angle), rgba(248, 172, 195, 0.9), rgb(248, 160, 160), rgba(248, 172, 195, 0.9));
+  transform: translate(-50%, -50%);
+  padding: 3px;
+  z-index: -2;
+  border-radius: 0.75rem;
+  filter: blur(5px);
+  animation: 3s spin linear infinite;
+}
+
+.sidebutton2:hover {
+  font-weight: bold;
+  scale: 1.05;
+  font-size: 0.9rem;
+
+}
+
+.sidebutton:active {
+  scale: 1;
+}
+
+
+.container-a {
+  position: absolute;
+  border-radius: 0.5rem;
+  width: 24vw;
+  height: 74vh;
+  left: 0.75rem;
+  bottom: 1vw;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  padding-top: 2vh;
+  padding-bottom: 5rem;
+  display: flex;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  flex-direction: column;
+  padding-left: 1.25vw;
+  gap: 5px;
+  box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
+
+}
+
+.container-a-shadow {
+  position: absolute;
+  width: 25vw;
+  height: 10vw;
+  bottom: 2vh;
+  left: 1.1vw;
+  border-radius: 0.5rem;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(0deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%);
+}
+
+.container-a-border {
+  position: absolute;
+  bottom: 1vw;
+  left: 0.75rem;
+  width: 25vw;
+  height: 89vh;
+  content: "";
+  border-radius: 0.5rem;
+  padding: 2px; /* control the border thickness */
+  background: linear-gradient(45deg,rgba(248, 160, 230,0) 0%, rgba(248, 160, 230,1) 50%, rgba(248, 160, 230,0) 100%);
+  -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.container-b::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 100%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(rgb(250, 125, 223) 10%, rgb(248, 172, 195) 33%);
+  filter: blur(100px);
+  transform: translate(-50%, -50%);
+}
+
+.container-b::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  padding: 2px; /* control the border thickness */
+  background: linear-gradient(-40deg,rgba(248, 160, 230,0) 0%, rgba(248, 160, 230,1) 25%,  rgba(248, 160, 230,0) 50%, rgba(248, 160, 230,0) 100%);
+  -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+li:not(.sticky):not(.favorite) {
+  order: 0;
+}
+
+.container-b {
+  overflow: hidden;
+  position: absolute;
+  border-radius: 0.5rem;
+  width: 71.75vw;
+  bottom: 1vw;
+  box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
+
+  height: 89.5vh;
+  left: 27.25vw;
+  /*background-color: rgba(0, 0, 0, 0.6);*/
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+}
+
+
+.update-log {
+  position: absolute;
+  width: 40vw;
+  bottom: 12vh;
+  left: 62.5%;
+  top: 50%;
+  border-radius: 1rem;
+  scrollbar-width: none;
+  height: 65vh;
+  overflow: hidden;
+  /*background-color: rgba(0, 0, 0, 0.6);*/
+  background-color: rgba(0,0,0,0.6);
+  backdrop-filter: blur(30px) saturate(50%);
+  transform: translate(-50%, -50%);
+  box-shadow: black 0px 0px 500px 100px;
+}
+
+.update-log::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3.75rem;
+  border-radius: 1rem 1rem 0 0;
+  background: rgba(0,0,0,0.1);
+}
+
+.update-log::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  padding: 2px; /* control the border thickness */
+  background: linear-gradient(45deg,rgba(248, 160, 230,0) 0%, rgb(255, 255, 255) 50%, rgba(248, 160, 230,0) 100%);
+  -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.update-msg {
+  font-family: "Aller", sans-serif;
+  font-weight: normal;
+  color: white;
+  font-size: 1rem;
+  height: 1.2rem;
+  top: 2vh;
+  left: 2vh;
+  position: relative;
+  width: 100%;
+  text-align: left;
+}
+
+.update-header {
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+
+.update-title {
+  font-size: 2rem;
+  font-weight: bold;
+  height: 2.75rem;
+}
+
+</style>
+
