@@ -4,14 +4,18 @@
 Doki Doki Mod Manager is a modern, easy-to-use mod manager for Doki Doki Literature Club using Rust + Vue 3.
 Doki Doki Mod Manager allows you to directly download from reddit and other sources directly from within the mod manager.
 
+# Prerequisite
+
+DDLC Game Zip - [Here](https://teamsalvato.itch.io/ddlc)
+
 # People Getting Into Modding After Playing The Original Game
 
-Just download the installer and install the mod manager! Everything should be set up for you.
+Just download the installer and install the mod manager, select the DDLC game zip file! Everything should be set up for you.
 
 # People That Already Have Mods
 
 If you saved all of your mods to a folder, perfect!
-Once you install the mod manager, click on "Set Install Location" and select the folder that contains all of your mods.
+Once you install the mod manager and select your DDLC game zip, click on "Set Install Location" and select the folder that contains all of your mods.
 It should automatically detect the mods that you have! If it does not, create a git issue with how the folder is structured
 and I will try to fix it.
 

@@ -988,7 +988,7 @@ function onLoad() {
                                 name: 'Zip',
                                 extensions: ['zip', 'rar']
                             }],
-                            title: 'Select Your Mod\'s Zip File'
+                            title: 'Select DDLC Zip File'
                         });
                         await invoke("set_ddlc_zip", {path: p})
                     } catch (error) {
