@@ -1,8 +1,6 @@
 use std::{fs};
 use std::fs::File;
-use std::io::{Cursor};
 use std::path::PathBuf;
-use tauri_plugin_fs_pro::{is_dir};
 use zip::ZipArchive;
 use crate::extractor;
 pub async fn extract_folder(target_dir: &PathBuf, file: &mut File) {

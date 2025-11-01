@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Doki Doki Mod Manager",
+  "productName": "Kunzite Doki Doki Mod Manager",
   "version": "1.0.0",
   "identifier": "com.dokimodmanager.app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Doki Doki Mod manager",
+        "title": "Doki Doki Mod Manager",
         "width": 1200,
         "height": 600,
         "decorations": false,
