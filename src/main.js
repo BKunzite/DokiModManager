@@ -957,7 +957,7 @@ function onLoad() {
         if (!reset) {
             let newest_version = await getVersion();
             if (newest_version !== CLIENT_VERSION) {
-                console.warn("NOT UP TO DATE")
+                console.warn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update</u>`
                 let response = await confirm("Please Update To The Latest Version\nGoto Latest Releases?");
                 if (response) {
