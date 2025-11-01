@@ -13,7 +13,7 @@
   </div>
     <div id="main" class="hide smooth-hide">
       <div data-tauri-drag-region class="bg" id="bg"></div>
-      <header class="title"><span style="color: #ffbde1">Doki Doki</span> Mod Manager</header>
+      <header class="title"><span class="title-colored">Doki Doki</span> Mod Manager</header>
       <div class="container-a smooth-hide" id="modlist">
         <header class="sidetext sticky">Main <span style="font-weight: normal; font-size: 0.75rem;">(v1.0.0-release)</span></header>
         <button class="sidebutton sidebutton2 sticky" id="options"><span style="font-family: Icon,serif; padding-right: 10px;">&#61669;</span> Home </button>
@@ -44,8 +44,8 @@
         <header class="header hide" id="modtitle">BROKEN</header>
         <header class="subheader hide" id="modinfo">BROKEN</header>
         <button class="play hide" id="play">Play</button>
-        <button class="path hide" id="path">&#60792;</button>
-        <button class="delete hide" id="delete">&#60450;</button>
+        <button class="path hide" id="path" title="Open Path In Explorer">&#60792;</button>
+        <button class="delete hide" id="delete" title="Delete Mod">&#60450;</button>
         <header class="rename-header hide" id="rename-header"><span style="font-family: Icon;">&#61678;</span> Rename Mod</header>
         <header class="rename-header hide" style="bottom:7.05vw" id="setauthor-header"><span style="font-family: Icon;">&#62062;</span> Set Author</header>
         <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62847;</span> Info</header>
@@ -57,6 +57,8 @@
           <button class="set-source" id="source"> <span style="font-family: Icon,serif; font-size: 8vh">&#60786;</span><br>Set Install Location</button>
           <button class="set-source" id="import" style="left: 31.5vw"> <span style="font-family: Icon,serif; font-size: 8vh">&#60802;</span><br>Import Mod</button>
           <button class="set-source" id="importimage" style="left: 43vw"> <span style="font-family: Icon,serif; font-size: 8vh">&#60802;</span><br>Import Image</button>
+          <button class="set-source" id="themeselect" style="left: 54.5vw"><img style="width: 4vw" id="chibi" src="./assets/chibi_monika.png"><br>Set Theme</button>
+
         </div>
 
       </div>
@@ -100,6 +102,11 @@
 </template>
 
 <style>
+
+:root {
+  --primary-color: 128,239,128;
+  --primary-color-saturated: 118, 138, 118;
+}
 
 @font-face {
   font-family: "Aller";
@@ -161,6 +168,10 @@
   box-shadow: black 0 0 150px 70px;
 }
 
+.title-colored {
+  color: rgb(var(--primary-color));
+}
+
 .glow {
   top: 100%;
   left: 50%;
@@ -169,7 +180,7 @@
   height: 50vw;
   position: absolute;
   border-radius: 100%;
-  background-color: rgba(248, 160, 230, 1);
+  background-color: rgb(var(--primary-color));
   filter: blur(100px);
   z-index: -1;
 }
@@ -225,7 +236,7 @@
   inset: 0;
   border-radius: 1rem;
   padding: 2px; /* control the border thickness */
-  background: linear-gradient(45deg,rgba(248, 160, 230,0) 0%, rgb(255, 255, 255) 50%, rgba(248, 160, 230,0) 100%);
+  background: linear-gradient(45deg,rgba(var(--primary-color),0) 0%, rgb(255, 255, 255) 50%, rgba(var(--primary-color),0) 100%);
   -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
@@ -239,7 +250,7 @@
   inset: 0;
   border-radius: 1rem;
   padding: 2px; /* control the border thickness */
-  background: linear-gradient(45deg,rgba(248, 160, 230,0) 0%, rgb(255, 255, 255) 50%, rgba(248, 160, 230,0) 100%);
+  background: linear-gradient(45deg,rgba(var(--primary-color),0) 0%, rgb(255, 255, 255) 50%, rgba(var(--primary-color),0) 100%);
   -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
@@ -415,6 +426,7 @@
   flex-wrap: nowrap;
   flex-grow: 1;
   white-space: nowrap;
+  scroll-behavior: smooth;
 }
 
 .covers-cover {
@@ -524,7 +536,7 @@ body {
   width: 100%;
   top: 50%;
   left: 50%;
-  background: conic-gradient(from var(--angle), rgb(248, 160, 230), rgb(169, 160, 248),rgb(248, 160, 230));
+  background: conic-gradient(from var(--angle), rgb(var(--primary-color)), rgb(var(--primary-color-saturated)), rgb(var(--primary-color)));
   transform: translate(-50%, -50%);
   padding: 3px;
   z-index: -2;
@@ -578,7 +590,7 @@ body {
 }
 
 .set-source:hover {
-  scale: 1.02;
+  scale: 1.05;
 }
 
 .set-source:active {
@@ -705,9 +717,9 @@ body {
   top: 4vh;
   left: 6vh;
   box-shadow: rgba(0, 0, 0, 0.75) -20px 20px 50px;
-  color: rgba(248, 160, 230, 1);
+  color: rgb(var(--primary-color));
   transform: rotateY(-10deg) rotateX(-10deg);
-  text-shadow: rgba(248, 160, 230, 1) 0 0 25px;
+  text-shadow: rgb(var(--primary-color)) 0 0 25px;
 }
 
 .minimize:hover {
@@ -875,7 +887,7 @@ body {
   display: inline-block;
   width: 100%;
   text-align: left;
-  text-shadow: rgb(248, 160, 230) 0 0 10px;
+  text-shadow: rgb(var(--primary-color)) 0 0 10px;
   mask-image: linear-gradient(90deg, rgb(255,255,255) 390px,rgba(255,255,255,0) 590px);
 }
 
@@ -898,7 +910,7 @@ body {
   width: 100%;
   top: 50%;
   left: 50%;
-  background: conic-gradient(from var(--angle), rgb(248, 172, 195), rgb(250, 125, 223), rgb(248, 172, 195));
+  background: conic-gradient(from var(--angle), rgb(var(--primary-color)), rgb(var(--primary-color-saturated)), rgb(var(--primary-color)));
   transform: translate(-50%, -50%);
   padding: 0px;
   z-index: -2;
@@ -932,7 +944,7 @@ body {
   width: 100%;
   top: 50%;
   left: 50%;
-  background: conic-gradient(from var(--angle), rgba(248, 172, 195, 0.9), rgb(248, 160, 160), rgba(248, 172, 195, 0.9));
+  background: conic-gradient(from var(--angle), rgba(var(--primary-color)), rgb(var(--primary-color-saturated)), rgba(var(--primary-color),0.9));
   transform: translate(-50%, -50%);
   padding: 3px;
   z-index: -2;
@@ -949,7 +961,7 @@ body {
 }
 
 .sidebutton:active {
-  scale: 1;
+  scale: 0.95;
 }
 
 
@@ -996,7 +1008,8 @@ body {
   content: "";
   border-radius: 0.5rem;
   padding: 2px; /* control the border thickness */
-  background: linear-gradient(45deg,rgba(248, 160, 230,0) 0%, rgba(248, 160, 230,1) 50%, rgba(248, 160, 230,0) 100%);
+  z-index: 5;
+  background: linear-gradient(45deg,rgba(var(--primary-color),0) 0%, rgb(var(--primary-color)) 50%, rgba(var(--primary-color),0) 100%);
   -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
@@ -1012,7 +1025,7 @@ body {
   border-radius: 100%;
   width: 50vw;
   height: 50vw;
-  background: radial-gradient(rgb(250, 125, 223) 10%, rgb(248, 172, 195) 33%);
+  background: radial-gradient(rgb(var(--primary-color-saturated))  10%, rgb(var(--primary-color)) 33%);
   filter: blur(100px);
   transform: translate(-50%, -50%);
 }
@@ -1023,7 +1036,7 @@ body {
   inset: 0;
   border-radius: 0.5rem;
   padding: 2px; /* control the border thickness */
-  background: linear-gradient(-40deg,rgba(248, 160, 230,0) 0%, rgba(248, 160, 230,1) 25%,  rgba(248, 160, 230,0) 50%, rgba(248, 160, 230,0) 100%);
+  background: linear-gradient(-40deg,rgba(var(--primary-color),0) 0%, rgb(var(--primary-color)) 25%,  rgba(var(--primary-color),0) 50%, rgba(var(--primary-color),0) 100%);
   -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
@@ -1086,7 +1099,7 @@ li:not(.sticky):not(.favorite) {
   inset: 0;
   border-radius: 1rem;
   padding: 2px; /* control the border thickness */
-  background: linear-gradient(45deg,rgba(248, 160, 230,0) 0%, rgb(255, 255, 255) 50%, rgba(248, 160, 230,0) 100%);
+  background: linear-gradient(45deg,rgba(var(--primary-color),0) 0%, rgb(255, 255, 255) 50%, rgba(var(--primary-color),0) 100%);
   -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);

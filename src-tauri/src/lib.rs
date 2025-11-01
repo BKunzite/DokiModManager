@@ -16,6 +16,9 @@ use unrar::Archive;
 use zip::ZipArchive;
 use sysinfo::{ProcessesToUpdate, System};
 use regex::Regex;
+use crate::hash::get_file_hash;
+
+static SCRIPTSRPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 
 #[tauri::command]
  fn close(window: tauri::Window) {
@@ -135,34 +138,62 @@ fn is_process_running(search_name: &str) -> bool {
     })
 }
 
+async fn fix_renpy_8(renpy: &str, scripts: PathBuf) {
+    let scriptsrpa = PathBuf::from(&scripts).join("scripts.rpa");
+    if !is_file(scriptsrpa.clone()).await {return}
+    let version = version_f32(renpy);
+    if version.is_none() {return}
+    let versionint = version.unwrap();
+    let hash = get_file_hash(scriptsrpa.to_str().unwrap()).unwrap();
+    println!("Version: {} ({}f32); Hash: {} : Equal: {};", renpy, versionint, hash, hash.eq(&SCRIPTSRPA_HASH));
+    if versionint >= 8.4 && hash == SCRIPTSRPA_HASH {
+        remove_file(PathBuf::from(&scripts).join("scripts.rpa")).unwrap();
+        println!("[REMOVED] scripts.rpa file removed in order to fix DDLC Mods >= RenPy 8.4");
+    }
+}
+
 #[tauri::command]
-async fn launch(app: AppHandle, path: &str, id: &str) -> Result<(), String> {
+async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(), String> {
     let _ = app.get_window("main").unwrap().minimize();
+    let scripts = PathBuf::from(&path)
+        .parent()
+        .unwrap()
+        .join("game");
     let dir = PathBuf::from(&path)
         .parent()
         .unwrap()
         .display()
         .to_string();
 
+
     println!("{}", path);
+    fix_renpy_8(&renpy, scripts).await;
     set_playing(id);
 
     let mut launch_result = Command::new(path)
         .current_dir(&dir)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn();
 
     let mut try_admin = false;
     let file_path = PathBuf::from(path);
     let file_name = file_path.file_name().unwrap().to_str().unwrap();
     let mut launch_time = Instant::now();
-
+    let mut error: Option<String> = None;
     match launch_result {
-        Ok(mut process) => {
+        Ok(process) => {
             println!("File Launched Successfully!");
-            let output = process.wait().unwrap();
-            println!("{}", output);
+            let output = process.wait_with_output().unwrap();
+
+            if output.status.success() {
+                error = Some("exit code: 0".to_string());
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                println!("Command failed with error:\n{}", stderr);
+                error = Some(format!("{}", stderr));
+            }
+
         }
         Err(_) => {
             try_admin = true;
@@ -207,12 +238,29 @@ async fn launch(app: AppHandle, path: &str, id: &str) -> Result<(), String> {
         }
     }
 
+    if error.is_some() {
+        let msg = error.unwrap();
+        let success = msg.eq("exit code: 0");
+        if !success {
+            app.emit("popup", StringData { text: format!("An Error Occured Launched The Game!\n\n{}", msg).as_str() }).expect("Popup Error");
+
+        }
+    }
+
     discord_rpc::set_activity("In Main Menu");
     app.emit("closed", ReturnData { id }).unwrap();
     app.get_window("main").unwrap().unminimize().expect("TODO: panic message");
     app.get_window("main").unwrap().set_focus().expect("TODO: panic message");
 
     Ok(())
+}
+
+fn version_f32(s: &str) -> Option<f32> {
+    let mut indices = s.char_indices().map(|(i, _)| i);
+    let end_index = indices.nth(3).unwrap_or(s.len());
+    let sub_string = &s[0..end_index];
+    println!("{}", sub_string);
+    sub_string.parse::<f32>().ok()
 }
 
 fn set_playing(name: &str) {
@@ -248,7 +296,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
     let mut target_dir = PathBuf::from(&config_data.directory).join(source_name_no_ext);
 
-    let file = File::open(&source_file)
+    let mut file = File::open(&source_file)
         .map_err(|e| e.to_string())?;
 
     let mut zip_archive_opt: Option<ZipArchive<File>> = None;
@@ -270,13 +318,22 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         let _ = extractor::extract_rar_archive(&source_file, &target_dir);
     } else {
 
-        let mut archive = ZipArchive::new(file)
+        let mut archive = ZipArchive::new(file.try_clone().unwrap())
             .map_err(|e| e.to_string())?;
+        let nest_check = detect_nest_1(Some(&mut archive));
         if import_game_zip(&mut archive) {
             target_dir = target_dir.join("game");
         }
-        extractor::extract_zip_archive(&mut archive, &target_dir)
-            .map_err(|e| e.to_string())?;
+
+        if !target_dir.to_str().unwrap().ends_with("game") && nest_check.clone().is_some() {
+            println!("Extract A");
+            let _ = extractor::extract_zip_archive_without_toplevel(&mut ZipArchive::new(&mut file).unwrap(), &target_dir, &nest_check.unwrap().replace("/",""))
+                .map_err(|e| e.to_string()).unwrap();
+        } else {
+            let _ = extractor::extract_zip_archive(&mut archive, &target_dir)
+                .map_err(|e| e.to_string()).unwrap();
+        }
+
         zip_archive_opt = Some(archive);
     }
 
@@ -289,6 +346,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         if nested == "None"  {
             break;
         } else {
+            println!("Fixing Nested");
             post_status(&app, &format!("Fixing Nested Zip File... Try {}", loop_time));
             if !is_game {
                 let p = &PathBuf::from(nested);
@@ -331,7 +389,33 @@ fn remove_numbered_suffix(input: &str) -> &str {
         input
     }
 }
-
+fn detect_nest_1(zip_archive: Option<&mut ZipArchive<File>>) -> Option<String> {
+    let mut newest_found: Option<String> = None;
+    let archive = zip_archive.unwrap();
+    for i in 0..archive.len() {
+        let file = archive.by_index(i)
+            .map_err(|e| e.to_string()).unwrap();
+        let name = file.name().to_string();
+        if name.contains("/") {
+            let newest = if let Some(s) = newest_found.as_ref() {
+                s
+            } else {
+                ""
+            };
+            let zero = name.split("/").next().unwrap();
+            if format!("{}",zero) == format!("{}",newest) || newest_found.is_none() {
+                newest_found = Some(zero.to_string());
+            } else {
+                newest_found = None;
+                break;
+            }
+        } else {
+            newest_found = None;
+            break;
+        }
+    }
+    newest_found
+}
 async fn detect_nest(string: &str, target_dir: &str,   zip_archive: Option<&mut ZipArchive<File>>) -> String {
     let paths = [
         string,
@@ -341,30 +425,8 @@ async fn detect_nest(string: &str, target_dir: &str,   zip_archive: Option<&mut 
     ];
 
     if zip_archive.is_some() {
-        let mut newest_found: Option<String> = None;
-        let archive = zip_archive.unwrap();
-        for i in 0..archive.len() {
-            let file = archive.by_index(i)
-                .map_err(|e| e.to_string()).unwrap();
-            let name = file.name().to_string();
-            if name.contains("/") {
-                let newest = if let Some(s) = newest_found.as_ref() {
-                    s
-                } else {
-                    ""
-                };
-                let zero = name.split("/").next().unwrap();
-                if format!("{}",zero) == format!("{}",newest) || newest_found.is_none() {
-                    newest_found = Some(zero.to_string());
-                } else {
-                    newest_found = None;
-                    break;
-                }
-            } else {
-                newest_found = None;
-                break;
-            }
-        }
+        let newest_found: Option<String> = detect_nest_1(zip_archive);
+
         if newest_found.is_some() {
             let newest = newest_found.unwrap();
             if newest == "game" {
@@ -500,6 +562,8 @@ async fn make_config() {
 mod downloader;
 mod discord_rpc;
 mod extractor;
+mod hash;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
     create_dir_all(env::current_dir().unwrap().join("store/mods").display().to_string()).expect("TODO: panic message");

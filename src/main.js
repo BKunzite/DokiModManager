@@ -26,6 +26,34 @@ let local_path;
 let observer;
 let reset = false;
 
+let CLIENT_THEME_ENUM = [
+    "NATSUKI", "MONIKA", "YURI", "SAYORI"
+]
+let CLIENT_THEMES = {
+    NATSUKI: {
+        primary_color: [254, 179, 188],
+        primary_color_saturated: [229, 127, 166],
+        image: "chibi_natsuki.png"
+    },
+    MONIKA: {
+        primary_color: [128, 239, 128],
+        primary_color_saturated: [118, 138, 118],
+        image: "chibi_monika.png"
+    },
+    YURI: {
+        primary_color: [108, 69, 130],
+        primary_color_saturated: [52, 24, 55],
+        image: "chibi_yuri.png"
+
+    },
+    SAYORI: {
+        primary_color: [227, 138, 131],
+        primary_color_saturated: [192, 100, 107],
+        image: "chibi_sayori.webp"
+
+    }
+}
+
 const heart_empty = "&#62920;";
 const heart_full = "&#62919;";
 
@@ -66,11 +94,13 @@ async function sync_covers() {
 async function loadConfig(path) {
     let hasConfig = false;
     let configPath = path + "\\client-config.json";
+    let theme = "NATSUKI"
     const localFiles = await readDir(path);
     let configData = {
         coverId: 0,
         totalTime: 0,
-        warn_path: true
+        warn_path: true,
+        theme: "NATSUKI"
     }
 
     local_path = path;
@@ -121,6 +151,13 @@ async function loadConfig(path) {
         configData = JSON.parse(await readTextFile(configPath));
     }
 
+    configData.warn_path = configData.warn_path || false;
+    configData.theme = configData.theme || "NATSUKI";
+    configData.coverId = configData.coverId || 0;
+    configData.totalTime = configData.totalTime || 0;
+
+    setTheme(configData.theme)
+
     localConfig = {
         path: configPath,
         config: configData
@@ -165,7 +202,6 @@ async function update_cover_images(first_time) {
                     let scroll =  images.scrollLeft;
                     update_cover_images()
                     setCover(background_cover);
-                    setTimeout(async () => {})
                     images.scrollLeft = scroll;
                 }, 100)
             })
@@ -246,21 +282,33 @@ async function setCover(id) {
     }
 }
 
+// Sets Client Theme Color
+
+async function setTheme(name) {
+    if (!(name in CLIENT_THEMES)) {
+        name = "NATSUKI";
+    }
+    document.getElementById("chibi").src = await getImage(CLIENT_THEMES[name].image);
+    document.body.style.setProperty("--primary-color", CLIENT_THEMES[name].primary_color)
+    document.body.style.setProperty("--primary-color-saturated", CLIENT_THEMES[name].primary_color_saturated)
+
+    localConfig.config.theme = name
+    await saveConfig()
+}
+
 // Gets An Image Locally/In Project
 
 async function getImage(id) {
     const cover = covers[id];
-    if (cover === undefined) {
-        const images = import.meta.glob('./assets/*.{png,jpg,jpeg,svg,json,webp}', { eager: true, as: 'url' });
-        return images["./assets/" + covers[0]]
-    }
-    if (cover.includes(":")) {
+
+    if (cover !== undefined && cover.includes(":")) {
         const contents = await readFile(cover);
         const base64String = Base64.fromUint8Array(contents);
+
         return `data:image/png;base64,${base64String}`
     } else {
         const images = import.meta.glob('./assets/*.{png,jpg,jpeg,svg,json,webp}', { eager: true, as: 'url' });
-        return images["./assets/" + cover]
+        if (cover !== undefined) { return images["./assets/" + cover] } else { return images["./assets/" + id] }
     }
 }
 
@@ -407,7 +455,7 @@ async function requestDirectory(path) {
                             }
 
                             if (gameExe !== "") {
-                                await invoke("launch", {path: dir + "\\" + gameExe, id: entry.name})
+                                await invoke("launch", {path: dir + "\\" + gameExe, id: entry.name, renpy: await getRenpy(dir)})
                             }
                         }, 1000)
 
@@ -478,9 +526,12 @@ async function requestDirectory(path) {
                     },
                     leftClick: async () => {
                         currentEntry = entry.name;
-                        let renpy;
                         let isInDir = false;
                         let dir = selectedPath + "\\" + entry.name;
+                        const fdirFiles = await readDir(dir);
+
+                        await setCover(configData.coverId);
+
                         for (const localEntry of localFiles) {
                             if (localEntry.name === "DDLC.exe") {
                                 isInDir = true;
@@ -490,37 +541,11 @@ async function requestDirectory(path) {
                         if (!isInDir) {
                             dir = selectedPath + "\\" + entry.name + "\\DDLC-1.1.1-pc"
                         }
+
                         let customExe;
                         let about ;
-                        const dirFiles = await readDir(dir + "\\renpy");
-                        const fdirFiles = await readDir(dir);
-                        await setCover(configData.coverId);
-                        for (const localEntry of dirFiles) {
-                            if (localEntry.name === "__init__.py") {
-                                const code = await readTextFile(dir + "\\renpy\\" + localEntry.name);
-                                const lines = code.split("\n");
-                                for (const line of lines) {
-                                    if (line.startsWith("version_tuple = ") && !line.includes("*")) {
-                                        renpy = (line + "").replace("version_tuple = (","").replace(", vc_version)", "").replaceAll(", ",".");
-                                        break;
-                                    } else if (line.trim().startsWith("version_tuple = ") && line.trim().includes("(8") && !line.includes("*")) {
-                                        renpy = (line.trim() + "").replace("version_tuple = ","").replace("VersionTuple","").replace("(","").replace(", vc_version)", "").replaceAll(", ",".");
-                                        break;
-                                    }
-                                }
-                            }
-                            if (localEntry.name === "vc_version.py" && renpy === undefined) {
-                                const code = await readTextFile(dir + "\\renpy\\" + localEntry.name);
-                                const lines = code.split("\n");
-                                for (const line of lines) {
-                                    if (line.startsWith("version = ")) {
-                                        renpy = (line + "").replace("version = ","").replaceAll ("'", "").replace("u","");
-                                        break;
-                                    }
-                                }
-                            }
+                        let renpy = await getRenpy(dir);
 
-                        }
                         for (const localEntry of fdirFiles) {
                             if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && customExe === undefined) {
                                 customExe = localEntry.name;
@@ -561,6 +586,40 @@ async function requestDirectory(path) {
         }, 1000)
     }
 
+}
+
+// Gets RenPy Version
+
+async function getRenpy(dir) {
+    let renpy;
+    const dirFiles = await readDir(dir + "\\renpy");
+    for (const localEntry of dirFiles) {
+        if (localEntry.name === "__init__.py") {
+            const code = await readTextFile(dir + "\\renpy\\" + localEntry.name);
+            const lines = code.split("\n");
+            for (const line of lines) {
+                if (line.startsWith("version_tuple = ") && !line.includes("*")) {
+                    renpy = (line + "").replace("version_tuple = (","").replace(", vc_version)", "").replaceAll(", ",".");
+                    break;
+                } else if (line.trim().startsWith("version_tuple = ") && line.trim().includes("(8") && !line.includes("*")) {
+                    renpy = (line.trim() + "").replace("version_tuple = ","").replace("VersionTuple","").replace("(","").replace(", vc_version)", "").replaceAll(", ",".");
+                    break;
+                }
+            }
+        }
+        if (localEntry.name === "vc_version.py" && renpy === undefined) {
+            const code = await readTextFile(dir + "\\renpy\\" + localEntry.name);
+            const lines = code.split("\n");
+            for (const line of lines) {
+                if (line.startsWith("version = ")) {
+                    renpy = (line + "").replace("version = ","").replaceAll ("'", "").replace("u","");
+                    break;
+                }
+            }
+        }
+
+    }
+    return renpy
 }
 
 // Hide/Show Container
@@ -766,9 +825,15 @@ function onLoad() {
     // Handles Horizontal Scrolling
 
     document.getElementById("images").addEventListener("wheel", event => {
-        event.preventDefault();
-        document.getElementById("images").scrollLeft += event.deltaY;
+        if (event.deltaX === 0) {
+            event.preventDefault();
+            document.getElementById("images").scrollBy({
+                left: event.deltaY, // Scroll more aggressively
+                behavior: 'smooth'
+            });
+        }
     })
+
 
     listen("import_done", async (event) => {
         document.getElementById("loadingsub").textContent = "Mod Imported | Loading GUI"
@@ -1053,6 +1118,14 @@ function onLoad() {
                 }
             }
         }
+    })
+
+    document.getElementById("themeselect").addEventListener("mouseup", async () => {
+        let next = CLIENT_THEME_ENUM.indexOf(localConfig.config.theme) + 1;
+        if (next > CLIENT_THEME_ENUM.length - 1) {
+            next = 0;
+        }
+        await setTheme(CLIENT_THEME_ENUM[next]);
     })
 
     document.getElementById("importimage").addEventListener("mouseup", async () => {
