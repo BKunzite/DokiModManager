@@ -1,5 +1,16 @@
 import { createApp } from "vue";
-import { readDir, readTextFile, create, writeTextFile, writeFile, watch, remove, rename, readFile } from '@tauri-apps/plugin-fs';
+import {
+    readDir,
+    readTextFile,
+    create,
+    writeTextFile,
+    writeFile,
+    watch,
+    remove,
+    rename,
+    readFile,
+    exists
+} from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { metadata, isExist, isDir } from "tauri-plugin-fs-pro-api";
@@ -966,6 +977,24 @@ function onLoad() {
                 }
             } else {
                 document.getElementById("version").textContent = `(${CLIENT_VERSION})`
+            }
+            if (!await isDir("./store/ddlc")) {
+                while (!await isDir("./store/ddlc")) {
+                    try {
+                        let p = await open({
+                            directory: false,
+                            multiple: false,
+                            filters: [{
+                                name: 'Zip',
+                                extensions: ['zip', 'rar']
+                            }],
+                            title: 'Select Your Mod\'s Zip File'
+                        });
+                        await invoke("set_ddlc_zip", {path: p})
+                    } catch (error) {
+                        console.log("Zip Failed: ", error)
+                    }
+                }
             }
             reset = true;
             await loadConfig(event.payload.local_path)

@@ -19,6 +19,7 @@ use regex::Regex;
 use crate::hash::get_file_hash;
 
 static SCRIPTSRPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
+static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 static RELEASES_URL: &str = "https://github.com/AKunzite/DokiModManager/releases";
 
 #[tauri::command]
@@ -97,18 +98,10 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
             .await
             .map_err(|e| e.to_string())?;
     }
-
-    let mut updated = false;
-    if !fs::metadata(env::current_dir().unwrap().display().to_string() + "\\store\\ddlc").is_ok() {
-        updated = true;
-        let mut _respond = downloader::download_url("https://ia801705.us.archive.org/24/items/Ddlc-winlinux/ddlc-win%2Blinux.zip".parse().unwrap(), "./store/ddlc.zip".parse().unwrap()).await;
-        post_status(&app, "Extracting DDLC...");
-        downloader::extract_folder(&PathBuf::from("./store/ddlc"),&mut File::open(PathBuf::from("./store/ddlc.zip")).unwrap()).await;
-    }
     
     let final_data: ConfigData = serde_json::from_str(&contents)
         .map_err(|e| e.to_string())?;
-    app.emit("pathRespond", ReturnPath { final_data: &final_data.directory, local_path: &*env::current_dir().unwrap().to_string_lossy(), path: home_dir().unwrap().join("Downloads").to_str().unwrap(), reinstall: updated})
+    app.emit("pathRespond", ReturnPath { final_data: &final_data.directory, local_path: &*env::current_dir().unwrap().to_string_lossy(), path: home_dir().unwrap().join("Downloads").to_str().unwrap(), reinstall: false})
         .map_err(|e| e.to_string())?;
 
     Ok(())
@@ -540,7 +533,21 @@ fn copy_dir_recursive(src: &PathBuf, dst: &PathBuf) -> std::io::Result<()> {
     }
     Ok(())
 }
+#[tauri::command]
+async fn set_ddlc_zip(path: &str) ->  Result<(), bool> {
+    if !is_file(PathBuf::from(path)).await {
+        return Err(false);
+    }
 
+    if get_file_hash(path).unwrap() != DDLC_HASH {
+        return Err(false);
+    }
+
+    fs::copy(PathBuf::from(path), env::current_dir().unwrap().join("store").join("ddlc.zip")).unwrap();
+    downloader::extract_folder(&PathBuf::from("./store/ddlc"),&mut File::open(PathBuf::from("./store/ddlc.zip")).unwrap()).await;
+
+    Ok(())
+}
 #[tauri::command]
 fn open_path(path: &str) {
     let _ = Command::new("explorer.exe")
@@ -589,7 +596,7 @@ pub async fn run() {
                 .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir, update])
+        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir, update, set_ddlc_zip])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
