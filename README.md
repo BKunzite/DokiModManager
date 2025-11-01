@@ -1,7 +1,39 @@
-# Tauri + Vue 3
+# 💗 (Kunzite) Doki Doki Mod Manager
+![img.png](img.png)
 
-The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Doki Doki Mod Manager is a modern, easy-to-use mod manager for Doki Doki Literature Club using Rust + Vue 3.
+Doki Doki Mod Manager allows you to directly download from reddit and other sources directly from within the mod manager.
 
-## Recommended IDE Setup
-    
-- [RustRover/Webstorm](https://www.jetbrains.com/help/) + [Vue - Official](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
+# People New To Modding
+
+Just download the installer and install the mod manager! Everything should be set up for you.
+
+# People That Already Have Mods
+
+If you saved all of your mods to a folder, perfect!
+Once you install the mod manager, click on "Set Install Location" and select the folder that contains all of your mods.
+It should automatically detect the mods that you have! If it does not, create a git issue with how the folder is structured
+and I will try to fix it.
+
+# Features
+
+#### -- Discord RPC
+#### -- Playtime Tracker
+#### -- Discord RPC
+
+## Custom Backgrounds & Themes
+
+You can set custom background by using the arrows on the cover image of the home page.
+You can set custom themes by clicking and cycling through each character on the home page.
+You can set custom mod covers by using the arrows on the cover image near the bottom left of the cover.
+
+## Drag & Drop
+
+You can easily drag and drop zipped mods and/or background images anywhere in the mod manager.
+Doki Doki Mod Manager whilst open will constantly scan downloads for newly downloaded zip files to import as mods.
+
+# Linux And Mac Support
+
+There are no plans in order to support Linux and Mac. If you are on either of those operating systems, please use the original Doki Doki Mod Manager.
+No hate towards the original mod manager. I made this because I had a few things that I wanted that were not in the original mod manager.
+Plus, I wanted to do a project that allowed me to get into rust.
