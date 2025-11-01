@@ -11,8 +11,6 @@ import sound_click from './assets/pageflip.ogg'
 import { Base64 } from 'js-base64';
 import App from "./App.vue";
 
-
-
 let launchers = []
 let currentEntry = ""
 let covers = []
@@ -25,11 +23,17 @@ let selectedPath;
 let local_path;
 let observer;
 let reset = false;
+let localConfig = {
+    path: "",
+    config: {}
+}
 
-let CLIENT_THEME_ENUM = [
+const CLIENT_VERSION = "1.0.0-release"
+const VERSION_URL = "https://raw.githubusercontent.com/AKunzite/DokiModManager/refs/heads/main/current_ver.txt"
+const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI"
 ]
-let CLIENT_THEMES = {
+const CLIENT_THEMES = {
     NATSUKI: {
         primary_color: [254, 179, 188],
         primary_color_saturated: [229, 127, 166],
@@ -53,14 +57,8 @@ let CLIENT_THEMES = {
 
     }
 }
-
 const heart_empty = "&#62920;";
 const heart_full = "&#62919;";
-
-let localConfig = {
-    path: "",
-    config: {}
-}
 
 // Removes Right Click Menu
 
@@ -83,6 +81,25 @@ async function sync_covers() {
             }
         }
     }
+}
+
+// Gets The Current Client Version From Github
+
+async function getVersion() {
+    try {
+        const response = await fetch(VERSION_URL)
+
+        if (!response.ok) {
+            console.warn(`Client Version Check Failed! Returned Status ${response.status}`)
+            return CLIENT_VERSION;
+        }
+
+        const version = await response.text();
+        return version.trim()
+    } catch (error) {
+        console.warn(`Client Version Check Failed! Error with: ${error}`)
+    }
+    return CLIENT_VERSION;
 }
 
 // Loads local config which includes background cover id
@@ -938,6 +955,18 @@ function onLoad() {
 
     listen("pathRespond", async (event) => {
         if (!reset) {
+            let newest_version = await getVersion();
+            if (newest_version !== CLIENT_VERSION) {
+                console.warn("NOT UP TO DATE")
+                document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update</u>`
+                let response = await confirm("Please Update To The Latest Version\nGoto Latest Releases?");
+                if (response) {
+                    await invoke("update")
+                    return;
+                }
+            } else {
+                document.getElementById("version").textContent = `(${CLIENT_VERSION})`
+            }
             reset = true;
             await loadConfig(event.payload.local_path)
             await home_main()

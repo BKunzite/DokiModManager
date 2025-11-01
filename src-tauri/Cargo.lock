@@ -1058,6 +1058,7 @@ version = "0.1.0"
 dependencies = [
  "discord-rpc-client",
  "hex",
+ "open",
  "rand 0.8.5",
  "regex",
  "reqwest",

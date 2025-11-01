@@ -15,7 +15,7 @@
       <div data-tauri-drag-region class="bg" id="bg"></div>
       <header class="title"><span class="title-colored">Doki Doki</span> Mod Manager</header>
       <div class="container-a smooth-hide" id="modlist">
-        <header class="sidetext sticky">Main <span style="font-weight: normal; font-size: 0.75rem;">(v1.0.0-release)</span></header>
+        <header class="sidetext sticky">Main <span style="font-weight: normal; font-size: 0.75rem;" id="version">(v1.0.0-release)</span></header>
         <button class="sidebutton sidebutton2 sticky" id="options"><span style="font-family: Icon,serif; padding-right: 10px;">&#61669;</span> Home </button>
         <button class="sidebutton sidebutton2 sticky" id="reddit"><span style="font-family: Icon,serif; padding-right: 10px">&#61537;</span> Reddit</button>
         <button class="sidebutton sidebutton2 sticky" id="dokimods"><span style="font-family: Icon,serif; padding-right: 10px">&#62051;</span> DokiMods</button>

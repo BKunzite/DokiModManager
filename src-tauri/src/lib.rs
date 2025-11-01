@@ -19,6 +19,7 @@ use regex::Regex;
 use crate::hash::get_file_hash;
 
 static SCRIPTSRPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
+static RELEASES_URL: &str = "https://github.com/AKunzite/DokiModManager/releases";
 
 #[tauri::command]
  fn close(window: tauri::Window) {
@@ -269,7 +270,11 @@ fn set_playing(name: &str) {
         name
     ));
 }
-
+#[tauri::command]
+async fn update(app: AppHandle) {
+    open::that(RELEASES_URL).expect("Open Release URL Failed");
+    app.exit(404);
+}
 #[tauri::command]
 async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     let config_contents = tokio::fs::read_to_string("DNNconfig.json")
@@ -584,7 +589,7 @@ pub async fn run() {
                 .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir])
+        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir, update])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
