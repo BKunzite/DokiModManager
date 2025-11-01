@@ -4,7 +4,7 @@
 Doki Doki Mod Manager is a modern, easy-to-use mod manager for Doki Doki Literature Club using Rust + Vue 3.
 Doki Doki Mod Manager allows you to directly download from reddit and other sources directly from within the mod manager.
 
-# People New To Modding
+# People Getting Into Modding After Playing The Original Game
 
 Just download the installer and install the mod manager! Everything should be set up for you.
 
@@ -37,3 +37,11 @@ Doki Doki Mod Manager whilst open will constantly scan downloads for newly downl
 There are no plans in order to support Linux and Mac. If you are on either of those operating systems, please use the original Doki Doki Mod Manager.
 No hate towards the original mod manager. I made this because I had a few things that I wanted that were not in the original mod manager.
 Plus, I wanted to do a project that allowed me to get into rust.
+
+# Credits
+
+- SFX + Default background from DDLC [@Team Salvato](https://teamsalvato.com/)
+- Monika  BG Image - [reddit - deleted user](https://www.reddit.com/r/DDLC/comments/7xnz27/made_a_169_wallpapercompatible_version_of_the/)
+- Yuri    BG Image - [reddit - Peaceablecolt](https://www.reddit.com/r/DDLC/comments/w9h5yr/i_havent_posted_here_in_like_3_years_heres_a/)
+- Sayori  BG Image - [twitter - Saschaa_SAN](https://x.com/Saschaa_SAN/status/1533897941928525824)
+- Natsuki BG Image - [reddit - The_Fish_Art](https://www.reddit.com/r/DDLC/comments/1ll685l/oc_the_simple_beauty_of_natsuki_202120232025_alts/)

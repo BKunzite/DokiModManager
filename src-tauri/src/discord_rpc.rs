@@ -11,7 +11,7 @@ pub fn set_activity(activity: &str) {
 }
 
 pub fn start() {
-    let mut drpc = Client::new(0);
+    let mut drpc = Client::new(1410874079589961800);
 
 
     drpc.on_ready(|_ctx| {
