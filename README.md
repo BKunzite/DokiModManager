@@ -23,7 +23,7 @@ and I will try to fix it.
 
 #### -- Discord RPC
 #### -- Playtime Tracker
-#### -- Discord RPC
+#### -- Works With Existing Mod Folders
 
 ## Custom Backgrounds & Themes
 

@@ -20,7 +20,7 @@ use crate::hash::get_file_hash;
 
 static SCRIPTSRPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
-static RELEASES_URL: &str = "https://github.com/AKunzite/DokiModManager/releases";
+static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
 
 #[tauri::command]
  fn close(window: tauri::Window) {
@@ -407,7 +407,7 @@ fn detect_nest_1(zip_archive: Option<&mut ZipArchive<File>>) -> Option<String> {
                 newest_found = None;
                 break;
             }
-        } else {
+        } else if !name.to_lowercase().contains("credit") {
             newest_found = None;
             break;
         }
@@ -419,6 +419,7 @@ async fn detect_nest(string: &str, target_dir: &str,   zip_archive: Option<&mut 
         string,
         &format!("{}-Renpy7Mod", string),
         &format!("{}-Renpy8Mod", string),
+        &format!("{}V3", string),
         &format!("{}-1.0-pc", string)
     ];
 

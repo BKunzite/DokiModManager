@@ -39,8 +39,8 @@ let localConfig = {
     config: {}
 }
 
-const CLIENT_VERSION = "1.0.0-release"
-const VERSION_URL = "https://raw.githubusercontent.com/AKunzite/DokiModManager/refs/heads/main/current_ver.txt"
+const CLIENT_VERSION = "1.0.1-release"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI"
 ]
