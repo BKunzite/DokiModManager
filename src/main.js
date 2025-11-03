@@ -128,7 +128,7 @@ async function loadConfig(path) {
         totalTime: 0,
         warn_path: true,
         theme: "NATSUKI",
-        version: "1.0.0-release"
+        version: "0.0.0-release"
     }
 
     local_path = path;
@@ -183,7 +183,7 @@ async function loadConfig(path) {
     configData.theme = configData.theme || "NATSUKI";
     configData.coverId = configData.coverId || 0;
     configData.totalTime = configData.totalTime || 0;
-    configData.version = configData.version || CLIENT_VERSION;
+    configData.version = configData.version || "0.0.0-release";
 
     localConfig = {
         path: configPath,
