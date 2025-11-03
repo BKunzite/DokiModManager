@@ -39,7 +39,7 @@ let localConfig = {
     config: {}
 }
 
-const CLIENT_VERSION = "1.0.1-release"
+const CLIENT_VERSION = "1.0.2-release"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI"
@@ -122,13 +122,13 @@ async function getVersion() {
 async function loadConfig(path) {
     let hasConfig = false;
     let configPath = path + "\\client-config.json";
-    let theme = "NATSUKI"
     const localFiles = await readDir(path);
     let configData = {
         coverId: 0,
         totalTime: 0,
         warn_path: true,
-        theme: "NATSUKI"
+        theme: "NATSUKI",
+        version: "1.0.0-release"
     }
 
     local_path = path;
@@ -183,8 +183,7 @@ async function loadConfig(path) {
     configData.theme = configData.theme || "NATSUKI";
     configData.coverId = configData.coverId || 0;
     configData.totalTime = configData.totalTime || 0;
-
-    setTheme(configData.theme)
+    configData.version = configData.version || CLIENT_VERSION;
 
     localConfig = {
         path: configPath,
@@ -194,8 +193,6 @@ async function loadConfig(path) {
     warn_path = configData.warn_path;
     total_time = configData.totalTime;
     background_cover = configData.coverId;
-
-    await update_cover_images(true)
 }
 
 // Resets and updates the list of cover images
@@ -253,6 +250,7 @@ async function saveConfig() {
     localConfig.config.coverId = background_cover;
     localConfig.config.totalTime = total_time;
     localConfig.config.warn_path = warn_path;
+    localConfig.config.version = CLIENT_VERSION;
     await writeTextFile(localConfig.path, JSON.stringify(localConfig.config))
 }
 
@@ -611,7 +609,7 @@ async function requestDirectory(path) {
             play(sound_click)
             document.getElementById("loader").classList.add("hide")
             document.getElementById("main").classList.remove("hide")
-        }, 1000)
+        }, 500)
     }
 
 }
@@ -966,17 +964,26 @@ function onLoad() {
 
     listen("pathRespond", async (event) => {
         if (!reset) {
+            let payloadPath = event.payload.path;
             let newest_version = await getVersion();
-            if (newest_version !== CLIENT_VERSION) {
+            await loadConfig(event.payload.local_path)
+            reset = true;
+
+            if (newest_version.split("\n")[0] !== CLIENT_VERSION) {
                 console.warn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
-                document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update</u>`
-                let response = await confirm("Please Update To The Latest Version\nGoto Latest Releases?");
+                document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
+                let response = await confirm("Please Update To The Latest Version\n\n" + newest_version + "\n\nGoto Latest Releases?\nPress Cancel To Update Later.");
                 if (response) {
-                    await invoke("update")
+                    await invoke("update", {close: true})
                     return;
                 }
             } else {
+                console.log(CLIENT_VERSION, localConfig.config.version)
                 document.getElementById("version").textContent = `(${CLIENT_VERSION})`
+                if (localConfig.config.version !== CLIENT_VERSION) {
+                    await saveConfig()
+                    confirm("Updated! (Wont Pop-Up Again Until Next Update)\n\n" + newest_version + "\n\nPress OK or CANCEL to continue.");
+                }
             }
             if (!await isDir("./store/ddlc")) {
                 while (!await isDir("./store/ddlc")) {
@@ -996,10 +1003,10 @@ function onLoad() {
                     }
                 }
             }
-            reset = true;
-            await loadConfig(event.payload.local_path)
+
+            await setTheme(localConfig.config.theme)
+            await update_cover_images(true)
             await home_main()
-            let payloadPath = event.payload.path;
             await watch(
                 event.payload.path,
                 async (event) => {
@@ -1075,6 +1082,10 @@ function onLoad() {
         if (currentEntry !== "") {
             await launchers[currentEntry].open();
         }
+    })
+
+    document.getElementById("version").addEventListener("mouseup", async _ => {
+        await invoke("update", {close: false})
     })
 
     document.getElementById("cover-next").addEventListener("mouseenter", () => {mouse_cover_available = true})
@@ -1183,6 +1194,7 @@ function onLoad() {
         if (next > CLIENT_THEME_ENUM.length - 1) {
             next = 0;
         }
+        await play(sound_beep)
         await setTheme(CLIENT_THEME_ENUM[next]);
     })
 

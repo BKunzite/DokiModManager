@@ -1,8 +1,12 @@
 1.0.2-beta
-Please update to this update so IK people still use this!
+Please update to this update so ik people still use this!
 I'm kinda disappointed with how things turned out, but oh well.
-I spent months on  this project just for 11 downloads, and I
-hoped for more, but I am still thankful for each one of you who
+I will continue updates, but im a little demotivated so
+after this update, most of them will probably be bug fixes.
+I use this often, so I might add a thing or two every so often
+because I find it usefull.
+I spent months on this project just for a handfull of downloads, and I
+kinda hoped for more; I am still thankfull for each one of you who
 downloaded it!
 
 💗 To You all!
@@ -10,3 +14,7 @@ downloaded it!
 - Minor Bug Fixes
 - Cleaned up some of the code
 - Update Messages
+
+Remember, if you have bugs, issues, or questions,
+create a git issue or put a comment under
+the original post!

@@ -15,7 +15,7 @@
       <div data-tauri-drag-region class="bg" id="bg"></div>
       <header class="title"><span class="title-colored">Doki Doki</span> Mod Manager</header>
       <div class="container-a smooth-hide" id="modlist">
-        <header class="sidetext sticky">Main <span style="font-weight: normal; font-size: 0.75rem;" id="version">(v1.0.0-release)</span></header>
+        <header class="sidetext sticky">Main <span style="font-weight: normal; font-size: 0.75rem; cursor: grab;" id="version">(v1.0.0-release)</span></header>
         <button class="sidebutton sidebutton2 sticky" id="options"><span style="font-family: Icon,serif; padding-right: 10px;">&#61669;</span> Home </button>
         <button class="sidebutton sidebutton2 sticky" id="reddit"><span style="font-family: Icon,serif; padding-right: 10px">&#61537;</span> Reddit</button>
         <button class="sidebutton sidebutton2 sticky" id="dokimods"><span style="font-family: Icon,serif; padding-right: 10px">&#62051;</span> DokiMods</button>
@@ -63,20 +63,17 @@
 
       </div>
       <div class="update-log hide smooth-hide" id="update-log">
-        <header class="update-msg update-title">Update 1.0.0-release</header>
+        <header class="update-msg update-title">Update 1.0.2-release</header>
         <header class="update-msg update-header">THANK YOU</header>
-        <header class="update-msg">[+] Encore! Thank You For Using This Mod Manager!</header>
+        <header class="update-msg">Thank You For Staying And Using This Mod Manager!</header>
 
         <header class="update-msg update-header">UX</header>
 
-        <header class="update-msg">[+] Rust Cleanup</header>
-        <header class="update-msg">[+] Javascript Cleanup</header>
-        <header class="update-msg">[+] Custom Images Implemented</header>
-        <header class="update-msg">[+] Drag&Drop Implemented</header>
+        <header class="update-msg">[+] Misc. Bug Fixes</header>
+        <header class="update-msg">[+] Added Post Update Text</header>
 
         <header class="update-msg update-header">UI</header>
-        <header class="update-msg">[+] Covers List On Home Screen</header>
-        <header class="update-msg">[+] Placeholder Backgrounds Replaced</header>
+        <header class="update-msg">[+] Made "Update!" Text Clickable</header>
 
       </div>
       <button class="close" id="close">&#60313;</button>
@@ -1073,7 +1070,7 @@ li:not(.sticky):not(.favorite) {
   top: 50%;
   border-radius: 1rem;
   scrollbar-width: none;
-  height: 65vh;
+  height: 55vh;
   overflow: hidden;
   /*background-color: rgba(0, 0, 0, 0.6);*/
   background-color: rgba(0,0,0,0.6);

@@ -243,8 +243,8 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
 
     discord_rpc::set_activity("In Main Menu");
     app.emit("closed", ReturnData { id }).unwrap();
-    app.get_window("main").unwrap().unminimize().expect("TODO: panic message");
-    app.get_window("main").unwrap().set_focus().expect("TODO: panic message");
+    app.get_window("main").unwrap().unminimize().expect("Failed To Unminimize");
+    app.get_window("main").unwrap().set_focus().expect("Failed to lose focus");
 
     Ok(())
 }
@@ -264,9 +264,11 @@ fn set_playing(name: &str) {
     ));
 }
 #[tauri::command]
-async fn update(app: AppHandle) {
+async fn update(app: AppHandle, close: bool) {
     open::that(RELEASES_URL).expect("Open Release URL Failed");
-    app.exit(404);
+    if close {
+        app.exit(404);
+    }
 }
 #[tauri::command]
 async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
@@ -305,7 +307,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
     post_status(&app, &format!("Duplicating DDLC's Files Into '{}'",target_dir.display()));
 
-    let _ = copy_dir_recursive(&PathBuf::from("./store/ddlc"), &target_dir).expect("TODO: panic message");
+    let _ = copy_dir_recursive(&PathBuf::from("./store/ddlc"), &target_dir).expect("Failed to copy ddlc!");
 
     post_status(&app, &format!("Extracting '{}'",source_name_no_ext));
 
@@ -579,8 +581,8 @@ mod hash;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
-    create_dir_all(env::current_dir().unwrap().join("store/mods").display().to_string()).expect("TODO: panic message");
-    create_dir_all(env::current_dir().unwrap().join("store/images").display().to_string()).expect("TODO: panic message");
+    create_dir_all(env::current_dir().unwrap().join("store/mods").display().to_string()).expect("FS Error: Failed To Create Store/Mods");
+    create_dir_all(env::current_dir().unwrap().join("store/images").display().to_string()).expect("FS Error: Failed To Create Store/Mods");
 
     std::thread::spawn(move || {discord_rpc::start();});
     discord_rpc::set_activity("In Main Menu");
