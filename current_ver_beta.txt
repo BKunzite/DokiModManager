@@ -1,0 +1,12 @@
+1.0.2-beta
+Please update to this update so IK people still use this!
+I'm kinda disappointed with how things turned out, but oh well.
+I spent months on  this project just for 11 downloads, and I
+hoped for more, but I am still thankful for each one of you who
+downloaded it!
+
+💗 To You all!
+
+- Minor Bug Fixes
+- Cleaned up some of the code
+- Update Messages
