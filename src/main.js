@@ -7,9 +7,7 @@ import {
     writeFile,
     watch,
     remove,
-    rename,
     readFile,
-    exists
 } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
@@ -21,7 +19,9 @@ import sound_boop from './assets/hover.ogg'
 import sound_click from './assets/pageflip.ogg'
 import { Base64 } from 'js-base64';
 import App from "./App.vue";
-
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import jingle from "./assets/jingle_punks_copyrightfree.mp3"
+let jingle_audio = new Audio(jingle);
 let launchers = []
 let currentEntry = ""
 let covers = []
@@ -34,12 +34,13 @@ let selectedPath;
 let local_path;
 let observer;
 let reset = false;
+let focused = true;
 let localConfig = {
     path: "",
     config: {}
 }
 
-const CLIENT_VERSION = "1.0.2-release"
+const CLIENT_VERSION = "1.0.3-christmas"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI"
@@ -219,6 +220,10 @@ async function update_cover_images(first_time) {
         cover_text.innerHTML = "&#60450;"
 
         if (i > 5) {
+            cover_img.addEventListener("mouseup", () => {
+                background_cover = i;
+                setCover(background_cover)
+            })
             cover_text.addEventListener("mouseup", () => {
                 remove(covers[i]);
                 covers.splice(i, 1);
@@ -596,7 +601,7 @@ async function requestDirectory(path) {
                         updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size/1048600) + " MB",  Math.floor(min/60)+ "h " + Math.floor(min % 60) + "m", renpy)
                     }
                 }
-                sidetext.addEventListener("mouseup", async (event) => {
+                sidetext.addEventListener("mouseup", async () => {
                     await launchers[entry.name].leftClick();
                 })
 
@@ -784,6 +789,32 @@ async function update_concurrent_game() {
     document.getElementById("pill-time").textContent = time
 }
 
+// Snowflake Animation
+
+async function snowflake() {
+    if (!focused) return;
+    const snowflake = document.createElement("div");
+    const x = Math.floor(Math.random() * window.innerWidth);
+    const size = Math.random() * 30 + 20;
+    const speed = Math.random() * 5 + 2;
+    snowflake.style.left = x + "px";
+    snowflake.style.width = size + "px";
+    snowflake.style.height = size + "px";
+    snowflake.classList.add("snowflake");
+    snowflake.style.transition = "top " + speed + "s linear";
+    snowflake.style.rotate = Math.floor(Math.random() * 360) + "deg";
+    document.body.appendChild(snowflake);
+
+    setTimeout(() => {
+        snowflake.style.top =  "100%"
+        if (Math.random() > 0.5) {
+            snowflake.style.zIndex = "-1"
+        }
+    }, 250)
+
+    setTimeout(() => {snowflake.remove()}, 250 + (speed * 1100))
+}
+
 // Renames Mod
 
 async function rename_mod() {
@@ -854,7 +885,7 @@ function onLoad() {
         if (event.deltaX === 0) {
             event.preventDefault();
             document.getElementById("images").scrollBy({
-                left: event.deltaY, // Scroll more aggressively
+                left: event.deltaY * 2,
                 behavior: 'smooth'
             });
         }
@@ -1208,7 +1239,23 @@ function onLoad() {
         await import_mod();
     })
 
+    // SNOWFLAKE
+
+    setInterval(snowflake, 100)
     setInterval(update_concurrent_game, 1000)
+
+    getCurrentWindow().onFocusChanged(({ payload: isfocused }) => {
+        focused = isfocused
+        if (focused) {
+            jingle_audio.play()
+        } else {
+            jingle_audio.pause()
+        }
+    });
+
+    jingle_audio.volume = 0.1;
+    jingle_audio.loop = true;
+    jingle_audio.play()
 
     invoke("request_path")
 }

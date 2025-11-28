@@ -132,15 +132,24 @@ fn is_process_running(search_name: &str) -> bool {
     })
 }
 
-async fn fix_renpy_8(renpy: &str, scripts: PathBuf) {
+async fn default_rpa(scripts: &PathBuf) -> bool {
+    let scriptsrpa = PathBuf::from(&scripts).join("scripts.rpa");
+    if !is_file(scriptsrpa.clone()).await {
+        return false;
+    }
+    let hash = get_file_hash(scriptsrpa.to_str().unwrap()).unwrap();
+    hash == SCRIPTSRPA_HASH
+}
+
+async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
     let scriptsrpa = PathBuf::from(&scripts).join("scripts.rpa");
     if !is_file(scriptsrpa.clone()).await {return}
     let version = version_f32(renpy);
     if version.is_none() {return}
     let versionint = version.unwrap();
-    let hash = get_file_hash(scriptsrpa.to_str().unwrap()).unwrap();
-    println!("Version: {} ({}f32); Hash: {} : Equal: {};", renpy, versionint, hash, hash.eq(&SCRIPTSRPA_HASH));
-    if versionint >= 8.4 && hash == SCRIPTSRPA_HASH {
+    let equal = default_rpa(&scripts).await;
+    println!("Version: {} ({}f32); Equal: {};", renpy, versionint, equal);
+    if versionint >= 8.4 && equal {
         remove_file(PathBuf::from(&scripts).join("scripts.rpa")).unwrap();
         println!("[REMOVED] scripts.rpa file removed in order to fix DDLC Mods >= RenPy 8.4");
     }
@@ -161,7 +170,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
 
 
     println!("{}", path);
-    fix_renpy_8(&renpy, scripts).await;
+    fix_renpy_8(&renpy, &scripts).await;
     set_playing(id);
 
     let mut launch_result = Command::new(path)
@@ -238,6 +247,19 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         if !success {
             app.emit("popup", StringData { text: format!("An Error Occured Launched The Game!\n\n{}", msg).as_str() }).expect("Popup Error");
 
+        }
+    }
+
+    if launch_time.elapsed().as_secs() < 30 && default_rpa(&scripts).await && is_file(
+        file_path.clone().parent()
+        .unwrap()
+        .join("log.txt")
+    ).await {
+        let log_file = file_path.clone().parent().unwrap().join("log.txt");
+        let contents =  fs::read_to_string(log_file).unwrap();
+        if contents.contains("'sayoriTime'") {
+            remove_file(PathBuf::from(&scripts).join("scripts.rpa")).unwrap();
+            Box::pin(launch(app.clone(), path, id, renpy)).await.expect("Launch Error");
         }
     }
 
@@ -370,6 +392,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     if is_file(PathBuf::from(&target_dir).join("game/firstrun")).await {
         remove_file(PathBuf::from(&target_dir).join("game/firstrun")).unwrap();
     }
+
     app.emit("import_done",StringData { text: &format!("{}",source_name_no_ext) }).unwrap();
 
     Ok(())

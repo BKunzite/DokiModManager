@@ -28,7 +28,7 @@
       <div class="container-a-border smooth-hide" id="container-boarder"></div>
       <div class="container-a-shadow smooth-hide" id="container-shadow"></div>
 
-      <input class="search smooth-hide" placeholder="Search" id="search">
+      <input class="search smooth-hide" placeholder="Search" id="search" autocomplete="off">
 
       <div class="container-b smooth-hide" id="container">
         <div class="cover hide" id="cove">
@@ -63,17 +63,17 @@
 
       </div>
       <div class="update-log hide smooth-hide" id="update-log">
-        <header class="update-msg update-title">Update 1.0.2-release</header>
+        <header class="update-msg update-title">Update 1.0.3-christmas</header>
         <header class="update-msg update-header">THANK YOU</header>
-        <header class="update-msg">Thank You For Staying And Using This Mod Manager!</header>
+        <header class="update-msg">Thank You For Continuing To Use This Mod Manager!</header>
 
         <header class="update-msg update-header">UX</header>
 
-        <header class="update-msg">[+] Misc. Bug Fixes</header>
-        <header class="update-msg">[+] Added Post Update Text</header>
+        <header class="update-msg">[+] Fixed Certain Mods (Mostly Club Meetings)</header>
 
         <header class="update-msg update-header">UI</header>
-        <header class="update-msg">[+] Made "Update!" Text Clickable</header>
+        <header class="update-msg">[+] Added Christmas theming (Until January)</header>
+        <header class="update-msg">[+] Minor Changes</header>
 
       </div>
       <button class="close" id="close">&#60313;</button>
@@ -91,6 +91,7 @@
     </div>
 
   </body>
+
   <div id="pill" class="pill-container smooth-hide hide">
     <span style="font-family: Icon; font-size: 0.5rem; padding-top: 0.3rem; left: 1.2rem; position: absolute; color: rgb(255,100,100)">&#62401;</span> Playing <span style="font-style: italic; color: rgb(248, 172, 195); mask-image: linear-gradient(90deg, rgb(255,255,255) 100px,rgba(255,255,255,0) 150px); padding-left: 2px; white-space: nowrap; vertical-align: top; overflow: hidden; max-width: 150px; display: inline-block" id="pill-game">Dark On Me LAAAAAAAAA</span>  <span style="padding-left: 4px">by</span> <span style="font-style: italic; color: rgb(248, 172, 195)" id="pill-author">unknown</span>
     <span style="right: 1.5rem; position: absolute; color: rgb(200,200,200)" id="pill-time">2h 2m</span>
@@ -162,7 +163,7 @@
   background-color: rgba(0,0,0,0.6);
   z-index: 10;
   backdrop-filter: blur(20px) saturate(50%);
-  box-shadow: black 0 0 150px 70px;
+  box-shadow: black 0 0 150px 70px, inset rgba(255,255,255,0.25) 0 0 10px;
 }
 
 .title-colored {
@@ -362,7 +363,7 @@
 }
 
 .wheel {
-  background-image: url("assets/heart3.gif");
+  background-image: url("assets/wired-outline-412-gift-hover-squeeze.gif");
   background-size: cover;
   width: 15rem;
   height: 15rem;
@@ -383,6 +384,7 @@
   left: 0;
   filter: drop-shadow(0px 0px 50px rgba(0, 0, 0, 0.5));
   transition: rotate ease-in 0.1s;
+  z-index: -2;
 }
 
 .covers {
@@ -392,7 +394,7 @@
   width: calc(71.75vw - 13vh);
   height: 35vh;
   border-radius: 1rem;
-  box-shadow: rgb(60,60,60) 0 0 10px;
+  box-shadow: rgba(60,60,60, 0.8) 0 0 10px;
   background: rgba(255, 255, 255, 0.1);
   overflow-y: hidden;
   overflow-x: auto;
@@ -490,6 +492,7 @@ body {
   transition: scale ease-in 0.1s;
   text-align: center;
   box-shadow: rgb(60,60,60) 0 0 10px;
+  z-index: 2;
 }
 
 .path {
@@ -970,7 +973,7 @@ body {
   left: 0.75rem;
   bottom: 1vw;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(10px);
   padding-top: 2vh;
   padding-bottom: 5rem;
   display: flex;
@@ -1061,6 +1064,16 @@ li:not(.sticky):not(.favorite) {
   backdrop-filter: blur(20px);
 }
 
+.snowflake {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  top: -100px;
+  background: url("assets/snowflake.svg") center no-repeat;
+  background-size: cover;
+  transition: top 10s linear;
+  pointer-events: none;
+}
 
 .update-log {
   position: absolute;

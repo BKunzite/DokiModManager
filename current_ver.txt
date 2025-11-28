@@ -1,19 +1,28 @@
-1.0.2-release
-Please update to this update so ik people still use this!
-I'm kinda disappointed with how things turned out, but oh well.
-I will continue updates, but im a little demotivated so
-after this update, most of them will probably be bug fixes.
-I use this often, so I might add a thing or two every so often
-because I find it usefull.
-I spent months on this project just for a handfull of downloads, and I
-kinda hoped for more; I am still thankfull for each one of you who
-downloaded it!
+1.0.3-christmas
+OPTIONAL
+
+Ive got some motivation back to update
+This is mostly a minor update
+including a Christmas theme (hence the version)
+and fixes a few mods
 
 💗 To You all!
 
-- Minor Bug Fixes
-- Cleaned up some of the code
-- Update Messages
+- Christmas theme
+ - Snowflakes
+ - Christmas Jingle
+ - Present Loading Animation
+- Fixed Certain Mods
+ - Mostly Club Meetings
+   - (Fixed the issue of some mods
+      requiring scripts.rpa to be
+      deleted whilst trying not to
+      break the ones that don't need
+      it to be deleted)
+
+- Future -
+ - The Christmas theme will be disabled
+   come January
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under
