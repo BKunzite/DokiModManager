@@ -1,4 +1,4 @@
-1.0.3-beta
+1.0.5-beta-semimajor
 OPTIONAL
 
 Ive got some motivation back to update
@@ -8,21 +8,13 @@ and fixes a few mods
 
 💗 To You all!
 
-- Christmas theme
- - Snowflakes
- - Christmas Jingle
- - Present Loading Animation
-- Fixed Certain Mods
- - Mostly Club Meetings
-   - (Fixed the issue of some mods
-      requiring scripts.rpa to be
-      deleted whilst trying not to
-      break the ones that don't need
-      it to be deleted)
-
-- Future -
- - The christmas theme will be disabled
-   come January
+- Fixed background cover select for default covers
+- Fixed custom exe not being listed
+- Made Snowflakes Rotate Whilst Falling
+- Squircles!
+- Screenshots Instead Of Set Name/Set Author
+ - Set Name / Set Author Can Now Be Changed By
+    Clicking The Title / Subtitle
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

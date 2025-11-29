@@ -11,7 +11,7 @@ import {
 } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
-import { metadata, isExist, isDir } from "tauri-plugin-fs-pro-api";
+import {metadata, isExist, isDir, isFile} from "tauri-plugin-fs-pro-api";
 import { homeDir } from "@tauri-apps/api/path";
 import { listen } from "@tauri-apps/api/event";
 import sound_beep from './assets/select.ogg'
@@ -40,8 +40,8 @@ let localConfig = {
     config: {}
 }
 
-const CLIENT_VERSION = "1.0.3-christmas"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
+const CLIENT_VERSION = "1.0.5-beta-semimajor"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI"
 ]
@@ -219,11 +219,13 @@ async function update_cover_images(first_time) {
         cover_text.classList.add("covers-text");
         cover_text.innerHTML = "&#60450;"
 
+        cover_img.addEventListener("mouseup", () => {
+            background_cover = i;
+            setCover(background_cover)
+        })
+
         if (i > 5) {
-            cover_img.addEventListener("mouseup", () => {
-                background_cover = i;
-                setCover(background_cover)
-            })
+
             cover_text.addEventListener("mouseup", () => {
                 remove(covers[i]);
                 covers.splice(i, 1);
@@ -331,9 +333,13 @@ async function setTheme(name) {
 
 async function getImage(id) {
     const cover = covers[id];
-
     if (cover !== undefined && cover.includes(":")) {
         const contents = await readFile(cover);
+        const base64String = Base64.fromUint8Array(contents);
+
+        return `data:image/png;base64,${base64String}`
+    } else if (typeof(id) === "string" && id.includes(":")) {
+        const contents = await readFile(id);
         const base64String = Base64.fromUint8Array(contents);
 
         return `data:image/png;base64,${base64String}`
@@ -559,7 +565,6 @@ async function requestDirectory(path) {
                         currentEntry = entry.name;
                         let isInDir = false;
                         let dir = selectedPath + "\\" + entry.name;
-                        const fdirFiles = await readDir(dir);
 
                         await setCover(configData.coverId);
 
@@ -569,13 +574,20 @@ async function requestDirectory(path) {
                                 break;
                             }
                         }
+
                         if (!isInDir) {
                             dir = selectedPath + "\\" + entry.name + "\\DDLC-1.1.1-pc"
                         }
 
+                        const fdirFiles = await readDir(dir);
                         let customExe;
                         let about ;
                         let renpy = await getRenpy(dir);
+
+                       while (document.getElementById("screenshots").firstChild) {
+                           document.getElementById("screenshots").firstChild.remove();
+                       }
+
 
                         for (const localEntry of fdirFiles) {
                             if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && customExe === undefined) {
@@ -584,6 +596,42 @@ async function requestDirectory(path) {
                             if (localEntry.name.toLowerCase().includes("credit") && about === undefined) {
                                 about = (await readTextFile(dir + "\\" + localEntry.name)).replaceAll("\n", "<br>");
                             }
+                            if (localEntry.name.includes("screenshot")) {
+                                const newScreenshot = document.createElement("img")
+                                const cover_text = document.createElement("button");
+                                const cover_bg = document.createElement("div");
+
+                                newScreenshot.classList.add("screenshots-image")
+                                newScreenshot.src = await getImage(dir + "\\" + localEntry.name);
+                                newScreenshot.addEventListener("click", async () => {
+                                    await launchers[entry.name].path();
+                                })
+                                cover_text.addEventListener("click", async () => {
+                                    await remove(dir + "\\" + localEntry.name);
+                                    await launchers[entry.name].leftClick();
+
+                                })
+                                cover_text.classList.add("screenshots-text");
+                                cover_text.innerHTML = "&#60450;"
+                                cover_bg.appendChild(cover_text);
+                                cover_bg.appendChild(newScreenshot);
+                                cover_bg.classList.add("screenshots-cover");
+                                document.getElementById("screenshots").appendChild(cover_bg);
+                            }
+                        }
+
+                        if (document.getElementById("screenshots").firstChild === null) {
+                            document.getElementById("screenshots-header").classList.add("hide")
+                            document.getElementById("screenshots-parent").classList.add("hide")
+                            document.getElementById("info").classList.remove("info")
+                            document.getElementById("info").classList.add("expanded")
+                            document.getElementById("setinfo-header").style.left = "16rem";
+                        } else {
+                            document.getElementById("screenshots-header").classList.remove("hide")
+                            document.getElementById("screenshots-parent").classList.remove("hide")
+                            document.getElementById("info").classList.remove("expanded")
+                            document.getElementById("info").classList.add("info")
+                            document.getElementById("setinfo-header").style.left = "30rem";
                         }
 
                         if (renpy === undefined) {
@@ -594,7 +642,7 @@ async function requestDirectory(path) {
                             const data = await metadata(selectedPath + "\\" + entry.name);
                             configData.size = data.size;
                         }
-                        renpy = "Renpy: " + renpy + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
+                        renpy = entry.name + "<br>Renpy: " + renpy + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
                         document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
                         play(sound_boop)
                         const min = Math.floor(configData.time/60000);
@@ -685,12 +733,20 @@ async function warn_path_alert() {
     return true;
 }
 
+function getTextWidth(text, font) {
+    const canvas = getTextWidth.canvas || (getTextWidth.canvas = document.createElement("canvas"));
+    const context = canvas.getContext("2d");
+    context.font = font;
+    const metrics = context.measureText(text);
+    return metrics.width;
+}
+
 // Updates Information On Main Window
 
 async function updateDisplayinfo(mod, author, space, time, renpy) {
     const shorthand = mod.replace("ddlc-","").replace("ddlc","").replace("-"," ");
 
-    document.getElementById("modtitle").textContent = shorthand
+    document.getElementById("modtitle").value = shorthand
 
     document.getElementById("modtitle").classList.remove("hide");
     document.getElementById("modinfo").classList.remove("hide");
@@ -700,12 +756,6 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
     if (author.length > 0) {
         currentEntry = mod;
         document.getElementById("covers").classList.add("hide");
-        document.getElementById("rename-header").classList.remove("hide");
-        document.getElementById("rename").classList.remove("hide");
-        document.getElementById("rename").value = mod;
-        document.getElementById("rename").placeholder = mod;
-        document.getElementById("setauthor").value = author;
-        document.getElementById("setauthor").placeholder = author;
         document.getElementById("setinfo-header").classList.remove("hide");
         document.getElementById("info").classList.remove("hide");
         if (renpy !== undefined) {
@@ -713,24 +763,27 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         } else {
             document.getElementById("info").textContent = "No Information Found!";
         }
-        document.getElementById("setauthor").classList.remove("hide");
-        document.getElementById("setauthor-header").classList.remove("hide");
         document.getElementById("delete").classList.remove("hide");
         document.getElementById("path").classList.remove("hide");
         document.getElementById("play").classList.remove("hide");
         document.getElementById("optionsmenu").classList.add("hide");
-        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon;\">&#60899;</span> " + author + " <span style=\"font-family: Icon; padding-left: 20px;\">&#60766;</span> " + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + time;
+        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon;\">&#60899;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60766;</span>" + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + time;
+        document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
+        document.getElementById("authinput").addEventListener("input", async (e) => {
+            document.getElementById("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 225) + "px"
+        })
+        document.getElementById("authinput").addEventListener("blur", async () => {
+            await setauthor();
+        })
     } else {
         currentEntry = ""
         await setCover(background_cover)
         let min = Math.floor(total_time/60000);
+        document.getElementById("screenshots-header").classList.add("hide");
+        document.getElementById("screenshots-parent").classList.add("hide");
         document.getElementById("covers").classList.remove("hide");
         document.getElementById("setinfo-header").classList.add("hide");
         document.getElementById("info").classList.add("hide");
-        document.getElementById("setauthor").classList.add("hide");
-        document.getElementById("setauthor-header").classList.add("hide");
-        document.getElementById("rename-header").classList.add("hide");
-        document.getElementById("rename").classList.add("hide");
         document.getElementById("delete").classList.add("hide");
         document.getElementById("path").classList.add("hide");
         document.getElementById("play").classList.add("hide");
@@ -751,12 +804,15 @@ async function home_main() {
 
 async function setauthor() {
     if (currentEntry === "") return;
-    document.getElementById("setauthor").blur()
-    var value = document.getElementById("setauthor").value;
+    document.getElementById("authinput").blur()
+    var value = document.getElementById("authinput").value.trimEnd();
+    console.log(value)
     if (value === "") {
         const author = (await launchers[currentEntry].getData()).author;
-        document.getElementById("setauthor").value = author;
-        document.getElementById("setauthor").placeholder = author;
+        document.getElementById("authinput").value = author;
+        document.getElementById("authinput").placeholder = author;
+        document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
+
     } else {
         await launchers[currentEntry].setAuthor(value);
         await launchers[currentEntry].leftClick();
@@ -801,12 +857,14 @@ async function snowflake() {
     snowflake.style.width = size + "px";
     snowflake.style.height = size + "px";
     snowflake.classList.add("snowflake");
-    snowflake.style.transition = "top " + speed + "s linear";
+    snowflake.style.transition = "top " + speed + "s linear, rotate " + speed + "s ease";
     snowflake.style.rotate = Math.floor(Math.random() * 360) + "deg";
+    snowflake.style.opacity = Math.random() * 0.5 + 0.5;
     document.body.appendChild(snowflake);
 
     setTimeout(() => {
         snowflake.style.top =  "100%"
+        snowflake.style.rotate = Math.floor(Math.random() * 360) + "deg";
         if (Math.random() > 0.5) {
             snowflake.style.zIndex = "-1"
         }
@@ -819,9 +877,8 @@ async function snowflake() {
 
 async function rename_mod() {
     if (currentEntry === "") return;
-    var value = document.getElementById("rename").value;
+    var value = document.getElementById("modtitle").value;
     var name = await launchers[currentEntry].getName();
-    document.getElementById("rename").value = name;
 
     if (value !== name && value.length !== 0) {
 
@@ -1085,26 +1142,6 @@ function onLoad() {
         document.getElementById("loadingsub").textContent = event.payload.text
     });
 
-    document.getElementById("rename").addEventListener("focusout", async (event) => {
-        await rename_mod()
-    })
-
-    document.getElementById("rename").addEventListener("keydown", async (event) => {
-        if (event.key === "Enter") {
-            await rename_mod()
-        }
-    })
-
-    document.getElementById("setauthor").addEventListener("focusout", async (event) => {
-        await setauthor()
-    })
-
-    document.getElementById("setauthor").addEventListener("keydown", async (event) => {
-        if (event.key === "Enter") {
-            await setauthor()
-        }
-    })
-
     document.getElementById("update").addEventListener("mouseup", async () => {
         document.getElementById("update-log").classList.toggle("hide");
     })
@@ -1148,6 +1185,24 @@ function onLoad() {
         }
     })
 
+    document.getElementById("modtitle").addEventListener("focus", async (event) => {
+        if (currentEntry === "") {
+            document.getElementById("modtitle").blur()
+        }
+    })
+
+    document.getElementById("modtitle").addEventListener("keydown", async (event) => {
+        if (event.key === "Enter") {
+            document.getElementById("modtitle").blur()
+        }
+    })
+
+    document.getElementById("modtitle").addEventListener("blur", async (event) => {
+        document.getElementById("modtitle").scrollLeft = 0;
+        if (currentEntry !== "") {
+            await rename_mod()
+        }
+    })
 
     document.getElementById("options").addEventListener("mouseup", async () => {
         play(sound_beep)

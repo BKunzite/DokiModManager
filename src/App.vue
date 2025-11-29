@@ -41,17 +41,20 @@
 
           </div>
         </div>
-        <header class="header hide" id="modtitle">BROKEN</header>
+        <textarea class="header hide" id="modtitle" autocomplete="off" spellcheck="false">BROKEN</textarea>
         <header class="subheader hide" id="modinfo">BROKEN</header>
         <button class="play hide" id="play">Play</button>
         <button class="path hide" id="path" title="Open Path In Explorer">&#60792;</button>
         <button class="delete hide" id="delete" title="Delete Mod">&#60450;</button>
-        <header class="rename-header hide" id="rename-header"><span style="font-family: Icon;">&#61678;</span> Rename Mod</header>
-        <header class="rename-header hide" style="bottom:7.05vw" id="setauthor-header"><span style="font-family: Icon;">&#62062;</span> Set Author</header>
-        <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62847;</span> Info</header>
+        <header class="rename-header hide" style="left: 3.5rem;" id="screenshots-header"><span style="font-family: Icon;">&#60996;</span> Screenshots</header>
+        <div class="screenshots hide" id="screenshots-parent">
+          <div class="subscreenshots" id="screenshots">
+
+          </div>
+        </div>
+
+        <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62551;</span> Description</header>
         <div class="info hide" id="info"></div>
-        <input class="rename hide" placeholder="Rename" id="rename">
-        <input class="rename hide" style="bottom: 2vw;" placeholder="unknown" id="setauthor">
 
         <div id="optionsmenu" class="hide">
           <button class="set-source" id="source"> <span style="font-family: Icon,serif; font-size: 8vh">&#60786;</span><br>Set Install Location</button>
@@ -158,12 +161,13 @@
   left: 10px;
   width: 30rem;
   height: 2.2rem;
-  border-radius: 1rem;
+  border-radius: 2rem;
   text-wrap: nowrap;
   background-color: rgba(0,0,0,0.6);
   z-index: 10;
   backdrop-filter: blur(20px) saturate(50%);
   box-shadow: black 0 0 150px 70px, inset rgba(255,255,255,0.25) 0 0 10px;
+  corner-shape: squircle;
 }
 
 .title-colored {
@@ -246,15 +250,17 @@
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 1rem;
+  border-radius: 2rem;
   padding: 2px; /* control the border thickness */
-  background: linear-gradient(45deg,rgba(var(--primary-color),0) 0%, rgb(255, 255, 255) 50%, rgba(var(--primary-color),0) 100%);
+  background: linear-gradient(10deg,rgba(var(--primary-color),0) 0%, rgb(255, 255, 255) 50%, rgba(var(--primary-color),0) 100%);
   -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
+  corner-shape: squircle;
+
 }
 
 .alert-title {
@@ -393,7 +399,7 @@
   left: 5vh;
   width: calc(71.75vw - 13vh);
   height: 35vh;
-  border-radius: 1rem;
+  border-radius: 2rem;
   box-shadow: rgba(60,60,60, 0.8) 0 0 10px;
   background: rgba(255, 255, 255, 0.1);
   overflow-y: hidden;
@@ -406,6 +412,7 @@
   flex-grow: 1;
   white-space: nowrap;
   padding-left: 3vh;
+  corner-shape: squircle;
 }
 
 .covers2 {
@@ -427,6 +434,7 @@
   white-space: nowrap;
   scroll-behavior: smooth;
 }
+
 
 .covers-cover {
   height: 31vh;
@@ -501,7 +509,7 @@ body {
   color: white;
   width: 4rem;
   height: 4rem;
-  border-radius: 1rem;
+  border-radius: 2rem;
   border: none;
   background: rgba(255, 255, 255, 0.15);
   position: absolute;
@@ -510,6 +518,7 @@ body {
   top: 30vh;
   transition: scale ease-in 0.1s, rotate ease-in 0.1s;
   box-shadow: rgb(90,90,90) 0 0 10px;
+  corner-shape: squircle;
 }
 
 .play {
@@ -551,7 +560,7 @@ body {
   color: white;
   width: 4rem;
   height: 4rem;
-  border-radius: 1rem;
+  border-radius: 2rem;
   border: none;
   background: rgba(255, 103, 103, 0.25);
   position: absolute;
@@ -560,6 +569,8 @@ body {
   top: 30vh;
   transition: scale ease-in 0.1s, rotate ease-in 0.1s;
   box-shadow: rgba(255, 103, 103, 0.5) 0 0 10px;
+  corner-shape: squircle;
+
 }
 
 .play:hover {
@@ -634,16 +645,18 @@ body {
   height: 2rem;
   background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
-  border-radius: 0.5rem;
+  border-radius: 1rem;
   border: none;
   transition: all ease-out 0.25s;
   box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
+  corner-shape: squircle;
 
 }
 
 .close:hover {
   background-color: rgba(255, 0, 0, 0.6);
   box-shadow: red 0 0 5px;
+  top: 1vh;
 
 }
 
@@ -659,8 +672,9 @@ body {
   top: 1.5vh;
   background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
-  border-radius: 0.5rem;
+  border-radius: 1rem;
   border: none;
+  corner-shape: squircle;
 
   overflow: scroll;
   scrollbar-width: none;
@@ -684,7 +698,7 @@ body {
   text-align: center;
   font-family: "Icon",serif;
   color: rgba(248, 160, 230, 0);
-  transition: top ease-in 0.1s, left ease-in 0.1s, transform ease-in 0.1s, box-shadow ease-in 0.1s, text-shadow ease-in 0.1s, -webkit-text-stroke ease-in 0.1s, color ease-in 0.1s, filter ease-in 0.1s, opacity ease-in 0.5s;
+  transition: top ease-in 0.1s, left ease-in 0.1s, transform ease-in 0.1s, box-shadow ease-in 0.1s, text-shadow ease-in 0.1s, -webkit-text-stroke ease-in 0.1s, color ease-in 0.1s, filter ease-in 0.1s, opacity ease-in 0.5s, box-shadow ease-in 0.2s;
 }
 
 .cover-update {
@@ -716,7 +730,7 @@ body {
 .cover:hover {
   top: 4vh;
   left: 6vh;
-  box-shadow: rgba(0, 0, 0, 0.75) -20px 20px 50px;
+  box-shadow: rgba(0, 0, 0, 0.75) -20px 20px 50px, inset rgb(var(--primary-color)) 0 0 25px;
   color: rgb(var(--primary-color));
   transform: rotateY(-10deg) rotateX(-10deg);
   text-shadow: rgb(var(--primary-color)) 0 0 25px;
@@ -725,7 +739,7 @@ body {
 .minimize:hover {
   background-color: rgba(255, 150, 0, 0.6);
   box-shadow: rgba(255, 150, 0, 0.6) 0 0 5px;
-
+  top: 1vh;
 }
 
 .sidetext {
@@ -845,15 +859,64 @@ body {
   transition: box-shadow ease-in 0.1s, background ease-in 0.1s;
 }
 
+.screenshots-text {
+  position: absolute;
+  background: rgba(255,0,0,0.25);
+  backdrop-filter: blur(10px);
+  font-size: 25px;
+  font-family: Icon;
+  color: black;
+  height: 40px;
+  width: 40px;
+  bottom: 1px;
+  border-radius: 100%;
+  transform: translate(425%, -50%);
+  text-align: center;
+  transition: all ease-out 0.1s;
+  border: none;
+  cursor: grab;
+}
 
-.info {
+.screenshots-cover {
+  height: 22vh;
+  flex: 0 1 auto;
+}
+
+.screenshots-image {
+  width: auto;
+  height: 22vh;
+  border-radius: 0.5rem;
+  box-shadow: rgb(60,60,60) 0 0 10px;
+}
+
+.subscreenshots {
+  position: absolute;
+  bottom: 2vh;
+  left: 2vh;
+  border-radius: 0.5rem;
+  direction: ltr;
+  width: calc(23rem);
+  height: 22vh;
+  overflow-y: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
+  display: flex;
+  align-items: center;
+  gap: 3vh;
+  flex-wrap: nowrap;
+  flex-grow: 1;
+  white-space: nowrap;
+  scroll-behavior: smooth;
+}
+
+.screenshots {
   font-family: "Aller", sans-serif;
   color: white;
   font-size: 1rem;
-  width: 26rem;
+  width: calc(23rem - 2vw);
   height: 20vh;
-  right: 2vw;
-  border-radius: 1rem;
+  left: 2vw;
+  border-radius: 2rem;
   border: none;
   background: rgba(255, 255, 255, 0.1);
   text-align: left;
@@ -861,6 +924,7 @@ body {
   bottom: 2vw;
   outline: none;
   padding-left: 2vw;
+  padding-right: 2vw;
   box-shadow: rgb(60,60,60) 0 0 10px;
   overflow-y: auto;
   padding-top: 1.25rem;
@@ -868,6 +932,63 @@ body {
   scrollbar-width: none;
   transition: box-shadow ease-in 0.1s, background ease-in 0.1s;
   user-select: text;
+  overflow-x: hidden;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  corner-shape: squircle;
+
+}
+
+.expanded {
+  font-family: "Aller", sans-serif;
+  color: white;
+  font-size: 1rem;
+  width: calc(49rem - 2vw);
+  height: 20vh;
+  right: 2vw;
+  border-radius: 2rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  text-align: left;
+  position: absolute;
+  bottom: 2vw;
+  outline: none;
+  box-shadow: rgb(60,60,60) 0 0 10px;
+  overflow-y: auto;
+  padding: 1.25rem 2vw 1rem;
+  scrollbar-width: none;
+  transition: box-shadow ease-in 0.1s, background ease-in 0.1s;
+  user-select: text;
+  overflow-x: hidden;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  corner-shape: squircle;
+}
+
+.info {
+  font-family: "Aller", sans-serif;
+  color: white;
+  font-size: 1rem;
+  width: calc(23rem - 2vw);
+  height: 20vh;
+  right: 2vw;
+  border-radius: 2rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  text-align: left;
+  position: absolute;
+  bottom: 2vw;
+  outline: none;
+  box-shadow: rgb(60,60,60) 0 0 10px;
+  overflow-y: auto;
+  padding: 1.25rem 2vw 1rem;
+  scrollbar-width: none;
+  transition: box-shadow ease-in 0.1s, background ease-in 0.1s;
+  user-select: text;
+  overflow-x: hidden;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  corner-shape: squircle;
 }
 
 .rename:focus {
@@ -876,17 +997,24 @@ body {
 }
 
 .header {
+  resize: none;
+  background: transparent;
+  border: none;
   font-family: "Aller", sans-serif;
   font-weight: bold;
   color: white;
   font-size: 3rem;
+  outline: none;
   height: 3.5rem;
   top: 6vh;
   left: 15rem;
+  overflow: hidden;
   position: absolute;
   display: inline-block;
-  width: 100%;
+  width: calc( 71.5vw - 15rem);
+  text-overflow: clip;
   text-align: left;
+  text-wrap: nowrap;
   text-shadow: rgb(var(--primary-color)) 0 0 10px;
   mask-image: linear-gradient(90deg, rgb(255,255,255) 390px,rgba(255,255,255,0) 590px);
 }
@@ -917,6 +1045,28 @@ body {
   border-radius: 0.75rem;
   filter: blur(2px);
   animation: 3s spin linear infinite;
+}
+
+.author-header {
+  font-family: "Aller", sans-serif;
+  color: white;
+  font-size: 1rem;
+  background: transparent;
+  outline: none;
+  resize: none;
+  border: none;
+  height: 1rem;
+  text-overflow: clip;
+  overflow: hidden;
+  text-wrap: nowrap;
+  text-align: left;
+  text-decoration: underline;
+  mask-image: linear-gradient(90deg, rgb(255,255,255) 200px,rgba(255,255,255,0) 225px);
+
+}
+
+.author-header::placeholder {
+  color: white
 }
 
 .subheader {
