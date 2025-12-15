@@ -66,7 +66,7 @@
 
       </div>
       <div class="update-log hide smooth-hide" id="update-log">
-        <header class="update-msg update-title">Update 1.0.3-christmas</header>
+        <header class="update-msg update-title">Update 1.1.0-major</header>
         <header class="update-msg update-header">THANK YOU</header>
         <header class="update-msg">Thank You For Continuing To Use This Mod Manager!</header>
 
@@ -75,7 +75,7 @@
         <header class="update-msg">[+] Fixed Certain Mods (Mostly Club Meetings)</header>
 
         <header class="update-msg update-header">UI</header>
-        <header class="update-msg">[+] Added Christmas theming (Until January)</header>
+        <header class="update-msg">[+] Major Overhaul To Overall UI</header>
         <header class="update-msg">[+] Minor Changes</header>
 
       </div>
@@ -90,13 +90,15 @@
         <button class="alert-button2" id="cancel">No</button>
 
       </div>
-
+      <div class="view-background smooth-hide hide" id="view-background">
+        <img class="view-image" id="view-image">
+      </div>
     </div>
 
   </body>
 
   <div id="pill" class="pill-container smooth-hide hide">
-    <span style="font-family: Icon; font-size: 0.5rem; padding-top: 0.3rem; left: 1.2rem; position: absolute; color: rgb(255,100,100)">&#62401;</span> Playing <span style="font-style: italic; color: rgb(248, 172, 195); mask-image: linear-gradient(90deg, rgb(255,255,255) 100px,rgba(255,255,255,0) 150px); padding-left: 2px; white-space: nowrap; vertical-align: top; overflow: hidden; max-width: 150px; display: inline-block" id="pill-game">Dark On Me LAAAAAAAAA</span>  <span style="padding-left: 4px">by</span> <span style="font-style: italic; color: rgb(248, 172, 195)" id="pill-author">unknown</span>
+    <span style="font-family: Icon; font-size: 0.5rem; padding-top: 0.3rem; left: 1.2rem; position: absolute; color: rgb(255,100,100)">&#62401;</span> Playing <span style="font-style: italic; color: rgb(var(--primary-color)); mask-image: linear-gradient(90deg, rgb(255,255,255) 100px,rgba(255,255,255,0) 150px); padding-left: 2px; white-space: nowrap; vertical-align: top; overflow: hidden; max-width: 150px; display: inline-block" id="pill-game">Dark On Me LAAAAAAAAA</span>  <span style="padding-left: 4px">by</span> <span style="font-style: italic; color: rgb(var(--primary-color))" id="pill-author">unknown</span>
     <span style="right: 1.5rem; position: absolute; color: rgb(200,200,200)" id="pill-time">2h 2m</span>
   </div>
 
@@ -146,6 +148,41 @@
   to {
     --angle: 360deg;
   }
+}
+
+.view-image {
+  aspect-ratio: 16/9;
+  width: 64vw;
+  height: 36vw;
+  position: absolute;
+  top: 50vh;
+  left: 18vw;
+  offset-anchor: center center;
+  border-radius: 1rem;
+  z-index: 10;
+  scale: 0;
+  rotate: 1 1 0.1 90deg;
+  box-shadow: black 0 0 100px 20px;
+  transition: scale ease-out 0.25s, top ease-out 0.25s, rotate ease-out 0.3s;
+}
+
+.zoom {
+  rotate: 1 1 1 0deg;
+  top: 15vh;
+  left: 18vw;
+  scale: 1;
+}
+
+.view-background {
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(0,0,0,0.6);
+  backdrop-filter: blur(5px) saturate(50%);
+  z-index: 10;
+  cursor: pointer;
 }
 
 .pill-container {
@@ -277,7 +314,7 @@
   font-family: "Aller", sans-serif;
   color: rgb(255,255,255);
   text-shadow: black 0px 0px 5px;
-  background: linear-gradient(180deg, rgba(243, 139, 188, 0.1) 0%, rgba(241, 66, 154, 0.1) 100%);
+  background: linear-gradient(180deg, rgba(var(--primary-color), 0.1) 0%, rgba(var(--primary-color-saturated), 0.1) 100%);
   border-radius: 0.75rem;
   border: none;
   width: 16.75vw;
@@ -445,6 +482,7 @@
   width: auto;
   height: 31vh;
   border-radius: 0.5rem;
+  cursor: grab;
   box-shadow: rgb(60,60,60) 0 0 10px;
 }
 
@@ -452,7 +490,7 @@
   position: absolute;
   background: rgba(255,0,0,0.25);
   backdrop-filter: blur(10px);
-  font-size: 25px;
+  font-size: 20px;
   font-family: Icon;
   color: black;
   height: 40px;
@@ -466,6 +504,11 @@
 }
 
 .covers-text:hover {
+  background: rgba(255,0,0,0.5);
+  box-shadow: red 0px 0px 10px;
+}
+
+.screenshots-text:hover {
   background: rgba(255,0,0,0.5);
   box-shadow: red 0px 0px 10px;
 }
@@ -491,34 +534,35 @@ body {
   color: white;
   width: 9vw;
   height: 9vw;
-  border-radius: 1rem;
+  border-radius: 2rem;
   border: none;
   background: rgba(255, 255, 255, 0.1);
   position: absolute;
   left: 20vw;
   top: 25vh;
-  transition: scale ease-in 0.1s;
+  transition: scale ease-in 0.1s, top ease-in 0.1s;
+  cursor: grab;
   text-align: center;
   box-shadow: rgb(60,60,60) 0 0 10px;
   z-index: 2;
+  corner-shape: squircle;
 }
 
 .path {
   font-family: "Icon", sans-serif;
-  font-size: 2rem;
+  font-size: 1.5rem;
   color: white;
   width: 4rem;
   height: 4rem;
-  border-radius: 2rem;
+  border-radius: 100%;
   border: none;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
   position: absolute;
   left: 31.75rem;
   text-align: center;
   top: 30vh;
-  transition: scale ease-in 0.1s, rotate ease-in 0.1s;
-  box-shadow: rgb(90,90,90) 0 0 10px;
-  corner-shape: squircle;
+  transition: scale ease-in 0.1s, rotate ease-in 0.1s, top ease-in 0.1s;
+  box-shadow: rgb(60,60,60) 0 0 30px;
 }
 
 .play {
@@ -528,7 +572,7 @@ body {
   color: white;
   width: 15rem;
   height: 5rem;
-  border-radius: 1rem;
+  border-radius: 2rem;
   border: none;
   position: absolute;
   left: 15rem;
@@ -536,6 +580,9 @@ body {
   top: 29vh;
   backdrop-filter: blur(10px);
   transition: scale ease-in 0.1s, transform ease-in 0.2s;
+  corner-shape: squircle;
+  cursor: pointer;
+
 }
 
 .play::before {
@@ -556,20 +603,20 @@ body {
 
 .delete {
   font-family: "Icon", sans-serif;
-  font-size: 2rem;
+  font-size: 1rem;
   color: white;
-  width: 4rem;
-  height: 4rem;
-  border-radius: 2rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 100%;
   border: none;
-  background: rgba(255, 103, 103, 0.25);
+  background: rgba(255, 36, 36, 0.5);
   position: absolute;
-  left: 37.5rem;
+  left: 34.5rem;
   text-align: center;
-  top: 30vh;
-  transition: scale ease-in 0.1s, rotate ease-in 0.1s;
+  top: 36vh;
+  transition: scale ease-in 0.1s, rotate ease-in 0.1s, top ease-in 0.1s;
   box-shadow: rgba(255, 103, 103, 0.5) 0 0 10px;
-  corner-shape: squircle;
+  cursor: grab;
 
 }
 
@@ -579,10 +626,12 @@ body {
 }
 
 .play:active {
-  scale: 0.95
+  scale: 0.95;
+
 }
 
 .delete:hover {
+  top: 35vh;
   rotate: 5deg;
   scale: 1.05
 }
@@ -592,8 +641,10 @@ body {
 }
 
 .path:hover {
+  top: 29vh;
   rotate: -5deg;
-  scale: 1.05
+  scale: 1.05;
+  cursor: pointer;
 }
 
 .path:active {
@@ -601,10 +652,13 @@ body {
 }
 
 .set-source:hover {
+  top: 24vh;
+  background: rgba(255, 255, 255, 0.2);
   scale: 1.05;
 }
 
 .set-source:active {
+  cursor: grabbing;
   scale: 0.95;
 }
 
@@ -693,12 +747,13 @@ body {
   top: 5vh;
   left: 5vh;
   border-radius: 0.75rem;
-  box-shadow: rgba(0, 0, 0, 0.1) 0 0 20px;
+  box-shadow: rgba(0, 0, 0, 0.1) 0 0 20px, inset rgba(0,0,0,0.4) 0 0 25px;
   font-size: 5rem;
   text-align: center;
   font-family: "Icon",serif;
   color: rgba(248, 160, 230, 0);
-  transition: top ease-in 0.1s, left ease-in 0.1s, transform ease-in 0.1s, box-shadow ease-in 0.1s, text-shadow ease-in 0.1s, -webkit-text-stroke ease-in 0.1s, color ease-in 0.1s, filter ease-in 0.1s, opacity ease-in 0.5s, box-shadow ease-in 0.2s;
+  cursor: pointer;
+  transition: top ease-in 0.2s, left ease-in 0.2s, transform ease-in 0.2s, text-shadow ease-in 0.1s, -webkit-text-stroke ease-in 0.1s, color ease-in 0.1s, filter ease-in 0.1s, opacity ease-in 0.5s, box-shadow ease-in 0.2s;
 }
 
 .cover-update {
@@ -834,7 +889,7 @@ body {
   color: white;
   font-size: 1rem;
   height: 1.2rem;
-  bottom: 16vw;
+  bottom: 19vw;
   left: 2rem;
   width: 20rem;
   text-align: center;
@@ -863,7 +918,26 @@ body {
   position: absolute;
   background: rgba(255,0,0,0.25);
   backdrop-filter: blur(10px);
-  font-size: 25px;
+  font-size: 20px;
+  font-family: Icon;
+  color: black;
+  height: 40px;
+  width: 40px;
+  bottom: 1px;
+  border-radius: 100%;
+  transform: translate(550%, -50%);
+  text-align: center;
+  transition: all ease-out 0.1s;
+  border: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.screenshots-path {
+  position: absolute;
+  background: rgba(150,150,150,0.25);
+  backdrop-filter: blur(10px);
+  font-size: 20px;
   font-family: Icon;
   color: black;
   height: 40px;
@@ -875,18 +949,28 @@ body {
   transition: all ease-out 0.1s;
   border: none;
   cursor: grab;
+  user-select: none;
+
+}
+
+.screenshots-path:hover {
+  background: rgba(255,255,255,0.5);
+  box-shadow: white 0px 0px 10px;
 }
 
 .screenshots-cover {
-  height: 22vh;
+  height: 27vh;
   flex: 0 1 auto;
 }
 
 .screenshots-image {
   width: auto;
-  height: 22vh;
+  height: 27vh;
   border-radius: 0.5rem;
+  cursor: grab;
   box-shadow: rgb(60,60,60) 0 0 10px;
+  user-select: none;
+
 }
 
 .subscreenshots {
@@ -896,7 +980,7 @@ body {
   border-radius: 0.5rem;
   direction: ltr;
   width: calc(23rem);
-  height: 22vh;
+  height: 27vh;
   overflow-y: hidden;
   overflow-x: auto;
   scrollbar-width: none;
@@ -914,18 +998,18 @@ body {
   color: white;
   font-size: 1rem;
   width: calc(23rem - 2vw);
-  height: 20vh;
+  height: 25vh;
   left: 2vw;
-  border-radius: 2rem;
+  border-radius: 1.5rem;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   text-align: left;
   position: absolute;
   bottom: 2vw;
   outline: none;
   padding-left: 2vw;
   padding-right: 2vw;
-  box-shadow: rgb(60,60,60) 0 0 10px;
+  box-shadow: rgb(60,60,60) 0 0 20px;
   overflow-y: auto;
   padding-top: 1.25rem;
   padding-bottom: 1rem;
@@ -943,17 +1027,17 @@ body {
   font-family: "Aller", sans-serif;
   color: white;
   font-size: 1rem;
-  width: calc(49rem - 2vw);
-  height: 20vh;
+  width: calc(71.75vw - 8vw);
+  height: 25vh;
   right: 2vw;
-  border-radius: 2rem;
+  border-radius: 1.5rem;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   text-align: left;
   position: absolute;
   bottom: 2vw;
   outline: none;
-  box-shadow: rgb(60,60,60) 0 0 10px;
+  box-shadow: rgb(60,60,60) 0 0 20px;
   overflow-y: auto;
   padding: 1.25rem 2vw 1rem;
   scrollbar-width: none;
@@ -970,16 +1054,16 @@ body {
   color: white;
   font-size: 1rem;
   width: calc(23rem - 2vw);
-  height: 20vh;
+  height: 25vh;
   right: 2vw;
-  border-radius: 2rem;
+  border-radius: 1.5rem;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   text-align: left;
   position: absolute;
   bottom: 2vw;
   outline: none;
-  box-shadow: rgb(60,60,60) 0 0 10px;
+  box-shadow: rgb(60,60,60) 0 0 20px;
   overflow-y: auto;
   padding: 1.25rem 2vw 1rem;
   scrollbar-width: none;
@@ -1085,6 +1169,10 @@ body {
   scale: 1.05;
   z-index: 2;
   font-weight: bold;
+}
+
+.sidebutton:active {
+  cursor: grabbing;
 }
 
 .sidebutton:hover::before, .sidebutton:hover::after {

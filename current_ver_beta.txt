@@ -1,10 +1,7 @@
-1.0.5-beta-semimajor
+1.1.0-beta-major
 OPTIONAL
 
-Ive got some motivation back to update
-This is mostly a minor update
-including a Christmas theme (hence the version)
-and fixes a few mods
+TYSM for 100+ downloads!
 
 💗 To You all!
 
@@ -15,6 +12,9 @@ and fixes a few mods
 - Screenshots Instead Of Set Name/Set Author
  - Set Name / Set Author Can Now Be Changed By
     Clicking The Title / Subtitle
+- Image Viewer
+- Preload immediately visible screenshots and all covers
+    - WebWorker/Async for other images to save on ram
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

@@ -9,7 +9,6 @@ use window_vibrancy::{apply_acrylic};
 use tokio::fs::{File as TokioFile};
 use tokio::io::{AsyncWriteExt, AsyncReadExt};
 use std::path::PathBuf;
-use std::thread::{sleep};
 use std::time::{Duration, Instant};
 use tauri_plugin_fs_pro::{is_dir, is_file};
 use unrar::Archive;
@@ -236,7 +235,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
                 if !is_process_running(file_name) {
                     break;
                 }
-                sleep(Duration::from_millis(1000));
+                tokio::time::sleep(Duration::from_millis(1000)).await;
             }
         }
     }
@@ -245,7 +244,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         let msg = error.unwrap();
         let success = msg.eq("exit code: 0");
         if !success {
-            app.emit("popup", StringData { text: format!("An Error Occured Launched The Game!\n\n{}", msg).as_str() }).expect("Popup Error");
+            app.emit("popup", StringData { text: format!("An Error Has Occurred Whilst Launching The Game!\n\n{}", msg).as_str() }).expect("Popup Error");
 
         }
     }
@@ -292,6 +291,7 @@ async fn update(app: AppHandle, close: bool) {
         app.exit(404);
     }
 }
+
 #[tauri::command]
 async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     let config_contents = tokio::fs::read_to_string("DNNconfig.json")
@@ -350,10 +350,10 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         if !target_dir.to_str().unwrap().ends_with("game") && nest_check.clone().is_some() {
             println!("Extract A");
             let _ = extractor::extract_zip_archive_without_toplevel(&mut ZipArchive::new(&mut file).unwrap(), &target_dir, &nest_check.unwrap().replace("/",""))
-                .map_err(|e| e.to_string()).unwrap();
+                .map_err(|e| e.to_string())?;
         } else {
             let _ = extractor::extract_zip_archive(&mut archive, &target_dir)
-                .map_err(|e| e.to_string()).unwrap();
+                .map_err(|e| e.to_string())?;
         }
 
         zip_archive_opt = Some(archive);

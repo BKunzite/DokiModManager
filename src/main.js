@@ -1,4 +1,6 @@
-import { createApp } from "vue";
+import {
+    createApp
+} from "vue";
 import {
     readDir,
     readTextFile,
@@ -9,18 +11,36 @@ import {
     remove,
     readFile,
 } from '@tauri-apps/plugin-fs';
-import { open } from '@tauri-apps/plugin-dialog';
-import { invoke } from '@tauri-apps/api/core';
-import {metadata, isExist, isDir, isFile} from "tauri-plugin-fs-pro-api";
-import { homeDir } from "@tauri-apps/api/path";
-import { listen } from "@tauri-apps/api/event";
+import {
+    open
+} from '@tauri-apps/plugin-dialog';
+import {
+    invoke
+} from '@tauri-apps/api/core';
+import {
+    metadata,
+    isExist,
+    isDir,
+} from "tauri-plugin-fs-pro-api";
+import {
+    homeDir
+} from "@tauri-apps/api/path";
+import {
+    listen
+} from "@tauri-apps/api/event";
 import sound_beep from './assets/select.ogg'
 import sound_boop from './assets/hover.ogg'
 import sound_click from './assets/pageflip.ogg'
-import { Base64 } from 'js-base64';
 import App from "./App.vue";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+    getCurrentWindow
+} from "@tauri-apps/api/window";
 import jingle from "./assets/jingle_punks_copyrightfree.mp3"
+import {
+    getImage
+} from "./core/ImageUtils"
+import ImageLoader from "./workers/ImageLoader.js?worker"
+
 let jingle_audio = new Audio(jingle);
 let launchers = []
 let currentEntry = ""
@@ -29,7 +49,7 @@ let background_cover = 0
 let total_time = 0;
 let warn_path = true;
 let mouse_cover_available = false;
-let alert_path=undefined
+let alert_path = undefined
 let selectedPath;
 let local_path;
 let observer;
@@ -39,8 +59,9 @@ let localConfig = {
     path: "",
     config: {}
 }
+let preload_covers = {}
 
-const CLIENT_VERSION = "1.0.5-beta-semimajor"
+const CLIENT_VERSION = "1.1.0-beta-major"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI"
@@ -72,9 +93,23 @@ const CLIENT_THEMES = {
 const heart_empty = "&#62920;";
 const heart_full = "&#62919;";
 
+// Preload Images
+
+function preloadImage(src) {
+    return new Promise(async (resolve, reject) => {
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = await getImage(src, covers);
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+    });
+}
+
 // Removes Right Click Menu
 
-document.oncontextmenu = document.body.oncontextmenu = function() {return false;}
+document.oncontextmenu = document.body.oncontextmenu = function() {
+    return false;
+}
 
 // Updates the list of covers
 async function sync_covers() {
@@ -86,13 +121,20 @@ async function sync_covers() {
         "sayori.jpg",
         "monika.png"
     ]
+    preload_covers = {}
+    for (const cover of covers) {
+        preload_covers[cover] = await preloadImage(cover);
+    }
     if (await isDir(local_path + "\\store\\images")) {
         for (const image of await readDir(local_path + "\\store\\images")) {
             if (image.name.endsWith(".png") || image.name.endsWith(".jpg") || image.name.endsWith(".jpeg") || image.name.endsWith(".webp")) {
-                covers.push(local_path + "\\store\\images" + "\\" + image.name);
+                const path = local_path + "\\store\\images" + "\\" + image.name;
+                covers.push(path);
+                preload_covers[path] = await preloadImage(path);
             }
         }
     }
+
 }
 
 // Gets The Current Client Version From Github
@@ -136,7 +178,7 @@ async function loadConfig(path) {
 
     // Detects Config
 
-    for(const localEntry of localFiles) {
+    for (const localEntry of localFiles) {
         if (localEntry.name === "client-config.json") {
             hasConfig = true;
             break;
@@ -150,7 +192,7 @@ async function loadConfig(path) {
                     const localFiles2 = await readDir(selectedPath + "\\" + entry.name);
                     let hasConfig2 = false;
                     let configPath2 = selectedPath + "\\" + entry.name + "\\.ddmm.config.json";
-                    for(const localEntry of localFiles2) {
+                    for (const localEntry of localFiles2) {
                         if (localEntry.name === ".ddmm.config.json") {
                             hasConfig2 = true;
                             break;
@@ -160,7 +202,7 @@ async function loadConfig(path) {
                         let kconfigData = {
                             author: "unknown",
                             time: 0,
-                            size:0,
+                            size: 0,
                             favorite: false,
                             coverId: 0
                         }
@@ -208,10 +250,9 @@ async function update_cover_images(first_time) {
 
     for (let i = covers.length - 1; i >= 0; i--) {
         const cover_bg = document.createElement("div");
-        const cover_img = document.createElement("img");
+        const cover_img = preload_covers[covers[i]].cloneNode(true);
         const cover_text = document.createElement("button");
 
-        cover_img.src = await getImage(i)
         cover_img.classList.add("covers-image");
 
         cover_bg.classList.add("covers-cover");
@@ -231,7 +272,7 @@ async function update_cover_images(first_time) {
                 covers.splice(i, 1);
                 console.log(covers)
                 setTimeout(async () => {
-                    let scroll =  images.scrollLeft;
+                    let scroll = images.scrollLeft;
                     update_cover_images()
                     setCover(background_cover);
                     images.scrollLeft = scroll;
@@ -290,7 +331,9 @@ async function import_mod(path) {
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
             document.getElementById("loadingsub").textContent = "Importing Mod " + selectedPath
-            await invoke("import_mod", {path: selectedPath})
+            await invoke("import_mod", {
+                path: selectedPath
+            })
         } else {
             confirm("Not A Zip File!")
         }
@@ -304,12 +347,12 @@ async function setCover(id) {
         id = 0;
     }
 
-    let image = await getImage(id)
+    let image = await getImage(id, covers)
 
-    document.getElementById("cove").style.backgroundImage = 'url("' + image  +'")';
+    document.getElementById("cove").style.backgroundImage = 'url("' + image + '")';
 
     if (currentEntry === "") {
-        document.getElementById("bg").style.backgroundImage = 'url("' +  image +'")';
+        document.getElementById("bg").style.backgroundImage = 'url("' + image + '")';
         background_cover = id;
         await saveConfig()
     }
@@ -321,7 +364,7 @@ async function setTheme(name) {
     if (!(name in CLIENT_THEMES)) {
         name = "NATSUKI";
     }
-    document.getElementById("chibi").src = await getImage(CLIENT_THEMES[name].image);
+    document.getElementById("chibi").src = await getImage(CLIENT_THEMES[name].image, covers);
     document.body.style.setProperty("--primary-color", CLIENT_THEMES[name].primary_color)
     document.body.style.setProperty("--primary-color-saturated", CLIENT_THEMES[name].primary_color_saturated)
 
@@ -331,22 +374,39 @@ async function setTheme(name) {
 
 // Gets An Image Locally/In Project
 
-async function getImage(id) {
-    const cover = covers[id];
-    if (cover !== undefined && cover.includes(":")) {
-        const contents = await readFile(cover);
-        const base64String = Base64.fromUint8Array(contents);
+function createScreenshotDiv(src, entryName, dir, image, entry) {
+    const newScreenshot = document.createElement("img")
+    const cover_text = document.createElement("button");
+    const path_text = document.createElement("button");
 
-        return `data:image/png;base64,${base64String}`
-    } else if (typeof(id) === "string" && id.includes(":")) {
-        const contents = await readFile(id);
-        const base64String = Base64.fromUint8Array(contents);
-
-        return `data:image/png;base64,${base64String}`
-    } else {
-        const images = import.meta.glob('./assets/*.{png,jpg,jpeg,svg,json,webp}', { eager: true, as: 'url' });
-        if (cover !== undefined) { return images["./assets/" + cover] } else { return images["./assets/" + id] }
-    }
+    const cover_bg = document.createElement("div");
+    newScreenshot.decoding = "async"
+    newScreenshot.classList.add("screenshots-image")
+    newScreenshot.src = src;
+    newScreenshot.addEventListener("mouseup", () => {
+        document.getElementById("view-image").src = src;
+        document.getElementById("view-image").classList.add("zoom")
+        document.getElementById("view-background").classList.remove("hide")
+    })
+    cover_text.addEventListener("click", async () => {
+        await remove(dir + "\\" + image);
+        await launchers[entryName].leftClick();
+        if (entry.preload[image]) {
+            await launchers[entry].preloadImages()
+        }
+    })
+    path_text.addEventListener("click", async () => {
+        await launchers[entryName].path();
+    })
+    path_text.classList.add("screenshots-path");
+    path_text.innerHTML = "&#60792;"
+    cover_text.classList.add("screenshots-text");
+    cover_text.innerHTML = "&#60450;"
+    cover_bg.appendChild(path_text)
+    cover_bg.appendChild(cover_text);
+    cover_bg.appendChild(newScreenshot);
+    cover_bg.classList.add("screenshots-cover");
+    return cover_bg
 }
 
 // Requests DDLC Directory and Updates Mods
@@ -363,7 +423,9 @@ async function requestDirectory(path) {
             return
         }
         selectedPath = ppath;
-        await invoke("path_select", {path: selectedPath})
+        await invoke("path_select", {
+            path: selectedPath
+        })
     } else {
         selectedPath = path;
     }
@@ -384,12 +446,43 @@ async function requestDirectory(path) {
         // Update Mods List
 
         for (const entry of files) {
-            document.getElementById("loadingsub").textContent = "Loading Mod " + entry.name.replace("ddlc-","").replace("ddlc","").replace("-","")
+            document.getElementById("loadingsub").textContent = "Loading Mod " + entry.name.replace("ddlc-", "").replace("ddlc", "").replace("-", "")
             if (entry.isDirectory) {
                 const localFiles = await readDir(selectedPath + "\\" + entry.name);
+
+                // Find Correct Directory
+
+                let dir = selectedPath + "\\" + entry.name;
+                let isInDir = false;
+                for (const localEntry of localFiles) {
+                    if (localEntry.name === "DDLC.exe") {
+                        isInDir = true;
+                        break;
+                    }
+                }
+
+                if (!isInDir) {
+                    dir = selectedPath + "\\" + entry.name + "\\DDLC-1.1.1-pc"
+                    if (await isDir(dir)) {
+                        for (const localEntry of await readDir(dir)) {
+                            if (localEntry.name === "DDLC.exe") {
+                                isInDir = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!isInDir) {
+                    console.warn(dir + " Does Not Contain DDLC.exe")
+                    continue;
+                }
+
+                // Create SideButton And Load Config
+
                 let hasConfig = false;
                 let configPath = selectedPath + "\\" + entry.name + "\\.ddmm.config.json";
-                for(const localEntry of localFiles) {
+                for (const localEntry of localFiles) {
                     if (localEntry.name === ".ddmm.config.json") {
                         hasConfig = true;
                         break;
@@ -398,17 +491,17 @@ async function requestDirectory(path) {
                 let configData = {
                     author: "unknown",
                     time: 0,
-                    size:0,
+                    size: 0,
                     favorite: false,
                     coverId: 0
                 }
                 if (!hasConfig) {
-                    create(configPath)
+                    await create(configPath)
                     const data = await metadata(selectedPath + "\\" + entry.name);
                     const contents = JSON.stringify(configData);
                     configData.size = data.size;
                     await writeTextFile(configPath, contents);
-                }else {
+                } else {
 
                     configData = JSON.parse(await readTextFile(configPath));
 
@@ -416,17 +509,17 @@ async function requestDirectory(path) {
                 if (configData.coverId === undefined || configData.coverId === null) {
                     configData.coverId = 0;
                 }
-                let shorthand = entry.name.replace("ddlc-","").replace("ddlc","").replace("-"," ");
+                let shorthand = entry.name.replace("ddlc-", "").replace("ddlc", "").replace("-", " ");
                 const sidetext = document.createElement("header");
-                const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand +"</span>";
-                const faveText = "<span style=\"font-family: Icon,serif\">&#60938;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand +"</span>";
+                const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
+                const faveText = "<span style=\"font-family: Icon,serif\">&#60938;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
 
                 let launch_time = Date.now();
                 sidetext.classList.add("sidebutton");
                 if (configData.favorite) {
                     sidetext.classList.add("favorite")
                 }
-                sidetext.id=shorthand;
+                sidetext.id = shorthand;
                 if (configData.favorite) {
                     sidetext.innerHTML = faveText
                 } else {
@@ -437,6 +530,21 @@ async function requestDirectory(path) {
                 launchers[entry.name] = {
                     item: sidetext,
                     location: selectedPath + "\\" + entry.name,
+                    preload: [],
+                    preloadImages: async () => {
+                        let images = 0;
+                        launchers[entry.name].preload = {}
+
+                        for (const localEntry of await readDir(dir)) {
+                            if (localEntry.name.includes("screenshot")) {
+                                launchers[entry.name].preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + "\\" + localEntry.name, []), entry.name, dir, localEntry.name, entry.name);
+                                images++
+                                if (images >= 2) {
+                                    break
+                                }
+                            }
+                        }
+                    },
                     getData: async () => {
                         return configData
                     },
@@ -457,17 +565,6 @@ async function requestDirectory(path) {
                         setTimeout(async () => {
                             play(sound_beep)
                             launch_time = Date.now();
-                            let isInDir = false;
-                            let dir = selectedPath + "\\" + entry.name;
-                            for (const localEntry of localFiles) {
-                                if (localEntry.name === "DDLC.exe") {
-                                    isInDir = true;
-                                    break;
-                                }
-                            }
-                            if (!isInDir) {
-                                dir = selectedPath + "\\" + entry.name + "\\DDLC-1.1.1-pc"
-                            }
                             let exes = []
                             const dirFiles = await readDir(dir);
 
@@ -492,28 +589,23 @@ async function requestDirectory(path) {
                             }
 
                             if (gameExe !== "") {
-                                await invoke("launch", {path: dir + "\\" + gameExe, id: entry.name, renpy: await getRenpy(dir)})
+                                await invoke("launch", {
+                                    path: dir + "\\" + gameExe,
+                                    id: entry.name,
+                                    renpy: await getRenpy(dir)
+                                })
                             }
                         }, 1000)
 
 
                     },
                     get_time: async () => {
-                      return Date.now() - launch_time;
+                        return Date.now() - launch_time;
                     },
                     path: async () => {
-                        let isInDir = false;
-                        let dir = selectedPath + "\\" + entry.name;
-                        for (const localEntry of localFiles) {
-                            if (localEntry.name === "DDLC.exe") {
-                                isInDir = true;
-                                break;
-                            }
-                        }
-                        if (!isInDir) {
-                            dir = selectedPath + "\\" + entry.name + "\\DDLC-1.1.1-pc"
-                        }
-                        await invoke("open_path", {path: dir})
+                        await invoke("open_path", {
+                            path: dir
+                        })
                     },
                     nextCover: async () => {
                         configData.coverId++;
@@ -550,7 +642,7 @@ async function requestDirectory(path) {
                             showContainers(true)
                         }
                         play(sound_click)
-                        const playTime =  Date.now() - launch_time;
+                        const playTime = Date.now() - launch_time;
                         total_time += playTime;
                         configData.time += playTime;
                         const data = await metadata(selectedPath + "\\" + entry.name);
@@ -563,31 +655,18 @@ async function requestDirectory(path) {
                     },
                     leftClick: async () => {
                         currentEntry = entry.name;
-                        let isInDir = false;
-                        let dir = selectedPath + "\\" + entry.name;
-
                         await setCover(configData.coverId);
-
-                        for (const localEntry of localFiles) {
-                            if (localEntry.name === "DDLC.exe") {
-                                isInDir = true;
-                                break;
-                            }
-                        }
-
-                        if (!isInDir) {
-                            dir = selectedPath + "\\" + entry.name + "\\DDLC-1.1.1-pc"
-                        }
 
                         const fdirFiles = await readDir(dir);
                         let customExe;
-                        let about ;
+                        let about;
                         let renpy = await getRenpy(dir);
+                        let screenshots = false;
+                        let images = []
 
-                       while (document.getElementById("screenshots").firstChild) {
-                           document.getElementById("screenshots").firstChild.remove();
-                       }
-
+                        while (document.getElementById("screenshots").firstChild) {
+                            document.getElementById("screenshots").firstChild.remove();
+                        }
 
                         for (const localEntry of fdirFiles) {
                             if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && customExe === undefined) {
@@ -597,36 +676,39 @@ async function requestDirectory(path) {
                                 about = (await readTextFile(dir + "\\" + localEntry.name)).replaceAll("\n", "<br>");
                             }
                             if (localEntry.name.includes("screenshot")) {
-                                const newScreenshot = document.createElement("img")
-                                const cover_text = document.createElement("button");
-                                const cover_bg = document.createElement("div");
+                                screenshots = true;
+                                if (launchers[entry.name].preload[localEntry.name] !== undefined) {
+                                    document.getElementById("screenshots").appendChild(launchers[entry.name].preload[localEntry.name]);
+                                    continue;
+                                }
+                                images.push(
+                                    localEntry.name
+                                )
 
-                                newScreenshot.classList.add("screenshots-image")
-                                newScreenshot.src = await getImage(dir + "\\" + localEntry.name);
-                                newScreenshot.addEventListener("click", async () => {
-                                    await launchers[entry.name].path();
-                                })
-                                cover_text.addEventListener("click", async () => {
-                                    await remove(dir + "\\" + localEntry.name);
-                                    await launchers[entry.name].leftClick();
-
-                                })
-                                cover_text.classList.add("screenshots-text");
-                                cover_text.innerHTML = "&#60450;"
-                                cover_bg.appendChild(cover_text);
-                                cover_bg.appendChild(newScreenshot);
-                                cover_bg.classList.add("screenshots-cover");
-                                document.getElementById("screenshots").appendChild(cover_bg);
                             }
                         }
 
-                        if (document.getElementById("screenshots").firstChild === null) {
+                        if (!screenshots) {
                             document.getElementById("screenshots-header").classList.add("hide")
                             document.getElementById("screenshots-parent").classList.add("hide")
                             document.getElementById("info").classList.remove("info")
                             document.getElementById("info").classList.add("expanded")
                             document.getElementById("setinfo-header").style.left = "16rem";
                         } else {
+                            document.getElementById("screenshots").scrollLeft = 0;
+                            const image_loader = images.map(async (image) => {
+                                const worker = new ImageLoader();
+
+                                worker.onmessage = (e) => {
+                                    document.getElementById("screenshots").appendChild(
+                                        createScreenshotDiv(e.data, entry.name, dir, image, entry.name)
+                                    );
+                                }
+                                worker.postMessage({
+                                    image: await readFile(dir + "\\" + image)
+                                })
+                            })
+                            await Promise.all(image_loader);
                             document.getElementById("screenshots-header").classList.remove("hide")
                             document.getElementById("screenshots-parent").classList.remove("hide")
                             document.getElementById("info").classList.remove("expanded")
@@ -645,10 +727,12 @@ async function requestDirectory(path) {
                         renpy = entry.name + "<br>Renpy: " + renpy + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
                         document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
                         play(sound_boop)
-                        const min = Math.floor(configData.time/60000);
-                        updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size/1048600) + " MB",  Math.floor(min/60)+ "h " + Math.floor(min % 60) + "m", renpy)
+                        const min = Math.floor(configData.time / 60000);
+                        await updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy)
                     }
                 }
+                await launchers[entry.name].preloadImages();
+
                 sidetext.addEventListener("mouseup", async () => {
                     await launchers[entry.name].leftClick();
                 })
@@ -656,6 +740,7 @@ async function requestDirectory(path) {
                 document.getElementById("modlist").appendChild(sidetext)
             }
         }
+        console.log("finish")
         document.getElementById("loadingsub").textContent = "Loaded Mods | Loading GUI"
 
         setTimeout(() => {
@@ -678,10 +763,10 @@ async function getRenpy(dir) {
             const lines = code.split("\n");
             for (const line of lines) {
                 if (line.startsWith("version_tuple = ") && !line.includes("*")) {
-                    renpy = (line + "").replace("version_tuple = (","").replace(", vc_version)", "").replaceAll(", ",".");
+                    renpy = (line + "").replace("version_tuple = (", "").replace(", vc_version)", "").replaceAll(", ", ".");
                     break;
                 } else if (line.trim().startsWith("version_tuple = ") && line.trim().includes("(8") && !line.includes("*")) {
-                    renpy = (line.trim() + "").replace("version_tuple = ","").replace("VersionTuple","").replace("(","").replace(", vc_version)", "").replaceAll(", ",".");
+                    renpy = (line.trim() + "").replace("version_tuple = ", "").replace("VersionTuple", "").replace("(", "").replace(", vc_version)", "").replaceAll(", ", ".");
                     break;
                 }
             }
@@ -691,7 +776,7 @@ async function getRenpy(dir) {
             const lines = code.split("\n");
             for (const line of lines) {
                 if (line.startsWith("version = ")) {
-                    renpy = (line + "").replace("version = ","").replaceAll ("'", "").replace("u","");
+                    renpy = (line + "").replace("version = ", "").replaceAll("'", "").replace("u", "");
                     break;
                 }
             }
@@ -744,7 +829,7 @@ function getTextWidth(text, font) {
 // Updates Information On Main Window
 
 async function updateDisplayinfo(mod, author, space, time, renpy) {
-    const shorthand = mod.replace("ddlc-","").replace("ddlc","").replace("-"," ");
+    const shorthand = mod.replace("ddlc-", "").replace("ddlc", "").replace("-", " ");
 
     document.getElementById("modtitle").value = shorthand
 
@@ -775,10 +860,15 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         document.getElementById("authinput").addEventListener("blur", async () => {
             await setauthor();
         })
+        document.getElementById("authinput").addEventListener("keydown", async (e) => {
+            if (e.key === "Enter") {
+                document.getElementById("authinput").blur();
+            }
+        })
     } else {
         currentEntry = ""
         await setCover(background_cover)
-        let min = Math.floor(total_time/60000);
+        let min = Math.floor(total_time / 60000);
         document.getElementById("screenshots-header").classList.add("hide");
         document.getElementById("screenshots-parent").classList.add("hide");
         document.getElementById("covers").classList.remove("hide");
@@ -797,7 +887,7 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
 async function home_main() {
     // await updateDisplayinfo("Hi " + (await invoke("whois", {})) + "!", "", "", "") -- This could leak the users full name; deprecated
     document.getElementById("covertext").innerHTML = ""
-    await updateDisplayinfo("Hi " + (await homeDir()).replace("C:\\Users\\","") + "!", "", "", "")
+    await updateDisplayinfo("Hiya " + (await homeDir()).replace("C:\\Users\\", "") + "!", "", "", "")
 }
 
 // Sets Author Of Mod And Saves To File
@@ -833,12 +923,12 @@ async function update_concurrent_game() {
         document.getElementById("pill").classList.remove("hide")
     }
 
-    const playTime =  await launchers[currentEntry].get_time();
-    const second = Math.floor(playTime/1000) % 60;
-    const min = Math.floor(playTime/60000);
+    const playTime = await launchers[currentEntry].get_time();
+    const second = Math.floor(playTime / 1000) % 60;
+    const min = Math.floor(playTime / 60000);
     const name = await launchers[currentEntry].getName() + " ";
     const author = (await launchers[currentEntry].getData()).author;
-    const time = Math.floor(min/60) + "h " + (min % 60) + "m " + second + "s";
+    const time = Math.floor(min / 60) + "h " + (min % 60) + "m " + second + "s";
 
     document.getElementById("pill-game").textContent = name
     document.getElementById("pill-author").textContent = author
@@ -863,14 +953,16 @@ async function snowflake() {
     document.body.appendChild(snowflake);
 
     setTimeout(() => {
-        snowflake.style.top =  "100%"
+        snowflake.style.top = "100%"
         snowflake.style.rotate = Math.floor(Math.random() * 360) + "deg";
         if (Math.random() > 0.5) {
             snowflake.style.zIndex = "-1"
         }
     }, 250)
 
-    setTimeout(() => {snowflake.remove()}, 250 + (speed * 1100))
+    setTimeout(() => {
+        snowflake.remove()
+    }, 250 + (speed * 1100))
 }
 
 // Renames Mod
@@ -892,7 +984,11 @@ async function rename_mod() {
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
             document.getElementById("loadingsub").textContent = "Renaming Mod"
-            await invoke("rename_dir", {path: oldName, newName: newName, id: value})
+            await invoke("rename_dir", {
+                path: oldName,
+                newName: newName,
+                id: value
+            })
         } catch (e) {
             if (e == "Error: Invalid Name!") {
                 confirm("The Name '" + value + "' is invalid!")
@@ -948,6 +1044,15 @@ function onLoad() {
         }
     })
 
+    document.getElementById("screenshots").addEventListener("wheel", event => {
+        if (event.deltaX === 0) {
+            event.preventDefault();
+            document.getElementById("screenshots").scrollBy({
+                left: event.deltaY * 2,
+                behavior: 'smooth'
+            });
+        }
+    })
 
     listen("import_done", async (event) => {
         document.getElementById("loadingsub").textContent = "Mod Imported | Loading GUI"
@@ -974,7 +1079,7 @@ function onLoad() {
         play(sound_beep)
         if (!await warn_path_alert()) return;
 
-        window.open("https://docs.google.com/spreadsheets/d/1lgQD8o7qhdWmrwdJjbRv3u_bwdrXmpOzaixWFzLR8r4/edit?usp=sharing",'reddit','width=1200,height=600')
+        window.open("https://docs.google.com/spreadsheets/d/1lgQD8o7qhdWmrwdJjbRv3u_bwdrXmpOzaixWFzLR8r4/edit?usp=sharing", 'reddit', 'width=1200,height=600')
     })
 
     // Opens Up DDLCMods Subreddit
@@ -984,7 +1089,7 @@ function onLoad() {
         play(sound_beep)
         if (!await warn_path_alert()) return;
 
-        window.open("https://www.reddit.com/r/DDLCMods/",'reddit','width=1200,height=600')
+        window.open("https://www.reddit.com/r/DDLCMods/", 'reddit', 'width=1200,height=600')
     })
 
     // Opens up DokiMods
@@ -994,7 +1099,7 @@ function onLoad() {
         play(sound_beep)
         if (!await warn_path_alert()) return;
 
-        window.open("https://dokimods.me/",'dokimods','width=1200,height=600')
+        window.open("https://dokimods.me/", 'dokimods', 'width=1200,height=600')
     })
 
     // Cancels Mod Install
@@ -1010,7 +1115,9 @@ function onLoad() {
     // Opens Up Path Of The Mod That Is Installing
 
     document.getElementById("sub3").addEventListener("mouseup", async () => {
-        await invoke("open_path", {path: alert_path})
+        await invoke("open_path", {
+            path: alert_path
+        })
     })
 
     // Accept Mod Download
@@ -1062,7 +1169,9 @@ function onLoad() {
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
                 let response = await confirm("Please Update To The Latest Version\n\n" + newest_version + "\n\nGoto Latest Releases?\nPress Cancel To Update Later.");
                 if (response) {
-                    await invoke("update", {close: true})
+                    await invoke("update", {
+                        close: true
+                    })
                     return;
                 }
             } else {
@@ -1085,7 +1194,9 @@ function onLoad() {
                             }],
                             title: 'Select DDLC Zip File'
                         });
-                        await invoke("set_ddlc_zip", {path: p})
+                        await invoke("set_ddlc_zip", {
+                            path: p
+                        })
                     } catch (error) {
                         console.log("Zip Failed: ", error)
                     }
@@ -1115,8 +1226,7 @@ function onLoad() {
                             }
                         }, 1000)
                     }
-                },
-                {
+                }, {
                     delayMs: 500
                 }
             )
@@ -1146,46 +1256,58 @@ function onLoad() {
         document.getElementById("update-log").classList.toggle("hide");
     })
 
-    document.getElementById("play").addEventListener("mouseup", async (event) => {
+    document.getElementById("play").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
             await launchers[currentEntry].open();
         }
     })
 
     document.getElementById("version").addEventListener("mouseup", async _ => {
-        await invoke("update", {close: false})
+        await invoke("update", {
+            close: false
+        })
     })
 
-    document.getElementById("cover-next").addEventListener("mouseenter", () => {mouse_cover_available = true})
-    document.getElementById("cover-next").addEventListener("mouseleave", () => {mouse_cover_available = false})
-    document.getElementById("cover-last").addEventListener("mouseenter", () => {mouse_cover_available = true})
-    document.getElementById("cover-last").addEventListener("mouseleave", () => {mouse_cover_available = false})
+    document.getElementById("cover-next").addEventListener("mouseenter", () => {
+        mouse_cover_available = true
+    })
+    document.getElementById("cover-next").addEventListener("mouseleave", () => {
+        mouse_cover_available = false
+    })
+    document.getElementById("cover-last").addEventListener("mouseenter", () => {
+        mouse_cover_available = true
+    })
+    document.getElementById("cover-last").addEventListener("mouseleave", () => {
+        mouse_cover_available = false
+    })
 
-    document.getElementById("cove").addEventListener("mouseup", async (event) => {
+    document.getElementById("cove").addEventListener("mouseup", async () => {
         if (currentEntry !== "" && !mouse_cover_available) {
             await launchers[currentEntry].oncove()
         }
     })
 
 
-    document.getElementById("delete").addEventListener("mouseup", async (event) => {
+    document.getElementById("delete").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
             let confirmed = await confirm("Are you sure you want to delete '" + launchers[currentEntry].location + "' and its data?")
             if (confirmed) {
-                await invoke("delete_path", {path: launchers[currentEntry].location});
+                await invoke("delete_path", {
+                    path: launchers[currentEntry].location
+                });
                 await home_main()
                 await requestDirectory(selectedPath);
             }
         }
     })
 
-    document.getElementById("path").addEventListener("mouseup", async (event) => {
+    document.getElementById("path").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
             await launchers[currentEntry].path();
         }
     })
 
-    document.getElementById("modtitle").addEventListener("focus", async (event) => {
+    document.getElementById("modtitle").addEventListener("focus", async () => {
         if (currentEntry === "") {
             document.getElementById("modtitle").blur()
         }
@@ -1197,7 +1319,7 @@ function onLoad() {
         }
     })
 
-    document.getElementById("modtitle").addEventListener("blur", async (event) => {
+    document.getElementById("modtitle").addEventListener("blur", async () => {
         document.getElementById("modtitle").scrollLeft = 0;
         if (currentEntry !== "") {
             await rename_mod()
@@ -1246,6 +1368,11 @@ function onLoad() {
         }, 1000)
     })
 
+    document.getElementById("view-background").addEventListener("mouseup", async () => {
+        document.getElementById("view-image").classList.remove("zoom")
+        document.getElementById("view-background").classList.add("hide")
+    })
+
     document.getElementById("min").addEventListener("mouseup", async () => {
         play(sound_beep)
         await invoke("minimize");
@@ -1275,6 +1402,14 @@ function onLoad() {
         }
     })
 
+    // Prevent Find
+
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+        }
+    });
+
     document.getElementById("themeselect").addEventListener("mouseup", async () => {
         let next = CLIENT_THEME_ENUM.indexOf(localConfig.config.theme) + 1;
         if (next > CLIENT_THEME_ENUM.length - 1) {
@@ -1285,7 +1420,9 @@ function onLoad() {
     })
 
     document.getElementById("importimage").addEventListener("mouseup", async () => {
-        await invoke("open_path", {path: local_path + "\\store\\images"})
+        await invoke("open_path", {
+            path: local_path + "\\store\\images"
+        })
     })
 
 
@@ -1299,7 +1436,9 @@ function onLoad() {
     setInterval(snowflake, 100)
     setInterval(update_concurrent_game, 1000)
 
-    getCurrentWindow().onFocusChanged(({ payload: isfocused }) => {
+    getCurrentWindow().onFocusChanged(({
+                                           payload: isfocused
+    }) => {
         focused = isfocused
         if (focused) {
             jingle_audio.play()
