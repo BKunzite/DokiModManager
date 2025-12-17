@@ -343,11 +343,14 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         let mut archive = ZipArchive::new(file.try_clone().unwrap())
             .map_err(|e| e.to_string())?;
         let nest_check = detect_nest_1(Some(&mut archive));
-        if import_game_zip(&mut archive) {
+        if import_game_zip(&mut archive, "") {
             target_dir = target_dir.join("game");
         }
 
         if !target_dir.to_str().unwrap().ends_with("game") && nest_check.clone().is_some() {
+            if import_game_zip(&mut archive, &*nest_check.clone().unwrap()) {
+                target_dir = target_dir.join("game");
+            }
             println!("Extract A");
             let _ = extractor::extract_zip_archive_without_toplevel(&mut ZipArchive::new(&mut file).unwrap(), &target_dir, &nest_check.unwrap().replace("/",""))
                 .map_err(|e| e.to_string())?;
@@ -528,12 +531,16 @@ fn rename_dir(app: AppHandle, path: &str, new_name: &str, id: &str) {
     app.emit("rename_done", StringData { text: &format!("{}",id) }).unwrap();
 }
 
-fn import_game_zip(archive: &mut ZipArchive<File>) -> bool {
+fn import_game_zip(archive: &mut ZipArchive<File>, toppath: &str) -> bool {
     let mut found = false;
     for i in 0..archive.len() {
         let file = archive.by_index(i)
             .map_err(|e| e.to_string()).unwrap();
-        if is_game_folder(file.name()) && !file.enclosed_name().unwrap().to_str().unwrap().contains("/") {
+        let mut formatted = file.enclosed_name().unwrap().to_str().unwrap().replace(toppath, "");
+        if formatted.starts_with("/") {
+            formatted.remove(0);
+        }
+        if is_game_folder(file.name()) && !formatted.contains("/") {
             found = true;
             break;
         }

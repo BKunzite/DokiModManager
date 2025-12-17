@@ -1,9 +1,9 @@
-1.1.0-beta-major
-OPTIONAL
-
-TYSM for 100+ downloads!
+1.1.0-major
+Suggested (Should update as major changes have happened)
 
 💗 To You all!
+
+- FIXED Blue Skies (thx @JCOverAll for the github issue)
 
 - Fixed background cover select for default covers
 - Fixed custom exe not being listed

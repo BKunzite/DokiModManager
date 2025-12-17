@@ -61,8 +61,8 @@ let localConfig = {
 }
 let preload_covers = {}
 
-const CLIENT_VERSION = "1.1.0-beta-major"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
+const CLIENT_VERSION = "1.1.0-major"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI"
 ]
@@ -688,6 +688,21 @@ async function requestDirectory(path) {
                             }
                         }
 
+
+
+                        if (renpy === undefined) {
+                            renpy = "Unknown (Please create a git issue on this)";
+                        }
+
+                        if (configData.size === 0) {
+                            const data = await metadata(selectedPath + "\\" + entry.name);
+                            configData.size = data.size;
+                        }
+                        renpy = entry.name + "<br>Renpy: " + renpy + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
+                        document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
+                        play(sound_boop)
+                        const min = Math.floor(configData.time / 60000);
+                        updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
                         if (!screenshots) {
                             document.getElementById("screenshots-header").classList.add("hide")
                             document.getElementById("screenshots-parent").classList.add("hide")
@@ -700,6 +715,7 @@ async function requestDirectory(path) {
                                 const worker = new ImageLoader();
 
                                 worker.onmessage = (e) => {
+                                    if (currentEntry !== entry.name) return;
                                     document.getElementById("screenshots").appendChild(
                                         createScreenshotDiv(e.data, entry.name, dir, image, entry.name)
                                     );
@@ -715,20 +731,6 @@ async function requestDirectory(path) {
                             document.getElementById("info").classList.add("info")
                             document.getElementById("setinfo-header").style.left = "30rem";
                         }
-
-                        if (renpy === undefined) {
-                            renpy = "Unknown (Please create a git issue on this)";
-                        }
-
-                        if (configData.size === 0) {
-                            const data = await metadata(selectedPath + "\\" + entry.name);
-                            configData.size = data.size;
-                        }
-                        renpy = entry.name + "<br>Renpy: " + renpy + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
-                        document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
-                        play(sound_boop)
-                        const min = Math.floor(configData.time / 60000);
-                        await updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy)
                     }
                 }
                 await launchers[entry.name].preloadImages();
@@ -789,6 +791,7 @@ async function getRenpy(dir) {
 // Hide/Show Container
 
 function showContainers(show) {
+    document.getElementById("update-log").classList.add("hide");
     if (show) {
         document.getElementById("modlist").classList.remove("hide")
         document.getElementById("container-boarder").classList.remove("hide")

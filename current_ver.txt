@@ -1,28 +1,33 @@
-1.0.3-christmas
-OPTIONAL
-
-Ive got some motivation back to update
-This is mostly a minor update
-including a Christmas theme (hence the version)
-and fixes a few mods
+1.1.0-major
+Suggested (Should update as major changes have happened)
 
 💗 To You all!
 
-- Christmas theme
- - Snowflakes
- - Christmas Jingle
- - Present Loading Animation
-- Fixed Certain Mods
- - Mostly Club Meetings
-   - (Fixed the issue of some mods
-      requiring scripts.rpa to be
-      deleted whilst trying not to
-      break the ones that don't need
-      it to be deleted)
+- FIXED Blue Skies (thx @JCOverAll for the github issue)
+- This update was suppose to be a bigger update, but I really
+    did not want to have blueskies not working.
+- Again, any feedback is appreciated (good or bad)!
+   - GitHub Issues/Comments on the original post work!
+        (Please do link mods if it is an issue
+        with one)
 
-- Future -
- - The Christmas theme will be disabled
-   come January
+- I do generally appreciate all the recent downloads! TYSM!
+- I might make a discord if you guys want it.
+
+Anyways,
+
+- 1.1.0 Major Update -
+
+- Fixed background cover select for default covers
+- Fixed custom exe not being listed
+- Made Snowflakes Rotate Whilst Falling
+- Squircles!
+- Screenshots Instead Of Set Name/Set Author
+ - Set Name / Set Author Can Now Be Changed By
+    Clicking The Title / Subtitle
+- Image Viewer
+- Preload immediately visible screenshots and all covers
+    - WebWorker/Async for other images to save on ram
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under
