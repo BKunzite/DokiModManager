@@ -32,6 +32,8 @@ import sound_beep from './assets/select.ogg'
 import sound_boop from './assets/hover.ogg'
 import sound_click from './assets/pageflip.ogg'
 import App from "./App.vue";
+import Desktop from "./Desktop.vue";
+
 import {
     getCurrentWindow
 } from "@tauri-apps/api/window";
@@ -59,12 +61,14 @@ let localConfig = {
     path: "",
     config: {}
 }
+let previous_app = null
 let preload_covers = {}
 
-const CLIENT_VERSION = "1.1.0-major"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
+const CLIENT_VERSION = "1.2.0-release"
+const IN_DEV = true;
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
-    "NATSUKI", "MONIKA", "YURI", "SAYORI"
+    "NATSUKI", "MONIKA", "YURI", "SAYORI", "YINYANG"
 ]
 const CLIENT_THEMES = {
     NATSUKI: {
@@ -88,6 +92,11 @@ const CLIENT_THEMES = {
         primary_color_saturated: [192, 100, 107],
         image: "chibi_sayori.webp"
 
+    },
+    YINYANG: {
+        primary_color: [255, 255, 255],
+        primary_color_saturated: [150, 150, 150],
+        image: "snowflake.svg"
     }
 }
 const heart_empty = "&#62920;";
@@ -433,14 +442,17 @@ async function requestDirectory(path) {
         if (ppath !== undefined) {
             selectedPath = ppath;
         }
+
         for (const element in launchers) {
             launchers[element]["item"].remove();
         }
-        document.getElementById("search").value = ""
+
         launchers = []
+        const files = await readDir(selectedPath);
+
+        document.getElementById("search").value = ""
         document.getElementById("loader").classList.remove("hide")
         document.getElementById("main").classList.add("hide")
-        const files = await readDir(selectedPath);
         document.getElementById("nummods").textContent = files.length;
 
         // Update Mods List
@@ -488,6 +500,7 @@ async function requestDirectory(path) {
                         break;
                     }
                 }
+
                 let configData = {
                     author: "unknown",
                     time: 0,
@@ -495,6 +508,7 @@ async function requestDirectory(path) {
                     favorite: false,
                     coverId: 0
                 }
+
                 if (!hasConfig) {
                     await create(configPath)
                     const data = await metadata(selectedPath + "\\" + entry.name);
@@ -502,13 +516,13 @@ async function requestDirectory(path) {
                     configData.size = data.size;
                     await writeTextFile(configPath, contents);
                 } else {
-
                     configData = JSON.parse(await readTextFile(configPath));
-
                 }
+
                 if (configData.coverId === undefined || configData.coverId === null) {
                     configData.coverId = 0;
                 }
+
                 let shorthand = entry.name.replace("ddlc-", "").replace("ddlc", "").replace("-", " ");
                 const sidetext = document.createElement("header");
                 const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
@@ -561,6 +575,7 @@ async function requestDirectory(path) {
                     },
                     open: async () => {
                         showContainers(false)
+                        update_concurrent_game()
                         document.getElementById("pill").classList.remove("hide")
                         setTimeout(async () => {
                             play(sound_beep)
@@ -1170,11 +1185,9 @@ function onLoad() {
             if (newest_version.split("\n")[0] !== CLIENT_VERSION) {
                 console.warn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
-                let response = await confirm("Please Update To The Latest Version\n\n" + newest_version + "\n\nGoto Latest Releases?\nPress Cancel To Update Later.");
+                let response = await confirm("Please Update To The Latest Version\n\n" + newest_version + "\n\nGoto Configer?\nPress Cancel To Update Later.");
                 if (response) {
-                    await invoke("update", {
-                        close: true
-                    })
+                    launch_desktop()
                     return;
                 }
             } else {
@@ -1256,6 +1269,7 @@ function onLoad() {
     });
 
     document.getElementById("update").addEventListener("mouseup", async () => {
+        play(sound_beep)
         document.getElementById("update-log").classList.toggle("hide");
     })
 
@@ -1266,9 +1280,10 @@ function onLoad() {
     })
 
     document.getElementById("version").addEventListener("mouseup", async _ => {
-        await invoke("update", {
-            close: false
-        })
+        // await invoke("update", {
+        //     close: false
+        // })
+        launch_desktop()
     })
 
     document.getElementById("cover-next").addEventListener("mouseenter", () => {
@@ -1440,7 +1455,7 @@ function onLoad() {
     setInterval(update_concurrent_game, 1000)
 
     getCurrentWindow().onFocusChanged(({
-                                           payload: isfocused
+        payload: isfocused
     }) => {
         focused = isfocused
         if (focused) {
@@ -1457,5 +1472,16 @@ function onLoad() {
     invoke("request_path")
 }
 
+function launch_desktop() {
+    previous_app = createApp(Desktop)
+    previous_app.mount("#app");
+    setTimeout(() => {
+        document.getElementById("launch").addEventListener("mouseup", () => {
+            window.location.reload(true)
+        })
+        document.getElementById("desktop-close").addEventListener("mouseup", close)
+    }, 100)
+}
+
 createApp(App).mount("#app");
-addEventListener("DOMContentLoaded", onLoad)
+document.addEventListener('DOMContentLoaded', onLoad);
