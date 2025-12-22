@@ -65,20 +65,6 @@
         </div>
 
       </div>
-      <div class="update-log hide smooth-hide" id="update-log">
-        <header class="update-msg update-title">Update 1.1.0-major</header>
-        <header class="update-msg update-header">THANK YOU</header>
-        <header class="update-msg">Thank You For Continuing To Use This Mod Manager!</header>
-
-        <header class="update-msg update-header">UX</header>
-
-        <header class="update-msg">[+] Fixed Certain Mods (Mostly Club Meetings)</header>
-
-        <header class="update-msg update-header">UI</header>
-        <header class="update-msg">[+] Major Overhaul To Overall UI</header>
-        <header class="update-msg">[+] Minor Changes</header>
-
-      </div>
       <button class="close" id="close">&#60313;</button>
       <button class="minimize" id="min">&#61870;</button>
       <div class="alert smooth-hide hide" id="alert">

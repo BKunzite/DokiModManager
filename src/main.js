@@ -806,7 +806,6 @@ async function getRenpy(dir) {
 // Hide/Show Container
 
 function showContainers(show) {
-    document.getElementById("update-log").classList.add("hide");
     if (show) {
         document.getElementById("modlist").classList.remove("hide")
         document.getElementById("container-boarder").classList.remove("hide")
@@ -854,7 +853,6 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
     document.getElementById("modtitle").classList.remove("hide");
     document.getElementById("modinfo").classList.remove("hide");
     document.getElementById("cove").classList.remove("hide");
-    document.getElementById("update-log").classList.add("hide");
 
     if (author.length > 0) {
         currentEntry = mod;
@@ -1270,7 +1268,7 @@ function onLoad() {
 
     document.getElementById("update").addEventListener("mouseup", async () => {
         play(sound_beep)
-        document.getElementById("update-log").classList.toggle("hide");
+        launch_desktop()
     })
 
     document.getElementById("play").addEventListener("mouseup", async () => {
@@ -1475,12 +1473,23 @@ function onLoad() {
 function launch_desktop() {
     previous_app = createApp(Desktop)
     previous_app.mount("#app");
-    setTimeout(() => {
-        document.getElementById("launch").addEventListener("mouseup", () => {
-            window.location.reload(true)
-        })
-        document.getElementById("desktop-close").addEventListener("mouseup", close)
-    }, 100)
+    document.getElementById("desktop-version").textContent = "Doki Doki Mod Manager " + CLIENT_VERSION
+    document.getElementById("desktop-launch").addEventListener("mouseup", () => {
+        window.location.reload(true)
+    })
+    document.getElementById("desktop-close2").addEventListener("mouseup",() => {
+        invoke("close");
+    })
+    document.getElementById("desktop-close").addEventListener("mouseup", () => {
+        invoke("close");
+    })
+    document.getElementById("desktop-update").addEventListener("mouseup", () => {
+        previous_app.unmount()
+        createApp(App).mount("#app")
+        document.getElementById("loadingsub").textContent = "Updating Doki Doki Mod Manager"
+
+        invoke("update_exe")
+    })
 }
 
 createApp(App).mount("#app");

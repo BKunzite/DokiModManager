@@ -15,12 +15,13 @@ use unrar::Archive;
 use zip::ZipArchive;
 use sysinfo::{ProcessesToUpdate, System};
 use regex::Regex;
+use reqwest::get;
 use crate::hash::get_file_hash;
 
 static SCRIPTSRPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
-
+static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/dokimodmanager.exe";
 #[tauri::command]
  fn close(window: tauri::Window) {
     let _ = window.close();
@@ -161,12 +162,12 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         .parent()
         .unwrap()
         .join("game");
+
     let dir = PathBuf::from(&path)
         .parent()
         .unwrap()
         .display()
         .to_string();
-
 
     println!("{}", path);
     fix_renpy_8(&renpy, &scripts).await;
@@ -582,6 +583,42 @@ async fn set_ddlc_zip(path: &str) ->  Result<(), bool> {
     Ok(())
 }
 #[tauri::command]
+async fn update_exe() {
+    println!("Updating Using {}", LATEST_ARTIFACT);
+    let resp = get(LATEST_ARTIFACT).await.expect("Failed to download latest");
+    let mut out = File::create("./dokimodmanager-new.exe").expect("Failed to create file");
+    out.write_all(&mut resp.bytes().await.expect("Failed to write bytes")).unwrap();
+    let update_script = format!(
+        r#"
+        Start-Sleep 3;
+        if (Test-Path 'dokimodmanager-new.exe') {{
+            if (Test-Path 'dokimodmanager.exe') {{
+                Remove-Item 'dokimodmanager.exe' -Force -ErrorAction SilentlyContinue;
+            }}
+            Rename-Item 'dokimodmanager-new.exe' 'dokimodmanager.exe';
+        }}
+        Start-Sleep 2
+        if (Test-Path 'dokimodmanager.exe') {{
+            $dir = Get-Location
+            $binDir = (Get-Location).Path
+            Start-Process '.\dokimodmanager.exe' -WorkingDirectory $binDir -WindowStyle Normal
+        }}
+        "#
+    );
+
+    println!("{:?}", env::current_dir().unwrap().display());
+
+    Command::new("powershell")
+        .current_dir(env::current_dir().unwrap())
+        .args([
+            "-NoProfile",
+            "-WindowStyle", "Hidden",
+            "-Command", &update_script])
+        .spawn()
+        .expect("failed to launch cmd");
+    std::process::exit(0);
+}
+#[tauri::command]
 fn open_path(path: &str) {
     let _ = Command::new("explorer.exe")
         .args([path])
@@ -629,7 +666,7 @@ pub async fn run() {
                 .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir, update, set_ddlc_zip])
+        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir, update, set_ddlc_zip, update_exe])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

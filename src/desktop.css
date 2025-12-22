@@ -11,10 +11,11 @@
 .icon-holder {
     width: 5vw;
     height: 12.5vh;
+    border-radius: 5px;
 }
 
 .icon-holder:hover {
-    background-color: rgba(255,255,255,0.5);
+    background-color: rgba(255,255,255,0.25);
 }
 
 .icon-image {
@@ -48,4 +49,36 @@
     display: grid;
     grid-auto-flow: row;
     gap: 2vw;
+}
+
+.update-version {
+    font: 2.75vw "Aller";
+    font-weight: bold;
+    color: rgb(255, 157, 198);
+    text-shadow: -9px 9px 5px rgba(255, 157, 198,0.5);
+}
+
+.update-heaader {
+    font: 2.25vw "Aller";
+    font-weight: bold;
+    color: white;
+    padding-top: 1.5vw;
+    padding-bottom: 0.5vw;
+    text-shadow: -7px 7px 5px rgba(255,255,255,0.5);
+}
+
+.update-text {
+    font: 1.25vw "Aller";
+    color: white;
+    text-shadow: -5px 5px 5px rgba(255,255,255,0.5);
+}
+
+.updates {
+    position: absolute;
+    right: 2vw;
+    top: 2vw;
+    display: list-item;
+    justify-items: right;
+    gap: 2vw;
+    list-style: none;
 }
