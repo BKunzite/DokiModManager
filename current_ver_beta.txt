@@ -1,20 +1,13 @@
-1.1.0-major
+1.2.0-release
 Suggested (Should update as major changes have happened)
 
 💗 To You all!
 
-- FIXED Blue Skies (thx @JCOverAll for the github issue)
+- Added Auto Updater
+    - Added Desktop
 
-- Fixed background cover select for default covers
-- Fixed custom exe not being listed
-- Made Snowflakes Rotate Whilst Falling
-- Squircles!
-- Screenshots Instead Of Set Name/Set Author
- - Set Name / Set Author Can Now Be Changed By
-    Clicking The Title / Subtitle
-- Image Viewer
-- Preload immediately visible screenshots and all covers
-    - WebWorker/Async for other images to save on ram
+- Polished UI
+- Added YinYang Theme
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under
