@@ -493,22 +493,22 @@ fn import_game_rar(archive_path: &PathBuf) -> bool {
         archive = if header.entry().is_directory() {
             // println!("New File {}", header.entry().filename.to_str().unwrap());
 
-            if header.entry().filename.to_str().unwrap().starts_with("mod_assets") {
+            if header.entry().filename.to_str().expect("Failed To Read File").starts_with("mod_assets") {
                 found = true;
                 break;
             }
-            header.skip().unwrap()
+            header.skip().expect("Failed to skip header")
         } else if header.entry().is_file(){
             // println!("New File {}", header.entry().filename.to_str().unwrap());
             if is_game_folder( header.entry().filename.to_str().unwrap()) && !header.entry().filename.to_str().unwrap().contains("\\") {
                 found = true;
                 break;
             }
-            header.skip().unwrap()
+            header.skip().expect("Failed to skip header")
             // header.extract_to(add_path(&format!("{}\\{}", target_dir.to_str().unwrap(), entry)))?
         } else {
             // println!("Skipping");
-            header.skip().unwrap()
+            header.skip().expect("Failed to skip header")
         };
     }
     found
@@ -572,7 +572,7 @@ async fn set_ddlc_zip(path: &str) ->  Result<(), bool> {
         return Err(false);
     }
 
-    if get_file_hash(path).unwrap() != DDLC_HASH {
+    if get_file_hash(path).expect("Failed to get Hash") != DDLC_HASH {
         return Err(false);
     }
 

@@ -1,0 +1,51 @@
+.taskbar {
+    width: 100vw;
+    height: 7vh;
+    left: 0;
+    bottom: 0;
+    position: absolute;
+    padding: 0;
+    background-color: rgb(40,40,40);
+}
+
+.icon-holder {
+    width: 5vw;
+    height: 12.5vh;
+}
+
+.icon-holder:hover {
+    background-color: rgba(255,255,255,0.5);
+}
+
+.icon-image {
+    width: 4vw;
+    height: 4vw;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%) translateY(5px);
+}
+
+.icon-text {
+    font: 1vw "Aller";
+    color: white;
+    text-align: center;
+    transform: translateY(10vh);
+}
+
+.desktop-close {
+    left: 1vh;
+    top: 1vh;
+    width: 5vh;
+    height: 5vh;
+    position: absolute;
+    cursor: grab;
+}
+
+.icons {
+    position: absolute;
+    left: 2vw;
+    top: 2vw;
+    display: grid;
+    grid-auto-flow: row;
+    gap: 2vw;
+}
