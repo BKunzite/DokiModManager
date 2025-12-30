@@ -1,46 +1,18 @@
-import {
-    createApp
-} from "vue";
-import {
-    readDir,
-    readTextFile,
-    create,
-    writeTextFile,
-    writeFile,
-    watch,
-    remove,
-    readFile,
-} from '@tauri-apps/plugin-fs';
-import {
-    open
-} from '@tauri-apps/plugin-dialog';
-import {
-    invoke
-} from '@tauri-apps/api/core';
-import {
-    metadata,
-    isExist,
-    isDir,
-} from "tauri-plugin-fs-pro-api";
-import {
-    homeDir
-} from "@tauri-apps/api/path";
-import {
-    listen
-} from "@tauri-apps/api/event";
+import {createApp} from "vue";
+import {create, readDir, readFile, readTextFile, remove, watch, writeFile, writeTextFile,} from '@tauri-apps/plugin-fs';
+import {open} from '@tauri-apps/plugin-dialog';
+import {invoke} from '@tauri-apps/api/core';
+import {isDir, isExist, metadata,} from "tauri-plugin-fs-pro-api";
+import {homeDir} from "@tauri-apps/api/path";
+import {listen} from "@tauri-apps/api/event";
 import sound_beep from './assets/select.ogg'
 import sound_boop from './assets/hover.ogg'
 import sound_click from './assets/pageflip.ogg'
 import App from "./App.vue";
 import Desktop from "./Desktop.vue";
-
-import {
-    getCurrentWindow
-} from "@tauri-apps/api/window";
+import {getCurrentWindow} from "@tauri-apps/api/window";
 import jingle from "./assets/jingle_punks_copyrightfree.mp3"
-import {
-    getImage
-} from "./core/ImageUtils"
+import {getImage} from "./core/ImageUtils"
 import ImageLoader from "./workers/ImageLoader.js?worker"
 
 let jingle_audio = new Audio(jingle);
@@ -63,12 +35,13 @@ let localConfig = {
 }
 let previous_app = null
 let preload_covers = {}
+let logs = []
+let start = Date.now();
 
-const CLIENT_VERSION = "1.2.0-release"
-const IN_DEV = true;
+const CLIENT_VERSION = "3.2.0-newyears"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
-    "NATSUKI", "MONIKA", "YURI", "SAYORI", "YINYANG"
+    "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER"
 ]
 const CLIENT_THEMES = {
     NATSUKI: {
@@ -93,7 +66,7 @@ const CLIENT_THEMES = {
         image: "chibi_sayori.webp"
 
     },
-    YINYANG: {
+    WINTER: {
         primary_color: [255, 255, 255],
         primary_color_saturated: [150, 150, 150],
         image: "snowflake.svg"
@@ -112,6 +85,26 @@ function preloadImage(src) {
         img.onload = () => resolve(img);
         img.onerror = reject;
     });
+}
+
+// Appends Message To User Console
+
+async function globLog(msg) {
+    console.log(msg)
+    await addConstant(msg, false, Date.now())
+}
+
+async function globWarn(msg) {
+    console.warn(msg)
+    await addConstant(msg, true, Date.now())
+}
+
+async function addConstant(msg, isWarn, timestamp) {
+    logs.push({
+        msg: msg,
+        isWarn: isWarn,
+        timestamp: timestamp
+    })
 }
 
 // Removes Right Click Menu
@@ -334,6 +327,10 @@ async function import_mod(path) {
             }],
             title: 'Select Your Mod\'s Zip File'
         });
+        await invoke('tracker', {
+            event: 'manual_download',
+            props: {  }
+        });
     }
     if (selectedPath != null) {
         if (selectedPath.endsWith(".zip") || selectedPath.endsWith(".rar")) {
@@ -467,7 +464,7 @@ async function requestDirectory(path) {
                 let dir = selectedPath + "\\" + entry.name;
                 let isInDir = false;
                 for (const localEntry of localFiles) {
-                    if (localEntry.name === "DDLC.exe") {
+                    if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
                         isInDir = true;
                         break;
                     }
@@ -477,7 +474,7 @@ async function requestDirectory(path) {
                     dir = selectedPath + "\\" + entry.name + "\\DDLC-1.1.1-pc"
                     if (await isDir(dir)) {
                         for (const localEntry of await readDir(dir)) {
-                            if (localEntry.name === "DDLC.exe") {
+                            if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
                                 isInDir = true;
                                 break;
                             }
@@ -486,7 +483,7 @@ async function requestDirectory(path) {
                 }
 
                 if (!isInDir) {
-                    console.warn(dir + " Does Not Contain DDLC.exe")
+                    globWarn(dir + " Does Not Contain DDLC.exe")
                     continue;
                 }
 
@@ -574,8 +571,12 @@ async function requestDirectory(path) {
                         return entry.name
                     },
                     open: async () => {
+                        await invoke('tracker', {
+                            event: 'game_launch',
+                            props: { mod: entry.name }
+                        });
                         showContainers(false)
-                        update_concurrent_game()
+                        await update_concurrent_game()
                         document.getElementById("pill").classList.remove("hide")
                         setTimeout(async () => {
                             play(sound_beep)
@@ -757,7 +758,7 @@ async function requestDirectory(path) {
                 document.getElementById("modlist").appendChild(sidetext)
             }
         }
-        console.log("finish")
+        await globLog("finish")
         document.getElementById("loadingsub").textContent = "Loaded Mods | Loading GUI"
 
         setTimeout(() => {
@@ -846,9 +847,7 @@ function getTextWidth(text, font) {
 // Updates Information On Main Window
 
 async function updateDisplayinfo(mod, author, space, time, renpy) {
-    const shorthand = mod.replace("ddlc-", "").replace("ddlc", "").replace("-", " ");
-
-    document.getElementById("modtitle").value = shorthand
+    document.getElementById("modtitle").value = mod.replace("ddlc-", "").replace("ddlc", "").replace("-", " ")
 
     document.getElementById("modtitle").classList.remove("hide");
     document.getElementById("modinfo").classList.remove("hide");
@@ -868,7 +867,7 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         document.getElementById("path").classList.remove("hide");
         document.getElementById("play").classList.remove("hide");
         document.getElementById("optionsmenu").classList.add("hide");
-        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon;\">&#60899;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60766;</span>" + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + time;
+        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60766;</span>" + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + time;
         document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
         document.getElementById("authinput").addEventListener("input", async (e) => {
             document.getElementById("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 225) + "px"
@@ -894,7 +893,7 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         document.getElementById("path").classList.add("hide");
         document.getElementById("play").classList.add("hide");
         document.getElementById("optionsmenu").classList.remove("hide");
-        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon;\">&#60899;</span> Kunzite <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + Math.floor(min / 60) + "h " + (min % 60) + "m";
+        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61973;</span> " + Math.floor(min / 60) + "h " + (min % 60) + "m";
     }
 }
 
@@ -1018,7 +1017,11 @@ async function rename_mod() {
 
 // Waits For Webpage To Load
 
-function onLoad() {
+async function onLoad() {
+    let start = Date.now();
+
+    await globLog("[MARKER] Debugger Attached.")
+    await globLog("Loading Observers...")
 
     // Listens For Rename Finishing
 
@@ -1026,9 +1029,9 @@ function onLoad() {
         await requestDirectory(selectedPath)
         while (document.getElementById("loader").classList.contains("hide")) {}
         const value = event.payload.text;
-        console.log(value)
+        await globLog(value)
         if (launchers[value]) {
-            launchers[value].leftClick();
+            await launchers[value].leftClick();
         }
     })
 
@@ -1083,7 +1086,7 @@ function onLoad() {
         if (launchers[goal]) {
             launchers[goal].leftClick();
         } else {
-            console.log(goal + " Not Found!")
+            globWarn(goal + " Not Found!")
         }
     })
 
@@ -1143,14 +1146,23 @@ function onLoad() {
             play(sound_beep)
             showContainers(true)
             document.getElementById("alert").classList.add("hide")
+            await invoke('tracker', {
+                event: 'auto_download',
+                props: {  }
+            });
             await import_mod(alert_path)
             alert_path = undefined;
         }
     })
 
+    globLog("Finished Loading Observers. Took " + (Date.now() - start) + "ms.")
+    globLog("Loading Defaults...")
+
     document.getElementById("loader").classList.remove("hide")
     document.getElementById("main").classList.add("hide")
-    document.getElementById("loadingsub").textContent = "Installing DDLC-Vanilla"
+    document.getElementById("loadingsub").textContent = "Installing DDLC-Vanilla (If nothing happens after 10s, please restart the program)"
+
+    globLog("Loading Drag/Drop")
 
     // Drag Drop Handling
     // This is for dragging and dropping images and mods
@@ -1159,6 +1171,10 @@ function onLoad() {
         let paths = event.payload.paths;
         for (const path of paths) {
             if (path.endsWith(".zip") || path.endsWith(".rar")) {
+                await invoke('tracker', {
+                    event: 'manual_download',
+                    props: {  }
+                });
                 await import_mod(path)
             } else {
                 await writeFile(local_path + "\\store\\images\\" + path.split("\\").pop(), await readFile(path))
@@ -1173,29 +1189,44 @@ function onLoad() {
     // This is what is recieved when you import a mod
     // This is also the first handshake handler that tells the frontend (this) to listen to the downloads folder
 
+    globLog("Finished Loading Defaults (" + (Date.now() - start) + "ms).")
+    globLog("Loading Observers2")
+
     listen("pathRespond", async (event) => {
         if (!reset) {
+            globLog("Start Loading Pt. 2 (" + (Date.now() - start) + "ms).")
+
             let payloadPath = event.payload.path;
             let newest_version = await getVersion();
             await loadConfig(event.payload.local_path)
             reset = true;
 
+            await globLog("Version Check (" + (Date.now() - start) + "ms).")
+
             if (newest_version.split("\n")[0] !== CLIENT_VERSION) {
-                console.warn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
+                await globWarn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
-                let response = await confirm("Please Update To The Latest Version\n\n" + newest_version + "\n\nGoto Configer?\nPress Cancel To Update Later.");
-                if (response) {
-                    launch_desktop()
-                    return;
+                if (navigator.onLine) {
+                    let response = await confirm("AUTO UPDATE\nNew Update Available! (Press 'OK' to update!)\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
+                    if (response) {
+                        await update_client()
+
+                        return;
+                    }
+                } else {
+                    await globWarn("You are currently offline. Update will not be requested.")
                 }
             } else {
-                console.log(CLIENT_VERSION, localConfig.config.version)
+                await globLog(CLIENT_VERSION, localConfig.config.version)
                 document.getElementById("version").textContent = `(${CLIENT_VERSION})`
                 if (localConfig.config.version !== CLIENT_VERSION) {
                     await saveConfig()
                     confirm("Updated! (Wont Pop-Up Again Until Next Update)\n\n" + newest_version + "\n\nPress OK or CANCEL to continue.");
                 }
             }
+
+            await globLog("DDLC Check (" + (Date.now() - start) + "ms).")
+
             if (!await isDir("./store/ddlc")) {
                 while (!await isDir("./store/ddlc")) {
                     try {
@@ -1212,14 +1243,18 @@ function onLoad() {
                             path: p
                         })
                     } catch (error) {
-                        console.log("Zip Failed: ", error)
+                        await globWarn("Zip Failed: ", error)
                     }
                 }
             }
 
+            await globLog("Theme (" + (Date.now() - start) + "ms).")
             await setTheme(localConfig.config.theme)
+            await globLog("Covers (" + (Date.now() - start) + "ms).")
             await update_cover_images(true)
+            await globLog("Main (" + (Date.now() - start) + "ms).")
             await home_main()
+            await globLog("Watcher (" + (Date.now() - start) + "ms).")
             await watch(
                 event.payload.path,
                 async (event) => {
@@ -1244,6 +1279,8 @@ function onLoad() {
                     delayMs: 500
                 }
             )
+
+            await globLog("Finished Loading Core (" + (Date.now() - start) + "ms).")
         }
         try {
             await requestDirectory(event.payload.final_data)
@@ -1447,7 +1484,11 @@ function onLoad() {
         await import_mod();
     })
 
+    await globLog("Finished Loading Observers2 (" + (Date.now() - start) + "ms).")
+
     // SNOWFLAKE
+
+    await globLog("Loading Intervals.")
 
     setInterval(snowflake, 100)
     setInterval(update_concurrent_game, 1000)
@@ -1467,12 +1508,63 @@ function onLoad() {
     jingle_audio.loop = true;
     jingle_audio.play()
 
-    invoke("request_path")
+    await globLog("Finished Loading PT. 1 (" + (Date.now() - start) + "ms).")
+
+    let loop = setInterval(async () => {
+        if (!reset) {
+            invoke("request_path")
+        } else {
+            await globLog("pt. 2 started")
+            clearInterval(loop)
+        }
+    }, 500)
 }
 
-function launch_desktop() {
+async function should_update() {
+    let newest_version = await getVersion();
+
+    return newest_version.split("\n")[0] !== CLIENT_VERSION;
+}
+
+async function update_client() {
+    if (await should_update()) {
+        document.getElementById("loadingsub").textContent = "Updating Doki Doki Mod Manager"
+        invoke("update_exe")
+    } else {
+        console.warn("Already Up To Date (" + CLIENT_VERSION + ")")
+    }
+}
+
+async function launch_desktop() {
     previous_app = createApp(Desktop)
     previous_app.mount("#app");
+
+    for (const log in logs) {
+        const data = logs[log];
+        const holder = document.createElement("div");
+        const text = document.createElement("header");
+        const timestamp = document.createElement("header");
+        const difference = data.timestamp - start;
+
+        holder.classList.add("console-text-holder")
+        text.classList.add("console-text")
+        timestamp.classList.add("console-text-right")
+
+        if (data.isWarn) {
+            holder.classList.add("console-warn")
+        }
+
+        text.textContent = data.msg;
+        timestamp.textContent = (difference < 1000 ? difference + "ms" : (difference > 60000 ? (difference / 60000).toFixed(2) + "m" : (difference / 1000).toFixed(2) + "s"));
+
+        holder.appendChild(text);
+        holder.appendChild(timestamp);
+
+        document.getElementById("console").appendChild(holder);
+    }
+
+    document.getElementById("console").scrollTo(0, document.getElementById("console").scrollHeight)
+
     document.getElementById("desktop-version").textContent = "Doki Doki Mod Manager " + CLIENT_VERSION
     document.getElementById("desktop-launch").addEventListener("mouseup", () => {
         window.location.reload(true)
@@ -1484,11 +1576,12 @@ function launch_desktop() {
         invoke("close");
     })
     document.getElementById("desktop-update").addEventListener("mouseup", () => {
-        previous_app.unmount()
-        createApp(App).mount("#app")
-        document.getElementById("loadingsub").textContent = "Updating Doki Doki Mod Manager"
+        if (should_update()) {
+            previous_app.unmount()
+            createApp(App).mount("#app")
+            update_client()
+        }
 
-        invoke("update_exe")
     })
 }
 

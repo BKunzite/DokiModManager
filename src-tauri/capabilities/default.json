@@ -13,7 +13,7 @@
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-position",
     "core:window:allow-set-size",
-
+    "aptabase:allow-track-event",
     "dialog:default",
     "fs:default",
     "fs:read-all",

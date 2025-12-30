@@ -42,4 +42,5 @@ hex = "0.4.3"
 sha2 = "0.10.9"
 open = "5.3.2"
 image = "0.24.9"
+tauri-plugin-aptabase = "1.0.0"
 

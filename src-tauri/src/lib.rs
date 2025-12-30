@@ -16,8 +16,9 @@ use zip::ZipArchive;
 use sysinfo::{ProcessesToUpdate, System};
 use regex::Regex;
 use reqwest::get;
+use serde_json::json;
 use crate::hash::get_file_hash;
-
+use tauri_plugin_aptabase::EventTracker;
 static SCRIPTSRPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
@@ -245,6 +246,11 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         let msg = error.unwrap();
         let success = msg.eq("exit code: 0");
         if !success {
+            app.track_event("Error", Some(json!({
+                "msg": msg,
+                "name": id,
+                "renpy": renpy
+            }))).expect("Failed to send tracking event");
             app.emit("popup", StringData { text: format!("An Error Has Occurred Whilst Launching The Game!\n\n{}", msg).as_str() }).expect("Popup Error");
 
         }
@@ -449,7 +455,8 @@ async fn detect_nest(string: &str, target_dir: &str,   zip_archive: Option<&mut 
         &format!("{}-Renpy7Mod", string),
         &format!("{}-Renpy8Mod", string),
         &format!("{}V3", string),
-        &format!("{}-1.0-pc", string)
+        &format!("{}-1.0-pc", string),
+        "CupcakeDelivery-1.0.1-pc"
     ];
 
     if zip_archive.is_some() {
@@ -627,7 +634,14 @@ fn open_path(path: &str) {
         .spawn()
         .expect("failed to launch cmd");
 }
+#[tauri::command]
+fn tracker(app: AppHandle, event: String, props: Option<serde_json::Value>) {
+    track(&app, event, props);
+}
 
+fn track(app: &AppHandle, event: String, props: Option<serde_json::Value>) {
+    app.track_event(&event, props).expect("Failed to track event");
+}
 async fn make_config() {
 
     let default_config_data: ConfigData = ConfigData {
@@ -659,14 +673,25 @@ pub async fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_fs_pro::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_aptabase::Builder::new("A-US-9509641067".into()).build())
+
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
             #[cfg(target_os = "windows")]
             apply_acrylic(&window,Some((0, 0, 0, 10)))
                 .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
+            let result = app.track_event("app_started", None).unwrap();
+            let app_handle = app.handle().clone();
+            println!("{:?}", &result);
+            app.get_webview_window("main").unwrap().on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                    app_handle.track_event("app_closed", None).expect("TODO: panic message");
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir, update, set_ddlc_zip, update_exe])
+        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir, update, set_ddlc_zip, update_exe, tracker])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

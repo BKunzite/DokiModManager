@@ -1,13 +1,27 @@
-1.2.0-release
-Suggested (Should update as major changes have happened)
+3.2.0-newyears
+IMPORTANT (adds auto updater so you dont have to download it from github again)
 
-💗 To You all!
+HAPPY NEW YEARS! (and obv 💗 To You all)!
+
+(new version scheme x.y.z-a)
+
+x = (4: alpha, 3: beta, 2: release candidate, 1: release)
+y = (1-100...) version
+z = quick-fix version
+a = version[y] release code-name
 
 - Added Auto Updater
     - Added Desktop
 
 - Polished UI
-- Added YinYang Theme
+- Fixed Mod Manager Stuck On 'Installing DDLC' and Not Launching
+- Fixed Certain Mods
+ - Makes Modes Look For Either 'renpy' Folder
+    instead of just 'DDLC.exe'
+ - Fixed Cupcake Delivery
+- Added 'WINTER' Theme
+
+ > Goal Before Release - Tutorial
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

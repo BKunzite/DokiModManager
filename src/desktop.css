@@ -1,3 +1,7 @@
+:root {
+    --bar-position: 0%;
+}
+
 .taskbar {
     width: 100vw;
     height: 7vh;
@@ -81,4 +85,69 @@
     justify-items: right;
     gap: 2vw;
     list-style: none;
+}
+
+.console-bg {
+    position: absolute;
+    background: rgb(40,40,40);
+    width: 50vw;
+    height: 70vh;
+    left: 50vw;
+    top: 50vh;
+    border: rgb(150,150,150) solid 0.1vh;
+    transform: translate(-50%, -50%);
+}
+
+.console-texts {
+    position: absolute;
+    width: 50vw;
+    top: calc(5vh + 1.5vw);
+    height: calc(65vh - 1.5vw);
+    overflow-y: scroll;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    flex-flow: column;
+    list-style: none;
+    vertical-align: bottom;
+}
+
+.console-bar {
+    position: absolute;
+    width: 100%;
+    height: 5vh;
+    background: rgb(60,60,60);
+}
+
+.console-text-holder {
+    width: 100%;
+    height: auto;
+}
+
+.console-warn {
+    background-color: rgba(200,200,0,0.5);
+}
+
+.console-text {
+    position: relative;
+    font: 1.5vw "Aller";
+    padding-top: 1vw;
+    padding-bottom: 1vw;
+    text-align: left;
+    color: white;
+    left: 1.5vw;
+    width: calc(100% - 12vw);
+    height: auto;
+    word-wrap: break-word;
+}
+
+.console-text-right {
+    position: absolute;
+    font: 1vw "Aller";
+    color: rgb(200,200,200);
+    width: 95%;
+    height: 5vh;
+    right: 1vw;
+    text-align: right;
+    transform: translateY(-5vh);
 }
