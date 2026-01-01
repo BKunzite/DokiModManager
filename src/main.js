@@ -1493,7 +1493,7 @@ async function onLoad() {
             tutorial_pointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width/2))  + "px"
             document.getElementById("tutorial-title").textContent = "Downloads";
             document.getElementById("tutorial-context").textContent = "Next, download a mod through reddit. You can also drag&drop a zip here. Remember to save to your Downloads folder!";
-            confirm("Please select a mod, or download a mod before continuing")
+            confirm("Please select a mod, or download one before continuing!")
             return
         }
         tutorial_step++;
