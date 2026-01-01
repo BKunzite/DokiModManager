@@ -1,5 +1,5 @@
 import {createApp} from "vue";
-import {create, readDir, readFile, readTextFile, remove, watch, writeFile, writeTextFile,} from '@tauri-apps/plugin-fs';
+import {create, readDir, readFile, readTextFile, remove, watch, writeFile, writeTextFile} from '@tauri-apps/plugin-fs';
 import {open} from '@tauri-apps/plugin-dialog';
 import {invoke} from '@tauri-apps/api/core';
 import {isDir, isExist, metadata,} from "tauri-plugin-fs-pro-api";
@@ -37,9 +37,12 @@ let previous_app = null
 let preload_covers = {}
 let logs = []
 let start = Date.now();
+let tutorial_complete = false;
+let tutorial_step = 0;
+let tutorial_pointer = null
 
-const CLIENT_VERSION = "3.2.0-newyears"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
+const CLIENT_VERSION = "1.2.0-newyears"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER"
 ]
@@ -172,6 +175,7 @@ async function loadConfig(path) {
         coverId: 0,
         totalTime: 0,
         warn_path: true,
+        tutorial: false,
         theme: "NATSUKI",
         version: "0.0.0-release"
     }
@@ -224,10 +228,10 @@ async function loadConfig(path) {
         configData = JSON.parse(await readTextFile(configPath));
     }
 
-    configData.warn_path = configData.warn_path || false;
     configData.theme = configData.theme || "NATSUKI";
     configData.coverId = configData.coverId || 0;
     configData.totalTime = configData.totalTime || 0;
+    configData.tutorial = configData.tutorial || false;
     configData.version = configData.version || "0.0.0-release";
 
     localConfig = {
@@ -235,9 +239,13 @@ async function loadConfig(path) {
         config: configData
     }
 
-    warn_path = configData.warn_path;
     total_time = configData.totalTime;
     background_cover = configData.coverId;
+    tutorial_complete = configData.tutorial;
+
+    if (tutorial_complete) {
+        document.getElementById("warn").remove()
+    }
 }
 
 // Resets and updates the list of cover images
@@ -299,8 +307,8 @@ async function update_cover_images(first_time) {
 async function saveConfig() {
     localConfig.config.coverId = background_cover;
     localConfig.config.totalTime = total_time;
-    localConfig.config.warn_path = warn_path;
     localConfig.config.version = CLIENT_VERSION;
+    localConfig.config.tutorial = tutorial_complete;
     await writeTextFile(localConfig.path, JSON.stringify(localConfig.config))
 }
 
@@ -337,6 +345,8 @@ async function import_mod(path) {
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
             document.getElementById("loadingsub").textContent = "Importing Mod " + selectedPath
+            alert_path = selectedPath;
+            showContainers(false)
             await invoke("import_mod", {
                 path: selectedPath
             })
@@ -808,6 +818,11 @@ async function getRenpy(dir) {
 
 function showContainers(show) {
     if (show) {
+        if (tutorial_pointer != null) {
+            document.getElementById("warn").classList.remove("hide")
+            tutorial_pointer.classList.remove("hide")
+            document.getElementById("tutorial").dispatchEvent(new MouseEvent("mouseup", {}))
+        }
         document.getElementById("modlist").classList.remove("hide")
         document.getElementById("container-boarder").classList.remove("hide")
         document.getElementById("container-shadow").classList.remove("hide")
@@ -815,25 +830,16 @@ function showContainers(show) {
         document.getElementById("container").classList.remove("hide")
 
     } else {
+        if (tutorial_pointer != null) {
+            document.getElementById("warn").classList.add("hide")
+            tutorial_pointer.classList.add("hide")
+        }
         document.getElementById("modlist").classList.add("hide")
         document.getElementById("container-boarder").classList.add("hide")
         document.getElementById("container-shadow").classList.add("hide")
         document.getElementById("search").classList.add("hide")
         document.getElementById("container").classList.add("hide")
     }
-}
-
-// Warns user on where to save downloads
-
-async function warn_path_alert() {
-    if (warn_path) {
-        let a = await confirm("Remember To Save To " + local_path + "\\Downloads!")
-        if (!a) return false;
-        warn_path = false;
-        await saveConfig();
-        return true
-    }
-    return true;
 }
 
 function getTextWidth(text, font) {
@@ -1074,6 +1080,10 @@ async function onLoad() {
     })
 
     listen("import_done", async (event) => {
+        console.log(alert_path)
+        if (alert_path.includes("\\Downloads\\")) {
+            await remove(alert_path);
+        }
         document.getElementById("loadingsub").textContent = "Mod Imported | Loading GUI"
         setTimeout(() => {
             if (alert_path !== undefined) {
@@ -1088,6 +1098,9 @@ async function onLoad() {
         } else {
             globWarn(goal + " Not Found!")
         }
+        alert_path = undefined;
+        showContainers(true)
+
     })
 
     // Opens Up A Spreadsheet Full Of DDLC Mods
@@ -1144,14 +1157,12 @@ async function onLoad() {
     document.getElementById("download").addEventListener("mouseup", async () => {
         if (alert_path !== undefined) {
             play(sound_beep)
-            showContainers(true)
             document.getElementById("alert").classList.add("hide")
             await invoke('tracker', {
                 event: 'auto_download',
                 props: {  }
             });
             await import_mod(alert_path)
-            alert_path = undefined;
         }
     })
 
@@ -1455,6 +1466,137 @@ async function onLoad() {
         }
     })
 
+    document.getElementById("tutorial-no").addEventListener("mouseup", async () => {
+        if (tutorial_pointer != null) {
+            tutorial_pointer.remove()
+            tutorial_pointer = null;
+        }
+        tutorial_complete = true
+        document.getElementById("warn").remove()
+        await saveConfig()
+    })
+
+    document.getElementById("tutorial").addEventListener("mouseup", async () => {
+        document.getElementById("warn").classList.add("tutorial-active")
+        document.getElementById("tutorial").textContent = "Next"
+        document.getElementById("tutorial-no").textContent = "End"
+        if (tutorial_step >= 4 && currentEntry === "") {
+            if (tutorial_pointer == null) {
+                tutorial_pointer = document.createElement("div")
+                tutorial_pointer.classList.add("tutorial-pointer")
+                document.getElementById("main").appendChild(tutorial_pointer)
+            }
+            tutorial_pointer.style.width = document.getElementById("modlist").getBoundingClientRect().width + "px";
+            tutorial_pointer.style.height = document.getElementById("modlist").getBoundingClientRect().height + "px";
+            tutorial_pointer.style.borderRadius = "10px"
+            tutorial_pointer.style.top = (document.getElementById("modlist").getBoundingClientRect().y + (document.getElementById("modlist").getBoundingClientRect().height/2)) + "px"
+            tutorial_pointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width/2))  + "px"
+            document.getElementById("tutorial-title").textContent = "Download";
+            document.getElementById("tutorial-context").textContent = "Next, download a mod through reddit. You can also drag&drop a zip here. Remember to save to your Downloads folder!";
+            confirm("Please select a mod, or download a mod before continuing")
+            return
+        }
+        tutorial_step++;
+        switch (tutorial_step) {
+            case 1:
+                document.getElementById("tutorial-title").textContent = "Welcome!";
+                document.getElementById("tutorial-context").textContent = "This will be a walk through of how to use Doki Doki Mod Manager. Press 'Next' to continue.";
+                break;
+            case 2:
+                if (tutorial_pointer == null) {
+                    tutorial_pointer = document.createElement("div")
+                    tutorial_pointer.classList.add("tutorial-pointer")
+                    tutorial_pointer.style.top = (document.getElementById("themeselect").getBoundingClientRect().y + (document.getElementById("themeselect").getBoundingClientRect().height/2)) + "px"
+                    tutorial_pointer.style.left = (document.getElementById("themeselect").getBoundingClientRect().x + (document.getElementById("themeselect").getBoundingClientRect().width/2))  + "px"
+
+                    document.getElementById("main").appendChild(tutorial_pointer)
+                }
+                document.getElementById("tutorial-title").textContent = "Theme";
+                document.getElementById("tutorial-context").textContent = "First of all, lets pick a theme. Click on the highlighted button until it is your favorite character.";
+                break;
+            case 3:
+                if (tutorial_pointer == null) {
+                    tutorial_pointer = document.createElement("div")
+                    tutorial_pointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorial_pointer)
+                }
+                tutorial_pointer.style.width = document.getElementById("covers").getBoundingClientRect().width + "px";
+                tutorial_pointer.style.height = document.getElementById("covers").getBoundingClientRect().height + "px";
+                tutorial_pointer.style.borderRadius = "10px"
+                tutorial_pointer.style.top = (document.getElementById("covers").getBoundingClientRect().y + (document.getElementById("covers").getBoundingClientRect().height/2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("covers").getBoundingClientRect().x + (document.getElementById("covers").getBoundingClientRect().width/2))  + "px"
+                document.getElementById("tutorial-title").textContent = "Background";
+                document.getElementById("tutorial-context").textContent = "Next, click on a background you would like to use, or drag and drop a image to set as the background.";
+                break;
+            case 4:
+                if (tutorial_pointer == null) {
+                    tutorial_pointer = document.createElement("div")
+                    tutorial_pointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorial_pointer)
+                }
+                tutorial_pointer.style.width = document.getElementById("reddit").getBoundingClientRect().width + "px";
+                tutorial_pointer.style.height = document.getElementById("reddit").getBoundingClientRect().height + "px";
+                tutorial_pointer.style.borderRadius = "10px"
+                tutorial_pointer.style.top = (document.getElementById("reddit").getBoundingClientRect().y + (document.getElementById("reddit").getBoundingClientRect().height/2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("reddit").getBoundingClientRect().x + (document.getElementById("reddit").getBoundingClientRect().width/2))  + "px"
+                document.getElementById("tutorial-title").textContent = "Download";
+                document.getElementById("tutorial-context").textContent = "Next, download a mod through reddit. You can also drag&drop a zip here. Remember to save to your Downloads folder!";
+                break;
+            case 5:
+                if (tutorial_pointer == null) {
+                    tutorial_pointer = document.createElement("div")
+                    tutorial_pointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorial_pointer)
+                }
+                tutorial_pointer.style.width = document.getElementById("cove").getBoundingClientRect().width + "px";
+                tutorial_pointer.style.height = document.getElementById("cove").getBoundingClientRect().height + "px";
+                tutorial_pointer.style.borderRadius = "10px"
+                tutorial_pointer.style.top = (document.getElementById("cove").getBoundingClientRect().y + (document.getElementById("cove").getBoundingClientRect().height/2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("cove").getBoundingClientRect().x + (document.getElementById("cove").getBoundingClientRect().width/2))  + "px"
+                document.getElementById("tutorial-title").textContent = "Covers";
+                document.getElementById("tutorial-context").textContent = "Use the arrows at the bottom of the selected area to change the cover.";
+                break;
+            case 6:
+                if (tutorial_pointer == null) {
+                    tutorial_pointer = document.createElement("div")
+                    tutorial_pointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorial_pointer)
+                }
+                tutorial_pointer.style.width = document.getElementById("modtitle").getBoundingClientRect().width + "px";
+                tutorial_pointer.style.height = document.getElementById("modtitle").getBoundingClientRect().height + "px";
+                tutorial_pointer.style.borderRadius = "10px"
+                tutorial_pointer.style.top = (document.getElementById("modtitle").getBoundingClientRect().y + (document.getElementById("modtitle").getBoundingClientRect().height/2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("modtitle").getBoundingClientRect().x + (document.getElementById("modtitle").getBoundingClientRect().width/2))  + "px"
+                document.getElementById("tutorial-title").textContent = "Name";
+                document.getElementById("tutorial-context").textContent = "Click on the mod title to rename it. Press enter to save.";
+                break;
+            case 7:
+                if (tutorial_pointer == null) {
+                    tutorial_pointer = document.createElement("div")
+                    tutorial_pointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorial_pointer)
+                }
+                tutorial_pointer.style.width = document.getElementById("modinfo").getBoundingClientRect().width + "px";
+                tutorial_pointer.style.height = document.getElementById("modinfo").getBoundingClientRect().height + "px";
+                tutorial_pointer.style.borderRadius = "10px"
+                tutorial_pointer.style.top = (document.getElementById("modinfo").getBoundingClientRect().y + (document.getElementById("modinfo").getBoundingClientRect().height/2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("modinfo").getBoundingClientRect().x + (document.getElementById("modinfo").getBoundingClientRect().width/2))  + "px"
+                document.getElementById("tutorial-title").textContent = "Author";
+                document.getElementById("tutorial-context").textContent = "Click on the author (underlined text) to set it. Press enter to save.";
+                break;
+            default:
+                if (tutorial_pointer != null) {
+                    tutorial_pointer.remove()
+                    tutorial_pointer = null;
+                }
+                document.getElementById("tutorial").remove()
+                document.getElementById("tutorial-no").style.width = "85%"
+                document.getElementById("tutorial-title").textContent = "Finish";
+                document.getElementById("tutorial-context").textContent = "And that is it! Press 'Play' To Start The Mod. Press 'End' To Finish The Tutorial.";
+                break;
+        }
+    })
+
     // Prevent Find
 
     window.addEventListener('keydown', (e) => {
@@ -1490,34 +1632,34 @@ async function onLoad() {
 
     await globLog("Loading Intervals.")
 
-    setInterval(snowflake, 100)
+    // setInterval(snowflake, 100)
     setInterval(update_concurrent_game, 1000)
 
-    getCurrentWindow().onFocusChanged(({
-        payload: isfocused
-    }) => {
-        focused = isfocused
-        if (focused) {
-            jingle_audio.play()
-        } else {
-            jingle_audio.pause()
-        }
-    });
+    // getCurrentWindow().onFocusChanged(({
+    //     payload: isfocused
+    // }) => {
+    //     focused = isfocused
+    //     if (focused) {
+    //         jingle_audio.play()
+    //     } else {
+    //         jingle_audio.pause()
+    //     }
+    // });
 
-    jingle_audio.volume = 0.1;
-    jingle_audio.loop = true;
-    jingle_audio.play()
+    // jingle_audio.volume = 0.1;
+    // jingle_audio.loop = true;
+    // jingle_audio.play()
 
     await globLog("Finished Loading PT. 1 (" + (Date.now() - start) + "ms).")
-
+    invoke("request_path")
     let loop = setInterval(async () => {
         if (!reset) {
-            invoke("request_path")
+            await invoke("request_path")
         } else {
             await globLog("pt. 2 started")
             clearInterval(loop)
         }
-    }, 500)
+    }, 2000)
 }
 
 async function should_update() {

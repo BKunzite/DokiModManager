@@ -1,35 +1,27 @@
-1.1.0-major
-Suggested (Should update as major changes have happened)
+1.2.0-newyears
+IMPORTANT (adds auto updater so you dont have to download it from github again)
 
-💗 To You all!
+HAPPY NEW YEARS! (and obv 💗 To You all)!
 
-- FIXED Blue Skies (thx @JCOverAll for the github issue)
-- This update was suppose to be a bigger update, but I really
-    did not want to have blueskies not working.
-- Again, any feedback is appreciated (good or bad)!
-   - GitHub Issues/Comments on the original post work!
-        (Please do link mods if it is an issue
-        with one)
+(new version scheme x.y.z-a)
 
-- I do generally appreciate all the recent downloads! TYSM!
-- I might make a discord if you guys want it.
+x = (4: alpha, 3: beta, 2: release candidate, 1: release)
+y = (1-100...) version
+z = quick-fix version
+a = version[y] release code-name
 
-Anyways,
+- Added Auto Updater
+    - Added Desktop
 
-- 1.1.0 Major Update -
-
-! CHANGE
-- Screenshots Instead Of Set Name/Set Author
- - Set Name / Set Author Can Now Be Changed By
-    Clicking The Title / Subtitle
-
-- Fixed background cover select for default covers
-- Fixed custom exe not being listed
-- Made Snowflakes Rotate Whilst Falling
-- Squircles!
-- Image Viewer
-- Preload immediately visible screenshots and all covers
-    - WebWorker/Async for other images to save on ram
+- Polished UI
+- Fixed Mod Manager Stuck On 'Installing DDLC' and Not Launching
+- Fixed Certain Mods
+ - Looks For Either 'renpy' Folder
+    instead of just 'DDLC.exe' whilst importing mods
+ - Fixed Cupcake Delivery
+- Added 'WINTER' Theme
+- Added Tutorial
+- Added A Few Optimizations
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

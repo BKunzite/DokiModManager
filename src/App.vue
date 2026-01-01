@@ -20,7 +20,7 @@
         <button class="sidebutton sidebutton2 sticky" id="reddit"><span style="font-family: Icon,serif; padding-right: 10px">&#61537;</span> Reddit</button>
         <button class="sidebutton sidebutton2 sticky" id="dokimods"><span style="font-family: Icon,serif; padding-right: 10px">&#62051;</span> DokiMods</button>
         <button class="sidebutton sidebutton2 sticky" id="spreadsheet"><span style="font-family: Icon,serif; padding-right: 10px">&#61375;</span> SpreadSheet</button>
-        <button class="sidebutton sidebutton2 sticky" id="update"><span style="font-family: Icon,serif; padding-right: 10px">&#61126; </span> Updates</button>
+        <button class="sidebutton sidebutton2 sticky" id="update"><span style="font-family: Icon,serif; padding-right: 10px">&#61126; </span> Updates (Desktop)</button>
 
         <header class="sidetext sticky" id="modcount">Mods <span style="font-weight: normal; font-size: 0.75rem;" id="nummods">0</span></header>
       </div>
@@ -78,6 +78,12 @@
       </div>
       <div class="view-background smooth-hide hide" id="view-background">
         <img class="view-image" id="view-image">
+      </div>
+      <div class="tutorial-warn" id="warn">
+        <header class="tutorial-warn-title" id="tutorial-title">Tutorial</header>
+        <header class="tutorial-warn-text" id="tutorial-context">It seems like you have not done the tutorial yet, would you like to?</header>
+        <button class="tutorial-warn-accept" id="tutorial">Yes</button>
+        <button class="tutorial-warn-deny" id="tutorial-no">No</button>
       </div>
     </div>
 

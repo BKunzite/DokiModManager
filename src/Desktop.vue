@@ -31,9 +31,11 @@
     <div class="update-heaader">Auto Updater</div>
     <div class="update-text">Added Auto Updater</div>
     <div class="update-heaader">Bug Fixes & UI</div>
-    <div class="update-text">Fixed Certain Mods Not Launching</div>
     <div class="update-text">Polished UI</div>
     <div class="update-text">Added 'WINTER' Theme</div>
+    <div class="update-text">Added Tutorial</div>
+    <div class="update-text">A Little Bit More Performance</div>
+
     <div class="update-heaader">Mod Importing</div>
     <div class="update-text">Looks for 'Renpy' instead</div>
     <div class="update-text">of only 'DDLC.exe'</div>

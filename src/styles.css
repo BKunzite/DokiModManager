@@ -161,6 +161,134 @@
     border-radius: 0 0 1rem 1rem;
     background: rgba(0,0,0,0.1);
 }
+.tutorial-warn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30vw;
+    height: 30vh;
+    background-color: rgba(0,0,0, 0.2);
+    backdrop-filter: blur(20px) saturate(50%);
+    border-radius: 3rem;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    z-index: 10;
+    box-shadow: 0 0 2000px 500px rgba(0,0,0,0.8);
+    corner-shape: squircle;
+    transition: top ease-out 0.5s, box-shadow ease-out 0.5s;
+}
+
+.tutorial-warn-title {
+    position: absolute;
+    top: 2vw;
+    left: 2vw;
+    font: 2vw "Aller";
+    font-weight: bold;
+    color: white;
+}
+
+.tutorial-warn-text {
+    position: absolute;
+    top: 5vw;
+    left: 2vw;
+    width: 85%;
+    font: 1.25vw "Aller";
+    color: white;
+}
+
+.tutorial-warn-accept {
+    position: absolute;
+    font-family: "Aller", sans-serif;
+    color: white;
+    font-size: 1rem;
+    bottom: 2vw;
+    right: 2vw;
+    width: 40%;
+    height: 20%;
+    border: none;
+    background-color: rgba(255,255,255, 0.2);
+    backdrop-filter: blur(20px) saturate(50%);
+    border-radius: 3rem;
+    corner-shape: squircle;
+    transition: scale ease-out 0.1s, background-color ease-out 0.1s;
+}
+
+.tutorial-active {
+    top: 80%;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
+.tutorial-warn-deny {
+    position: absolute;
+    font-family: "Aller", sans-serif;
+    color: white;
+    font-size: 1rem;
+    bottom: 2vw;
+    left: 2vw;
+    width: 40%;
+    height: 20%;
+    border: none;
+    background-color: rgba(255,255,255, 0.2);
+    backdrop-filter: blur(20px) saturate(50%);
+    border-radius: 3rem;
+    corner-shape: squircle;
+    transition: scale ease-out 0.1s, background-color ease-out 0.1s;
+
+}
+
+.tutorial-pointer {
+    position: absolute;
+    width: 15vw;
+    height: 15vw;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, -50%);
+    border-radius: 100%;
+    box-shadow:  0 0 3000px 1000px rgba(0,0,0,0.8);
+    z-index: 9;
+    pointer-events: none;
+    transition: top ease-out 0.5s, left ease-out 0.5s, width ease-out 0.5s, height ease-out 0.5s, border-radius ease-out 0.5s;
+}
+
+.tutorial-warn-deny:hover {
+    scale: 1.1;
+}
+.tutorial-warn-accept:hover {
+    scale: 1.1;
+}
+
+.tutorial-warn::before {
+    content: "";
+    top: 0;
+    left: 0;
+    width: 50vw;
+    height: 50vw;
+    position: absolute;
+    border-radius: 100%;
+    background-color: rgba(252, 252, 149, 0.5);
+    transform: translate(-50%, -50%);
+    filter: blur(100px);
+    z-index: -1;
+}
+
+.tutorial-warn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 3rem;
+    corner-shape: squircle;
+    padding: 2px; /* control the border thickness */
+    background: linear-gradient(45deg,rgba(var(--primary-color),0) 0%, rgb(255, 255, 255) 50%, rgba(var(--primary-color),0) 100%);
+    -webkit-mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
 .alert::after {
     content: "";
     position: absolute;
@@ -298,7 +426,7 @@
 }
 
 .wheel {
-    background-image: url("assets/wired-outline-412-gift-hover-squeeze.gif");
+    background-image: url("assets/wired-outline-20-love-heart-hover-heartbeat.gif");
     background-size: cover;
     width: 15rem;
     height: 15rem;
@@ -1276,3 +1404,4 @@ li:not(.sticky):not(.favorite) {
     font-weight: bold;
     height: 2.75rem;
 }
+
