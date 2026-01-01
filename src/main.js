@@ -1491,7 +1491,7 @@ async function onLoad() {
             tutorial_pointer.style.borderRadius = "10px"
             tutorial_pointer.style.top = (document.getElementById("modlist").getBoundingClientRect().y + (document.getElementById("modlist").getBoundingClientRect().height/2)) + "px"
             tutorial_pointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width/2))  + "px"
-            document.getElementById("tutorial-title").textContent = "Download";
+            document.getElementById("tutorial-title").textContent = "Downloads";
             document.getElementById("tutorial-context").textContent = "Next, download a mod through reddit. You can also drag&drop a zip here. Remember to save to your Downloads folder!";
             confirm("Please select a mod, or download a mod before continuing")
             return
@@ -1539,7 +1539,7 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("reddit").getBoundingClientRect().y + (document.getElementById("reddit").getBoundingClientRect().height/2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("reddit").getBoundingClientRect().x + (document.getElementById("reddit").getBoundingClientRect().width/2))  + "px"
-                document.getElementById("tutorial-title").textContent = "Download";
+                document.getElementById("tutorial-title").textContent = "Downloads";
                 document.getElementById("tutorial-context").textContent = "Next, download a mod through reddit. You can also drag&drop a zip here. Remember to save to your Downloads folder!";
                 break;
             case 5:
