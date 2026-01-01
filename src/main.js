@@ -21,7 +21,6 @@ let currentEntry = ""
 let covers = []
 let background_cover = 0
 let total_time = 0;
-let warn_path = true;
 let mouse_cover_available = false;
 let alert_path = undefined
 let selectedPath;
@@ -41,7 +40,7 @@ let tutorial_complete = false;
 let tutorial_step = 0;
 let tutorial_pointer = null
 
-const CLIENT_VERSION = "1.2.0-newyears"
+const CLIENT_VERSION = "1.2.1-newyears"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER"
@@ -174,7 +173,7 @@ async function loadConfig(path) {
     let configData = {
         coverId: 0,
         totalTime: 0,
-        warn_path: true,
+        warn_path: false,
         tutorial: false,
         theme: "NATSUKI",
         version: "0.0.0-release"
@@ -1109,7 +1108,6 @@ async function onLoad() {
 
 
         play(sound_beep)
-        if (!await warn_path_alert()) return;
 
         window.open("https://docs.google.com/spreadsheets/d/1lgQD8o7qhdWmrwdJjbRv3u_bwdrXmpOzaixWFzLR8r4/edit?usp=sharing", 'reddit', 'width=1200,height=600')
     })
@@ -1119,7 +1117,6 @@ async function onLoad() {
     document.getElementById("reddit").addEventListener("mouseup", async () => {
 
         play(sound_beep)
-        if (!await warn_path_alert()) return;
 
         window.open("https://www.reddit.com/r/DDLCMods/", 'reddit', 'width=1200,height=600')
     })
@@ -1129,7 +1126,6 @@ async function onLoad() {
     document.getElementById("dokimods").addEventListener("mouseup", async () => {
 
         play(sound_beep)
-        if (!await warn_path_alert()) return;
 
         window.open("https://dokimods.me/", 'dokimods', 'width=1200,height=600')
     })

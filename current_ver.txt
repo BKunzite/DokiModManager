@@ -1,5 +1,7 @@
-1.2.0-newyears
+1.2.1-newyears
 IMPORTANT (adds auto updater so you dont have to download it from github again)
+
+:( SORRY I BROKE SIDE BUTTONS
 
 HAPPY NEW YEARS! (and obv 💗 To You all)!
 
@@ -12,7 +14,7 @@ a = version[y] release code-name
 
 - Added Auto Updater
     - Added Desktop
-
+- Fixed Broken Reddit Link
 - Polished UI
 - Fixed Mod Manager Stuck On 'Installing DDLC' and Not Launching
 - Fixed Certain Mods
