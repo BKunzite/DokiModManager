@@ -10,7 +10,6 @@ import sound_boop from './assets/hover.ogg'
 import sound_click from './assets/pageflip.ogg'
 import App from "./App.vue";
 import Desktop from "./Desktop.vue";
-import {getCurrentWindow} from "@tauri-apps/api/window";
 import jingle from "./assets/jingle_punks_copyrightfree.mp3"
 import {getImage} from "./core/ImageUtils"
 import ImageLoader from "./workers/ImageLoader.js?worker"
@@ -40,8 +39,8 @@ let tutorial_complete = false;
 let tutorial_step = 0;
 let tutorial_pointer = null
 
-const CLIENT_VERSION = "1.2.1-newyears"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
+const CLIENT_VERSION = "2.3.0-release"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER"
 ]
@@ -76,6 +75,202 @@ const CLIENT_THEMES = {
 }
 const heart_empty = "&#62920;";
 const heart_full = "&#62919;";
+
+const TRANSLATION_TABLE = {
+    "en": {
+        "data": {
+            "flag": "english.png",
+        },
+        "yes": "Yes",
+        "no": "No",
+        "play": "Play",
+        "import-watcher": "Allow this mod to be extracted and imported?",
+        "main": "Main",
+        "mods": "Mods",
+        "search": "Search",
+        "import": "Import Mod",
+        "greet": "Hiya",
+        "install": "Set Install Location",
+        "import_image": "Import Image",
+        "home": "Home",
+        "theme": "Set Theme",
+        "update": "Updates (Desktop)",
+        "loading": "Loading Mod",
+        "description": "Description",
+        "screenshot": "Screenshot",
+        "update-text": "Update",
+        "tutorial-text": "Tutorial",
+        "tutorial-context": "It seems like you have not done the tutorial yet, would you like to?",
+        "cancel": "Cancel",
+        "next": "Next",
+        "end": "End",
+        "updating": "Updating",
+        "tutorial": {
+            "select": "Please select a mod, or download one before continuing!",
+
+            1: {
+                title: "Welcome!",
+                context: "This will be a walk through of how to use Doki Doki Mod Manager. Press 'Next' to continue."
+            },
+            2: {
+                title: "Theme",
+                context: "First of all, lets pick a theme. Click on the highlighted button until it is your favorite character."
+            },
+            3: {
+                title: "Background",
+                context: "Next, click on a background you would like to use, or drag and drop a image to set as the background."
+            },
+            4: {
+                title: "Downloads",
+                context: "Next, download a mod through reddit. You can also drag&drop a zip here. Remember to save to your Downloads folder!"
+            },
+            5: {
+                title: "Covers",
+                context: "Use the arrows at the bottom of the selected area to change the cover."
+            },
+            6: {
+                title: "Name",
+                context: "Click on the mod title to rename it. Press enter to save."
+            },
+            7: {
+                title: "Author",
+                context: "Click on the author (underlined text) to set it. Press enter to save."
+            },
+            8: {
+                title: "Finish",
+                context: "And that is it! Press 'Play' To Start The Mod. Press 'End' To Finish The Tutorial."
+            }
+        }
+    },
+    "es": {
+        "data": {
+            "flag": "spain.png",
+        },
+        "yes": "Sí",
+        "no": "No",
+        "play": "Jugar",
+        "import-watcher": "¿Permitir que este mod se extraiga e importe?",
+        "main": "Principal",
+        "search": "Buscar",
+        "import": "Importar Mod",
+        "mods": "Mods",
+        "greet": "¡Hola!",
+        "install": "Establecer Ubicación de Instalación",
+        "import_image": "Importar Imagen",
+        "home": "Inicio",
+        "theme": "Establecer Tema",
+        "update": "Actualizaciones (Escritorio)",
+        "loading": "Cargando Mod",
+        "description": "Descripción",
+        "screenshot": "Captura de Pantalla",
+        "update-text": "Actualizar",
+        "tutorial-text": "Guía",
+        "tutorial-context": "Parece que aún no has completado el tutorial, ¿te gustaría hacerlo?",
+        "cancel": "Cancelar",
+        "next": "Siguiente",
+        "end": "Terminar",
+        "updating": "Actualizar",
+        "tutorial": {
+            "select": "Por favor, selecciona un mod o descarga uno antes de continuar!",
+            1: {
+                title: "¡Bienvenido!",
+                context: "Este será un recorrido sobre cómo usar Doki Doki Mod Manager. Presiona 'Siguiente' para continuar."
+            },
+            2: {
+                title: "Tema",
+                context: "En primer lugar, elijamos un tema. Haz clic en el botón resaltado hasta que sea tu personaje favorito."
+            },
+            3: {
+                title: "Fondo",
+                context: "A continuación, haz clic en el fondo que quieras usar, o arrastra y suelta una imagen para establecerla como fondo."
+            },
+            4: {
+                title: "Descargas",
+                context: "Luego, descarga un mod a través de Reddit. También puedes arrastrar y soltar un archivo zip aquí. ¡Recuerda guardarlo en tu carpeta de Descargas!"
+            },
+            5: {
+                title: "Portadas",
+                context: "Usa las flechas en la parte inferior del área seleccionada para cambiar la portada."
+            },
+            6: {
+                title: "Nombre",
+                context: "Haz clic en el título del mod para cambiarle el nombre. Presiona Enter para guardar."
+            },
+            7: {
+                title: "Autor",
+                context: "Haz clic en el autor (texto subrayado) para establecerlo. Presiona Enter para guardar."
+            },
+            8: {
+                title: "Finalizar",
+                context: "¡Y eso es todo! Presiona 'Jugar' para iniciar el mod. Presiona 'Terminar' para finalizar el tutorial."
+            }
+        }
+    }
+};
+
+let translation_lan = ""
+let translation = TRANSLATION_TABLE["en"];
+
+// Load Translation
+
+function loadTranslation(lang, first) {
+    if (TRANSLATION_TABLE[lang] === undefined) lang = "en";
+    translation = TRANSLATION_TABLE[lang] || TRANSLATION_TABLE["en"];
+    translation_lan = lang;
+
+    const elementMap = [
+        { id: "main-text", key: "main", type: "textContent" },
+        { id: "search", key: "search", type: "placeholder" },
+        { id: "source-text", key: "install", type: "textContent" },
+        { id: "import-text", key: "import", type: "textContent" },
+        { id: "import-image-text", key: "import_image", type: "textContent" },
+        { id: "description-text", key: "description", type: "textContent" },
+        { id: "screenshot-text", key: "screenshot", type: "textContent" },
+        { id: "download", key: "yes", type: "textContent" },
+        { id: "mods-text", key: "mods", type: "textContent" },
+        { id: "cancel", key: "no", type: "textContent" },
+        { id: "theme-text", key: "theme", type: "textContent" },
+        { id: "update-text", key: "update-text", type: "textContent" },
+        { id: "play", key: "play", type: "textContent" },
+        { id: "home-text", key: "home", type: "textContent" },
+    ];
+
+    if (!tutorial_complete) {
+        document.getElementById("tutorial-title").textContent = tutorial_step === 0 ? translation["tutorial-text"] : translation.tutorial[tutorial_step].title;
+        document.getElementById("tutorial-context").textContent = tutorial_step === 0 ? translation["tutorial-context"] : translation.tutorial[tutorial_step].context;
+        if (tutorial_pointer == null) {
+            if (tutorial_step === 8) {
+                document.getElementById("tutorial-no").textContent = translation.end
+            } else {
+                document.getElementById("tutorial").textContent = translation.next
+                document.getElementById("tutorial-no").textContent = translation.cancel
+            }
+        } else {
+            document.getElementById("tutorial").textContent = translation.yes
+            document.getElementById("tutorial-no").textContent = translation.no
+        }
+    }
+
+    for (let i = 0; i < elementMap.length; i++) {
+        const element = document.getElementById(elementMap[i].id);
+        if (element) {
+            element[elementMap[i]["type"]] = translation[elementMap[i].key];
+        }
+    }
+
+    getImage(translation["data"]["flag"], {}).then(url => {
+        document.getElementById("language-flag").src = url
+    });
+    document.getElementById("language-text").textContent = lang;
+
+    if (currentEntry === "") {
+        if (!first) {
+            home_main().then()
+        }
+    } else {
+        launchers[currentEntry].leftClick().then();
+    }
+}
 
 // Preload Images
 
@@ -176,6 +371,7 @@ async function loadConfig(path) {
         warn_path: false,
         tutorial: false,
         theme: "NATSUKI",
+        language: "",
         version: "0.0.0-release"
     }
 
@@ -232,6 +428,9 @@ async function loadConfig(path) {
     configData.totalTime = configData.totalTime || 0;
     configData.tutorial = configData.tutorial || false;
     configData.version = configData.version || "0.0.0-release";
+    configData.language = configData.language || "";
+
+    console.log("Cover Id: " + configData.coverId)
 
     localConfig = {
         path: configPath,
@@ -241,6 +440,7 @@ async function loadConfig(path) {
     total_time = configData.totalTime;
     background_cover = configData.coverId;
     tutorial_complete = configData.tutorial;
+    translation_lan = configData.language;
 
     if (tutorial_complete) {
         document.getElementById("warn").remove()
@@ -282,8 +482,8 @@ async function update_cover_images(first_time) {
                 console.log(covers)
                 setTimeout(async () => {
                     let scroll = images.scrollLeft;
-                    update_cover_images()
-                    setCover(background_cover);
+                    await update_cover_images()
+                    await setCover(background_cover);
                     images.scrollLeft = scroll;
                 }, 100)
             })
@@ -303,11 +503,13 @@ async function update_cover_images(first_time) {
 
 // Saves config to file (./client-config.json)
 
-async function saveConfig() {
+async function saveConfig(a) {
+    console.log("Saving Config" + a)
     localConfig.config.coverId = background_cover;
     localConfig.config.totalTime = total_time;
     localConfig.config.version = CLIENT_VERSION;
     localConfig.config.tutorial = tutorial_complete;
+    localConfig.config.language = translation_lan;
     await writeTextFile(localConfig.path, JSON.stringify(localConfig.config))
 }
 
@@ -336,11 +538,11 @@ async function import_mod(path) {
         });
         await invoke('tracker', {
             event: 'manual_download',
-            props: {  }
+            props: { name: selectedPath.split("\\").pop() }
         });
     }
     if (selectedPath != null) {
-        if (selectedPath.endsWith(".zip") || selectedPath.endsWith(".rar")) {
+        if (selectedPath.endsWith(".zip") || selectedPath.endsWith(".rar") || selectedPath.endsWith("scripts.rpa")) {
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
             document.getElementById("loadingsub").textContent = "Importing Mod " + selectedPath
@@ -375,16 +577,19 @@ async function setCover(id) {
 
 // Sets Client Theme Color
 
-async function setTheme(name) {
+async function setTheme(name, first) {
     if (!(name in CLIENT_THEMES)) {
         name = "NATSUKI";
     }
+
     document.getElementById("chibi").src = await getImage(CLIENT_THEMES[name].image, covers);
     document.body.style.setProperty("--primary-color", CLIENT_THEMES[name].primary_color)
     document.body.style.setProperty("--primary-color-saturated", CLIENT_THEMES[name].primary_color_saturated)
 
     localConfig.config.theme = name
-    await saveConfig()
+    if (!first) {
+        await saveConfig()
+    }
 }
 
 // Gets An Image Locally/In Project
@@ -464,7 +669,7 @@ async function requestDirectory(path) {
         // Update Mods List
 
         for (const entry of files) {
-            document.getElementById("loadingsub").textContent = "Loading Mod " + entry.name.replace("ddlc-", "").replace("ddlc", "").replace("-", "")
+            document.getElementById("loadingsub").textContent = translation.loading + " " + entry.name.replace("ddlc-", "").replace("ddlc", "").replace("-", "")
             if (entry.isDirectory) {
                 const localFiles = await readDir(selectedPath + "\\" + entry.name);
 
@@ -907,7 +1112,7 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
 async function home_main() {
     // await updateDisplayinfo("Hi " + (await invoke("whois", {})) + "!", "", "", "") -- This could leak the users full name; deprecated
     document.getElementById("covertext").innerHTML = ""
-    await updateDisplayinfo("Hiya " + (await homeDir()).replace("C:\\Users\\", "") + "!", "", "", "")
+    await updateDisplayinfo(translation.greet + " " + (await homeDir()).replace("C:\\Users\\", "") + "!", "", "", "")
 }
 
 // Sets Author Of Mod And Saves To File
@@ -929,9 +1134,19 @@ async function setauthor() {
     }
 }
 
+// Keep Alive
+
+async function keepAlive() {
+    await invoke('tracker', {
+        event: 'keep_alive',
+        props: { name: currentEntry }
+    });
+}
+
 // Updates Screen With Game Open
 
 async function update_concurrent_game() {
+    if (!document.getElementById("loader").classList.contains("hide")) return;
     if (!document.getElementById("modlist").classList.contains("hide") || alert_path !== undefined) {
         if (!document.getElementById("pill").classList.contains("hide")) {
             document.getElementById("pill").classList.add("hide")
@@ -1156,7 +1371,7 @@ async function onLoad() {
             document.getElementById("alert").classList.add("hide")
             await invoke('tracker', {
                 event: 'auto_download',
-                props: {  }
+                props: { name: alert_path.split("\\").pop() }
             });
             await import_mod(alert_path)
         }
@@ -1177,7 +1392,7 @@ async function onLoad() {
     listen('tauri://drag-drop', async (event) => {
         let paths = event.payload.paths;
         for (const path of paths) {
-            if (path.endsWith(".zip") || path.endsWith(".rar")) {
+            if (path.endsWith(".zip") || path.endsWith(".rar") || path.endsWith(".rpa")) {
                 await invoke('tracker', {
                     event: 'manual_download',
                     props: {  }
@@ -1201,7 +1416,7 @@ async function onLoad() {
 
     listen("pathRespond", async (event) => {
         if (!reset) {
-            globLog("Start Loading Pt. 2 (" + (Date.now() - start) + "ms).")
+            await globLog("Start Loading Pt. 2 (" + (Date.now() - start) + "ms).")
 
             let payloadPath = event.payload.path;
             let newest_version = await getVersion();
@@ -1255,8 +1470,29 @@ async function onLoad() {
                 }
             }
 
+            await globLog("Language (" + (Date.now() - start) + "ms).")
+
+            if (translation_lan === "") {
+                document.getElementById("language-list").classList.remove("hide")
+                document.getElementById("language-list").classList.add("language-list-force")
+                document.getElementById("loader").appendChild(document.getElementById("language-list"))
+                let interval;
+                await new Promise(resolve => interval = setInterval(() => {
+                    if (translation_lan !== "") {
+                        resolve()
+                        clearInterval(interval)
+                    }
+                }, 100))
+                document.getElementById("language-list").classList.add("hide")
+                document.getElementById("language-list").classList.remove("language-list-force")
+                document.getElementById("main").appendChild(document.getElementById("language-list"))
+            } else {
+                await loadTranslation(translation_lan, true)
+            }
+
             await globLog("Theme (" + (Date.now() - start) + "ms).")
-            await setTheme(localConfig.config.theme)
+
+            await setTheme(localConfig.config.theme, true)
             await globLog("Covers (" + (Date.now() - start) + "ms).")
             await update_cover_images(true)
             await globLog("Main (" + (Date.now() - start) + "ms).")
@@ -1268,7 +1504,7 @@ async function onLoad() {
                     for (const index in event.paths) {
                         const path = event.paths[index];
                         setTimeout(async () => {
-                            if ((path.endsWith(".zip") || path.endsWith(".rar")) && await isExist(path)) {
+                            if ((path.endsWith(".zip") || path.endsWith(".rar") || path.endsWith(".rpa")) && await isExist(path)) {
                                 document.getElementById("alert").classList.remove("hide")
                                 showContainers(false)
                                 alert_path = path
@@ -1298,6 +1534,10 @@ async function onLoad() {
 
     listen('closed', async (event) => {
         if (event.payload.id !== "") {
+            await invoke('tracker', {
+                event: 'game_close',
+                props: { mod: event.payload.id }
+            });
             await launchers[event.payload.id].close();
         }
     });
@@ -1462,6 +1702,26 @@ async function onLoad() {
         }
     })
 
+    document.getElementById("english").addEventListener("mouseup", async () => {
+        let old = translation_lan;
+        await loadTranslation("en", (old === ""))
+        if (old !== "") {
+            saveConfig().then()
+        }
+    })
+
+    document.getElementById("spanish").addEventListener("mouseup", async () => {
+        let old = translation_lan;
+        await loadTranslation("es", (old === ""))
+        if (old !== "") {
+            saveConfig().then()
+        }
+    })
+
+    document.getElementById("language").addEventListener("mouseup", async () => {
+        document.getElementById("language-list").classList.toggle("hide")
+    })
+
     document.getElementById("tutorial-no").addEventListener("mouseup", async () => {
         if (tutorial_pointer != null) {
             tutorial_pointer.remove()
@@ -1474,8 +1734,8 @@ async function onLoad() {
 
     document.getElementById("tutorial").addEventListener("mouseup", async () => {
         document.getElementById("warn").classList.add("tutorial-active")
-        document.getElementById("tutorial").textContent = "Next"
-        document.getElementById("tutorial-no").textContent = "End"
+        document.getElementById("tutorial").textContent = translation.next
+        document.getElementById("tutorial-no").textContent = translation.cancel
         if (tutorial_step >= 4 && currentEntry === "") {
             if (tutorial_pointer == null) {
                 tutorial_pointer = document.createElement("div")
@@ -1487,16 +1747,16 @@ async function onLoad() {
             tutorial_pointer.style.borderRadius = "10px"
             tutorial_pointer.style.top = (document.getElementById("modlist").getBoundingClientRect().y + (document.getElementById("modlist").getBoundingClientRect().height/2)) + "px"
             tutorial_pointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width/2))  + "px"
-            document.getElementById("tutorial-title").textContent = "Downloads";
-            document.getElementById("tutorial-context").textContent = "Next, download a mod through reddit. You can also drag&drop a zip here. Remember to save to your Downloads folder!";
-            confirm("Please select a mod, or download one before continuing!")
+            document.getElementById("tutorial-title").textContent = translation.tutorial[4].title;
+            document.getElementById("tutorial-context").textContent = translation.tutorial[4].context;
+            confirm(translation.tutorial.select)
             return
         }
         tutorial_step++;
         switch (tutorial_step) {
             case 1:
-                document.getElementById("tutorial-title").textContent = "Welcome!";
-                document.getElementById("tutorial-context").textContent = "This will be a walk through of how to use Doki Doki Mod Manager. Press 'Next' to continue.";
+                document.getElementById("tutorial-title").textContent = translation.tutorial[1].title;
+                document.getElementById("tutorial-context").textContent = translation.tutorial[1].context;
                 break;
             case 2:
                 if (tutorial_pointer == null) {
@@ -1507,8 +1767,8 @@ async function onLoad() {
 
                     document.getElementById("main").appendChild(tutorial_pointer)
                 }
-                document.getElementById("tutorial-title").textContent = "Theme";
-                document.getElementById("tutorial-context").textContent = "First of all, lets pick a theme. Click on the highlighted button until it is your favorite character.";
+                document.getElementById("tutorial-title").textContent = translation.tutorial[2].title;
+                document.getElementById("tutorial-context").textContent = translation.tutorial[2].context;
                 break;
             case 3:
                 if (tutorial_pointer == null) {
@@ -1521,8 +1781,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("covers").getBoundingClientRect().y + (document.getElementById("covers").getBoundingClientRect().height/2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("covers").getBoundingClientRect().x + (document.getElementById("covers").getBoundingClientRect().width/2))  + "px"
-                document.getElementById("tutorial-title").textContent = "Background";
-                document.getElementById("tutorial-context").textContent = "Next, click on a background you would like to use, or drag and drop a image to set as the background.";
+                document.getElementById("tutorial-title").textContent = translation.tutorial[3].title;
+                document.getElementById("tutorial-context").textContent = translation.tutorial[3].context;
                 break;
             case 4:
                 if (tutorial_pointer == null) {
@@ -1535,8 +1795,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("reddit").getBoundingClientRect().y + (document.getElementById("reddit").getBoundingClientRect().height/2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("reddit").getBoundingClientRect().x + (document.getElementById("reddit").getBoundingClientRect().width/2))  + "px"
-                document.getElementById("tutorial-title").textContent = "Downloads";
-                document.getElementById("tutorial-context").textContent = "Next, download a mod through reddit. You can also drag&drop a zip here. Remember to save to your Downloads folder!";
+                document.getElementById("tutorial-title").textContent = translation.tutorial[4].title;
+                document.getElementById("tutorial-context").textContent = translation.tutorial[4].context;
                 break;
             case 5:
                 if (tutorial_pointer == null) {
@@ -1549,8 +1809,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("cove").getBoundingClientRect().y + (document.getElementById("cove").getBoundingClientRect().height/2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("cove").getBoundingClientRect().x + (document.getElementById("cove").getBoundingClientRect().width/2))  + "px"
-                document.getElementById("tutorial-title").textContent = "Covers";
-                document.getElementById("tutorial-context").textContent = "Use the arrows at the bottom of the selected area to change the cover.";
+                document.getElementById("tutorial-title").textContent = translation.tutorial[5].title;
+                document.getElementById("tutorial-context").textContent = translation.tutorial[5].context;
                 break;
             case 6:
                 if (tutorial_pointer == null) {
@@ -1563,8 +1823,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("modtitle").getBoundingClientRect().y + (document.getElementById("modtitle").getBoundingClientRect().height/2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("modtitle").getBoundingClientRect().x + (document.getElementById("modtitle").getBoundingClientRect().width/2))  + "px"
-                document.getElementById("tutorial-title").textContent = "Name";
-                document.getElementById("tutorial-context").textContent = "Click on the mod title to rename it. Press enter to save.";
+                document.getElementById("tutorial-title").textContent = translation.tutorial[6].title;
+                document.getElementById("tutorial-context").textContent = translation.tutorial[6].context;
                 break;
             case 7:
                 if (tutorial_pointer == null) {
@@ -1577,8 +1837,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("modinfo").getBoundingClientRect().y + (document.getElementById("modinfo").getBoundingClientRect().height/2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("modinfo").getBoundingClientRect().x + (document.getElementById("modinfo").getBoundingClientRect().width/2))  + "px"
-                document.getElementById("tutorial-title").textContent = "Author";
-                document.getElementById("tutorial-context").textContent = "Click on the author (underlined text) to set it. Press enter to save.";
+                document.getElementById("tutorial-title").textContent = translation.tutorial[7].title;
+                document.getElementById("tutorial-context").textContent = translation.tutorial[7].context;
                 break;
             default:
                 if (tutorial_pointer != null) {
@@ -1587,8 +1847,9 @@ async function onLoad() {
                 }
                 document.getElementById("tutorial").remove()
                 document.getElementById("tutorial-no").style.width = "85%"
-                document.getElementById("tutorial-title").textContent = "Finish";
-                document.getElementById("tutorial-context").textContent = "And that is it! Press 'Play' To Start The Mod. Press 'End' To Finish The Tutorial.";
+                document.getElementById("tutorial-no").textContent = translation.end
+                document.getElementById("tutorial-title").textContent = translation.tutorial[8].title;
+                document.getElementById("tutorial-context").textContent = translation.tutorial[8].context;
                 break;
         }
     })
@@ -1607,7 +1868,7 @@ async function onLoad() {
             next = 0;
         }
         await play(sound_beep)
-        await setTheme(CLIENT_THEME_ENUM[next]);
+        await setTheme(CLIENT_THEME_ENUM[next], false);
     })
 
     document.getElementById("importimage").addEventListener("mouseup", async () => {
@@ -1630,6 +1891,7 @@ async function onLoad() {
 
     // setInterval(snowflake, 100)
     setInterval(update_concurrent_game, 1000)
+    setInterval(keepAlive, 60000)
 
     // getCurrentWindow().onFocusChanged(({
     //     payload: isfocused
@@ -1666,7 +1928,11 @@ async function should_update() {
 
 async function update_client() {
     if (await should_update()) {
-        document.getElementById("loadingsub").textContent = "Updating Doki Doki Mod Manager"
+        await invoke('tracker', {
+            event: 'update_launcher',
+            props: {  }
+        });
+        document.getElementById("loadingsub").textContent = translation.updating + " Doki Doki Mod Manager"
         invoke("update_exe")
     } else {
         console.warn("Already Up To Date (" + CLIENT_VERSION + ")")

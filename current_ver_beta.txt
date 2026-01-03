@@ -1,27 +1,16 @@
-4.3.0-newyears
-IMPORTANT (adds auto updater so you dont have to download it from github again)
+2.3.0-release
+Minor (Bug Fixes)
 
-HAPPY NEW YEARS! (and obv 💗 To You all)!
+💗 To You all
 
-(new version scheme x.y.z-a)
+Sorry, 1.2.0/1.2.1 was rushed for new years, and contained
+a lot of bugs. This version should fix most of them.
 
-x = (4: alpha, 3: beta, 2: release candidate, 1: release)
-y = (1-100...) version
-z = quick-fix version
-a = version[y] release code-name
+Translations:
+    Added Spanish & English Translations
 
-- Added Auto Updater
-    - Added Desktop
-
-- Polished UI
-- Fixed Mod Manager Stuck On 'Installing DDLC' and Not Launching
-- Fixed Certain Mods
- - Makes Modes Look For Either 'renpy' Folder
-    instead of just 'DDLC.exe'
- - Fixed Cupcake Delivery
-- Added 'WINTER' Theme
-
- > Goal Before Release - Tutorial
+Mod Importing:
+    Support for standalone .rpa files
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

@@ -8,8 +8,9 @@ use tauri::{AppHandle, Emitter, Manager};
 use window_vibrancy::{apply_acrylic};
 use tokio::fs::{File as TokioFile};
 use tokio::io::{AsyncWriteExt, AsyncReadExt};
-use std::path::PathBuf;
+use std::path::{PathBuf};
 use std::time::{Duration, Instant};
+use rand::{thread_rng, Rng};
 use tauri_plugin_fs_pro::{is_dir, is_file};
 use unrar::Archive;
 use zip::ZipArchive;
@@ -309,11 +310,16 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     
     let source_file = PathBuf::from(&path);
-    let source_name = source_file
-        .file_name()
-        .ok_or("Unable to get source file name")?
-        .to_str()
-        .ok_or("Invalid source file name")?;
+    let raw_rpa = path.ends_with(".rpa");
+    let source_name = if raw_rpa {
+        &format!("Unknown_{}", thread_rng().gen_range(0..99999).to_string())
+    } else {
+        source_file
+            .file_name()
+            .ok_or("Unable to get source file name")?
+            .to_str()
+            .ok_or("Invalid source file name")?
+    };
 
     let source_name_no_ext = remove_numbered_suffix(
         source_name
@@ -345,6 +351,12 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
             target_dir = target_dir.join("game");
         }
         let _ = extractor::extract_rar_archive(&source_file, &target_dir);
+    } else if path.ends_with(".rpa") {
+        let file_content = fs::read(&source_file).unwrap();
+        fs::write(
+            &target_dir.join(format!("game/{}", &source_file.file_name().unwrap().to_str().unwrap())),
+            &file_content
+        ).unwrap();
     } else {
 
         let mut archive = ZipArchive::new(file.try_clone().unwrap())

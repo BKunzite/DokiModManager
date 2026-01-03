@@ -15,14 +15,14 @@
       <div data-tauri-drag-region class="bg" id="bg"></div>
       <header class="title"><span class="title-colored">Doki Doki</span> Mod Manager</header>
       <div class="container-a smooth-hide" id="modlist">
-        <header class="sidetext sticky">Main <span style="font-weight: normal; font-size: 0.75rem; cursor: grab;" id="version">(v1.0.0-release)</span></header>
-        <button class="sidebutton sidebutton2 sticky" id="options"><span style="font-family: Icon,serif; padding-right: 10px;">&#61669;</span> Home </button>
+        <header class="sidetext sticky"><span id="main-text">Main</span> <span style="font-weight: normal; font-size: 0.75rem; cursor: grab;" id="version">(v1.0.0-release)</span></header>
+        <button class="sidebutton sidebutton2 sticky" id="options"><span style="font-family: Icon,serif; padding-right: 10px;">&#61669;</span> <span id="home-text">Home</span> </button>
         <button class="sidebutton sidebutton2 sticky" id="reddit"><span style="font-family: Icon,serif; padding-right: 10px">&#61537;</span> Reddit</button>
         <button class="sidebutton sidebutton2 sticky" id="dokimods"><span style="font-family: Icon,serif; padding-right: 10px">&#62051;</span> DokiMods</button>
-        <button class="sidebutton sidebutton2 sticky" id="spreadsheet"><span style="font-family: Icon,serif; padding-right: 10px">&#61375;</span> SpreadSheet</button>
-        <button class="sidebutton sidebutton2 sticky" id="update"><span style="font-family: Icon,serif; padding-right: 10px">&#61126; </span> Updates (Desktop)</button>
+        <button class="sidebutton sidebutton2 sticky" id="spreadsheet"><span style="font-family: Icon,serif; padding-right: 10px">&#61375;</span> <span id="spreadsheet">SpreadSheet</span></button>
+        <button class="sidebutton sidebutton2 sticky" id="update"><span style="font-family: Icon,serif; padding-right: 10px">&#61126; </span> <span id="update-text">Updates (Desktop)</span></button>
 
-        <header class="sidetext sticky" id="modcount">Mods <span style="font-weight: normal; font-size: 0.75rem;" id="nummods">0</span></header>
+        <header class="sidetext sticky" id="modcount"><span id="mods-text">Mods</span> <span style="font-weight: normal; font-size: 0.75rem;" id="nummods">0</span></header>
       </div>
 
       <div class="container-a-border smooth-hide" id="container-boarder"></div>
@@ -46,24 +46,38 @@
         <button class="play hide" id="play">Play</button>
         <button class="path hide" id="path" title="Open Path In Explorer">&#60792;</button>
         <button class="delete hide" id="delete" title="Delete Mod">&#60450;</button>
-        <header class="rename-header hide" style="left: 3.5rem;" id="screenshots-header"><span style="font-family: Icon;">&#60996;</span> Screenshots</header>
+        <header class="rename-header hide" style="left: 3.5rem;" id="screenshots-header"><span style="font-family: Icon;">&#60996;</span> <span id="screenshot-text">Screenshots</span></header>
         <div class="screenshots hide" id="screenshots-parent">
           <div class="subscreenshots" id="screenshots">
 
           </div>
         </div>
 
-        <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62551;</span> Description</header>
+        <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62551;</span> <span id="description-text">Description</span></header>
         <div class="info hide" id="info"></div>
 
         <div id="optionsmenu" class="hide">
-          <button class="set-source" id="source"> <span style="font-family: Icon,serif; font-size: 8vh">&#60786;</span><br>Set Install Location</button>
-          <button class="set-source" id="import" style="left: 31.5vw"> <span style="font-family: Icon,serif; font-size: 8vh">&#60802;</span><br>Import Mod</button>
-          <button class="set-source" id="importimage" style="left: 43vw"> <span style="font-family: Icon,serif; font-size: 8vh">&#60802;</span><br>Import Image</button>
-          <button class="set-source" id="themeselect" style="left: 54.5vw"><img style="width: 4vw" id="chibi" src="./assets/chibi_monika.png"><br>Set Theme</button>
+          <button class="set-source" id="source"> <span style="font-family: Icon,serif; font-size: 8vh">&#60786;</span><br><span id="source-text">Set Install Location</span></button>
+          <button class="set-source" id="import" style="left: 31.5vw"> <span style="font-family: Icon,serif; font-size: 8vh">&#60802;</span><br><span id="import-text">Import Mod</span></button>
+          <button class="set-source" id="importimage" style="left: 43vw"> <span style="font-family: Icon,serif; font-size: 8vh">&#60802;</span><br><span id="import-image-text">Import Image</span></button>
+          <button class="set-source" id="themeselect" style="left: 54.5vw"><img style="width: 4vw" id="chibi" src="./assets/chibi_monika.png"><br><span id="theme-text">Set Theme</span></button>
 
         </div>
 
+      </div>
+      <button class="language" id="language">
+        <img src="./assets/spain.png" class="language-flag" id="language-flag">
+        <span id="language-text" class="language-text">es</span>
+      </button>
+      <div class="language-list hide" id="language-list">
+        <button class="language-button-list" id="english">
+          <img src="./assets/english.png" class="language-flag-list">
+          <span class="language-text-list">English</span>
+        </button>
+        <button class="language-button-list" id="spanish">
+          <img src="./assets/spain.png" class="language-flag-list">
+          <span class="language-text-list">Español</span>
+        </button>
       </div>
       <button class="close" id="close">&#60313;</button>
       <button class="minimize" id="min">&#61870;</button>
