@@ -146,8 +146,8 @@ async fn default_rpa(scripts: &PathBuf) -> bool {
 
 async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
     let scriptsrpa = PathBuf::from(&scripts).join("scripts.rpa");
-    let file_size = File::open(&scriptsrpa).unwrap().metadata().unwrap().file_size();
     if !is_file(scriptsrpa.clone()).await {return}
+    let file_size = File::open(&scriptsrpa).unwrap().metadata().unwrap().file_size();
     println!("File Size: {}", file_size );
     if file_size > 10000 {return}
     let version = version_f32(renpy);
