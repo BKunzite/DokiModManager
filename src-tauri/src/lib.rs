@@ -2,6 +2,7 @@ use std::{env, fs};
 use std::env::{home_dir};
 use std::fs::{create_dir_all, remove_dir_all, remove_file, File};
 use std::io::{Write};
+use std::os::windows::fs::MetadataExt;
 use std::process::{Command, Stdio};
 use serde::{Serialize, Deserialize};
 use tauri::{AppHandle, Emitter, Manager};
@@ -145,15 +146,18 @@ async fn default_rpa(scripts: &PathBuf) -> bool {
 
 async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
     let scriptsrpa = PathBuf::from(&scripts).join("scripts.rpa");
+    let file_size = File::open(&scriptsrpa).unwrap().metadata().unwrap().file_size();
     if !is_file(scriptsrpa.clone()).await {return}
+    println!("File Size: {}", file_size );
+    if file_size > 10000 {return}
     let version = version_f32(renpy);
     if version.is_none() {return}
     let versionint = version.unwrap();
     let equal = default_rpa(&scripts).await;
     println!("Version: {} ({}f32); Equal: {};", renpy, versionint, equal);
-    if versionint >= 8.4 && equal {
+    if versionint >= 8.3 && equal {
         remove_file(PathBuf::from(&scripts).join("scripts.rpa")).unwrap();
-        println!("[REMOVED] scripts.rpa file removed in order to fix DDLC Mods >= RenPy 8.4");
+        println!("[REMOVED] scripts.rpa file removed in order to fix DDLC Mods >= RenPy 8.3");
     }
 }
 
@@ -250,6 +254,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
             app.track_event("Error", Some(json!({
                 "msg": msg,
                 "name": id,
+                "exe": file_name,
                 "renpy": renpy
             }))).expect("Failed to send tracking event");
             app.emit("popup", StringData { text: format!("An Error Has Occurred Whilst Launching The Game!\n\n{}", msg).as_str() }).expect("Popup Error");

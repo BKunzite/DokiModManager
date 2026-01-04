@@ -78,6 +78,18 @@
           <img src="./assets/spain.png" class="language-flag-list">
           <span class="language-text-list">Español</span>
         </button>
+        <button class="language-button-list" id="french">
+          <img src="./assets/france.png" class="language-flag-list">
+          <span class="language-text-list">Français</span>
+        </button>
+        <button class="language-button-list" id="cantonese">
+          <img src="./assets/hong-kong.png" class="language-flag-list">
+          <span class="language-text-list">粵語</span>
+        </button>
+        <button class="language-button-list" id="japan">
+          <img src="./assets/japan.png" class="language-flag-list">
+          <span class="language-text-list">日本語</span>
+        </button>
       </div>
       <button class="close" id="close">&#60313;</button>
       <button class="minimize" id="min">&#61870;</button>

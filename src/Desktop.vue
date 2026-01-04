@@ -37,6 +37,7 @@
 
     <div class="update-heaader">Mod Importing</div>
     <div class="update-text">Now supports .rpa files</div>
+    <div class="update-text">Fixed Renpy 8.3</div>
   </div>
   </body>
 </template>

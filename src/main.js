@@ -39,8 +39,8 @@ let tutorial_complete = false;
 let tutorial_step = 0;
 let tutorial_pointer = null
 
-const CLIENT_VERSION = "2.3.0-release"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
+const CLIENT_VERSION = "1.3.0-release"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER"
 ]
@@ -94,11 +94,10 @@ const TRANSLATION_TABLE = {
         "import_image": "Import Image",
         "home": "Home",
         "theme": "Set Theme",
-        "update": "Updates (Desktop)",
+        "update-text": "Updates (Desktop)",
         "loading": "Loading Mod",
         "description": "Description",
         "screenshot": "Screenshot",
-        "update-text": "Update",
         "tutorial-text": "Tutorial",
         "tutorial-context": "It seems like you have not done the tutorial yet, would you like to?",
         "cancel": "Cancel",
@@ -205,6 +204,197 @@ const TRANSLATION_TABLE = {
                 context: "¡Y eso es todo! Presiona 'Jugar' para iniciar el mod. Presiona 'Terminar' para finalizar el tutorial."
             }
         }
+    },
+    "fr": {
+        "data": {
+            "flag": "france.png",
+        },
+        "yes": "Oui",
+        "no": "Non",
+        "play": "Jouer",
+        "import-watcher": "Autoriser l'extraction et l'importation de ce mod ?",
+        "main": "Principal",
+        "mods": "Mods",
+        "search": "Rechercher",
+        "import": "Importer Mod",
+        "greet": "Salut",
+        "install": "Définir l'emplacement d'installation",
+        "import_image": "Importer Image",
+        "home": "Accueil",
+        "theme": "Définir Thème",
+        "update-text": "Mises à jour (Bureau)",
+        "loading": "Chargement du Mod",
+        "description": "Description",
+        "screenshot": "Capture d'écran",
+        "tutorial-text": "Tutoriel",
+        "tutorial-context": "Il semble que vous n'ayez pas encore fait le tutoriel, souhaitez-vous le faire ?",
+        "cancel": "Annuler",
+        "next": "Suivant",
+        "end": "Terminer",
+        "updating": "Mise à jour",
+        "tutorial": {
+            "select": "Veuillez sélectionner un mod, ou en télécharger un avant de continuer !",
+
+            1: {
+                "title": "Bienvenue !",
+                "context": "Ceci sera un guide sur la façon d'utiliser Doki Doki Mod Manager. Appuyez sur 'Suivant' pour continuer."
+            },
+            2: {
+                "title": "Thème",
+                "context": "Tout d'abord, choisissons un thème. Cliquez sur le bouton mis en surbrillance jusqu'à ce qu'il s'agisse de votre personnage préféré."
+            },
+            3: {
+                "title": "Fond d'écran",
+                "context": "Ensuite, cliquez sur un fond d'écran que vous souhaitez utiliser, ou faites glisser-déposer une image pour l'utiliser comme fond d'écran."
+            },
+            4: {
+                "title": "Téléchargements",
+                "context": "Ensuite, téléchargez un mod via Reddit. Vous pouvez également faire glisser-déposer un fichier zip ici. N'oubliez pas de l'enregistrer dans votre dossier Téléchargements !"
+            },
+            5: {
+                "title": "Covers",
+                "context": "Utilisez les flèches en bas de la zone sélectionnée pour changer le cover."
+            },
+            6: {
+                "title": "Nom",
+                "context": "Cliquez sur le titre du mod pour le renommer. Appuyez sur Entrée pour enregistrer."
+            },
+            7: {
+                "title": "Auteur",
+                "context": "Cliquez sur l'auteur (texte souligné) pour le définir. Appuyez sur Entrée pour enregistrer."
+            },
+            8: {
+                "title": "Terminé",
+                "context": "Et c'est tout ! Appuyez sur 'Jouer' pour démarrer le mod. Appuyez sur 'Terminer' pour finir le tutoriel."
+            }
+        }
+    },
+    "zh-HK": {
+        "data": {
+            "flag": "hong-kong.png",
+        },
+        "yes": "係",
+        "no": "唔係",
+        "play": "玩",
+        "import-watcher": "可唔可以提取同埋導入呢個模組?",
+        "main": "主頁",
+        "mods": "模組",
+        "search": "搜尋",
+        "import": "導入模組",
+        "greet": "你好",
+        "install": "設定安裝位置",
+        "import_image": "導入圖片",
+        "home": "主頁",
+        "theme": "設定主題",
+        "update-text": "更新 (桌面)",
+        "loading": "載入模組",
+        "description": "描述",
+        "screenshot": "截圖",
+        "tutorial-text": "教學",
+        "tutorial-context": "好似你仲未做過教學，你想唔想做?",
+        "cancel": "取消",
+        "next": "下一頁",
+        "end": "結束",
+        "updating": "更新緊",
+        "tutorial": {
+            "select": "請選擇一個模組，或者先下載一個再繼續!",
+
+            1: {
+                "title": "歡迎!",
+                "context": "呢個會係 Doki Doki Mod Manager 嘅使用教學。按「下一頁」繼續。"
+            },
+            2: {
+                "title": "主題",
+                "context": "首先，揀個主題。點擊高亮嘅按鈕，直到係你鍾意嘅角色。"
+            },
+            3: {
+                "title": "背景",
+                "context": "然後，點擊你想用嘅背景，或者拖放圖片設為背景。"
+            },
+            4: {
+                "title": "下載",
+                "context": "然後，透過 reddit 下載模組。你亦可以拖放 zip 檔案到呢度。記住要儲存到你的下載資料夾!"
+            },
+            5: {
+                "title": "封面",
+                "context": "用選定區域底部嘅箭頭嚟改變封面。"
+            },
+            6: {
+                "title": "名稱",
+                "context": "點擊模組標題嚟改名。按 Enter 儲存。"
+            },
+            7: {
+                "title": "作者",
+                "context": "點擊作者 (底線文字) 設定。按 Enter 儲存。"
+            },
+            8: {
+                "title": "完成",
+                "context": "就係咁多! 按「玩」開始模組。按「結束」完成教學。"
+            }
+        }
+    },
+    "jp": {
+        "data": {
+            "flag": "japan.png"
+        },
+        "yes": "はい",
+        "no": "いいえ",
+        "play": "プレイ",
+        "import-watcher": "このModの解凍とインポートを許可しますか？",
+        "main": "メイン",
+        "mods": "Mod",
+        "search": "検索",
+        "import": "Modをインポート",
+        "greet": "こんにちは",
+        "install": "インストール先を設定",
+        "import_image": "画像をインポート",
+        "home": "ホーム",
+        "theme": "テーマを設定",
+        "update-text": "アップデート (デスクトップ)",
+        "loading": "Modを読み込み中",
+        "description": "説明",
+        "screenshot": "スクリーンショット",
+        "tutorial-text": "チュートリアル",
+        "tutorial-context": "まだチュートリアルを完了していないようです。開始しますか？",
+        "cancel": "キャンセル",
+        "next": "次へ",
+        "end": "終了",
+        "updating": "更新中",
+        "tutorial": {
+            "select": "続行する前に、Modを選択するかダウンロードしてください！",
+            "1": {
+                "title": "ようこそ！",
+                "context": "Doki Doki Mod Managerの使い方をご案内します。「次へ」を押して進んでください。"
+            },
+            "2": {
+                "title": "テーマ",
+                "context": "まず最初に、テーマを選びましょう。ハイライトされたボタンをクリックして、お気に入りのキャラクターを選んでください。"
+            },
+            "3": {
+                "title": "背景",
+                "context": "次に、使用したい背景をクリックするか、画像をドラッグ＆ドロップして背景に設定してください。"
+            },
+            "4": {
+                "title": "ダウンロード",
+                "context": "次に、RedditからModをダウンロードしてください。ここにZIPファイルをドラッグ＆ドロップすることもできます。ダウンロードフォルダに保存するのを忘れないでください！"
+            },
+            "5": {
+                "title": "カバー",
+                "context": "選択範囲の下部にある矢印を使用して、カバーを変更します。"
+            },
+            "6": {
+                "title": "名前",
+                "context": "Modのタイトルをクリックして名前を変更できます。Enterキーを押して保存します。"
+            },
+            "7": {
+                "title": "作者",
+                "context": "下線付きのテキスト（作者名）をクリックして設定します。Enterキーを押して保存します。"
+            },
+            "8": {
+                "title": "完了",
+                "context": "以上です！「プレイ」を押してModを開始しましょう。「終了」を押すとチュートリアルを閉じます。"
+            }
+        }
     }
 };
 
@@ -215,6 +405,12 @@ let translation = TRANSLATION_TABLE["en"];
 
 function loadTranslation(lang, first) {
     if (TRANSLATION_TABLE[lang] === undefined) lang = "en";
+    if (translation_lan !== lang) {
+        invoke('tracker', {
+            event: 'language',
+            props: {name: lang}
+        }).then();
+    }
     translation = TRANSLATION_TABLE[lang] || TRANSLATION_TABLE["en"];
     translation_lan = lang;
 
@@ -873,6 +1069,10 @@ async function requestDirectory(path) {
                         }
                         play(sound_click)
                         const playTime = Date.now() - launch_time;
+                        await invoke('tracker', {
+                            event: 'game_close',
+                            props: { mod: entry.name, length: Math.floor(playTime / 3600000) + "h " + (Math.floor(playTime / 60000) % 60) + "m " + (Math.floor(playTime / 1000) % 60) + "s" }
+                        });
                         total_time += playTime;
                         configData.time += playTime;
                         const data = await metadata(selectedPath + "\\" + entry.name);
@@ -1429,7 +1629,11 @@ async function onLoad() {
                 await globWarn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
                 if (navigator.onLine) {
-                    let response = await confirm("AUTO UPDATE\nNew Update Available! (Press 'OK' to update!)\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
+                    let response = await confirm("AUTO UPDATE\nNew Update Available! (Press 'Ok' to update)\n" +
+                        "Pulsa 'Ok' para actualizar\n" +
+                        "Appuyez sur 'Ok' pour mettre à jour\n" +
+                        "按 「Ok」 更新\n" +
+                        "「Ok」 を押して更新する)\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
                     if (response) {
                         await update_client()
 
@@ -1534,10 +1738,7 @@ async function onLoad() {
 
     listen('closed', async (event) => {
         if (event.payload.id !== "") {
-            await invoke('tracker', {
-                event: 'game_close',
-                props: { mod: event.payload.id }
-            });
+
             await launchers[event.payload.id].close();
         }
     });
@@ -1718,6 +1919,30 @@ async function onLoad() {
         }
     })
 
+    document.getElementById("japan").addEventListener("mouseup", async () => {
+        let old = translation_lan;
+        await loadTranslation("jp", (old === ""))
+        if (old !== "") {
+            saveConfig().then()
+        }
+    })
+
+    document.getElementById("french").addEventListener("mouseup", async () => {
+        let old = translation_lan;
+        await loadTranslation("fr", (old === ""))
+        if (old !== "") {
+            saveConfig().then()
+        }
+    })
+
+    document.getElementById("cantonese").addEventListener("mouseup", async () => {
+        let old = translation_lan;
+        await loadTranslation("zh-HK", (old === ""))
+        if (old !== "") {
+            saveConfig().then()
+        }
+    })
+
     document.getElementById("language").addEventListener("mouseup", async () => {
         document.getElementById("language-list").classList.toggle("hide")
     })
@@ -1891,7 +2116,7 @@ async function onLoad() {
 
     // setInterval(snowflake, 100)
     setInterval(update_concurrent_game, 1000)
-    setInterval(keepAlive, 60000)
+    setInterval(keepAlive, 240000)
 
     // getCurrentWindow().onFocusChanged(({
     //     payload: isfocused

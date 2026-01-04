@@ -1,4 +1,4 @@
-2.3.0-release
+1.3.0-release
 Minor (Bug Fixes)
 
 💗 To You all
@@ -7,11 +7,30 @@ Sorry, 1.2.0/1.2.1 was rushed for new years, and contained
 a lot of bugs. This version should fix most of them.
 
 Translations:
-    Added Spanish & English Translations
+     English
+     Español
+     Français
+     粵語
+     日本語
 
 Mod Importing:
+    Fixed Renpy 8.3 (The patch was already out for 8.4,
+        but needed to be on 8.3 aswell)
+           + Fixed True Story
     Support for standalone .rpa files
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under
 the original post!
+
+Translation errors might exist.
+Pueden existir errores de traducción.
+Des erreurs de traduction peuvent exister.
+可能存在翻譯錯誤。
+翻訳に誤りがある可能性があります。
+
+Press 'Ok' to update
+Pulsa 'Ok' para actualizar
+Appuyez sur 'Ok' pour mettre à jour
+按 「Ok」 更新
+「Ok」 を押して更新する
