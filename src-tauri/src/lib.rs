@@ -149,7 +149,7 @@ async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
     if !is_file(scriptsrpa.clone()).await {return}
     let file_size = File::open(&scriptsrpa).unwrap().metadata().unwrap().file_size();
     println!("File Size: {}", file_size );
-    if file_size > 10000 {return}
+    if file_size > 280_0000 {return}
     let version = version_f32(renpy);
     if version.is_none() {return}
     let versionint = version.unwrap();
