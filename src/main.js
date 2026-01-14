@@ -1806,7 +1806,7 @@ async function onLoad() {
             await globLog("Language (" + (Date.now() - start) + "ms).")
 
             if (translation_lan === "") {
-                document.getElementById("language-list").classList.remove("hide")
+                document.getElementById("language-list").classList.remove("language-list-hide")
                 document.getElementById("language-list").classList.add("language-list-force")
                 document.getElementById("loader").appendChild(document.getElementById("language-list"))
                 let interval;
