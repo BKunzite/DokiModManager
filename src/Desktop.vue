@@ -27,17 +27,18 @@
     </div>
   </div>
   <div class="updates">
-    <div class="update-version" id="desktop-version">Version 1.3.0-beta</div>
+    <div class="update-version" id="desktop-version">Version 1.3.1-beta</div>
     <div class="update-heaader">Translation</div>
-    <div class="update-text">Added English</div>
-    <div class="update-text">Added Spanish</div>
+    <div class="update-text">Added Portuguese</div>
     <div class="update-heaader">Bug Fixes & UI</div>
     <div class="update-text">Polished UI</div>
-    <div class="update-text">Many Bug Fixes</div>
+    <div class="update-text">More Themes</div>
+    <div class="update-text">Performance Improvements</div>
 
     <div class="update-heaader">Mod Importing</div>
-    <div class="update-text">Now supports .rpa files</div>
-    <div class="update-text">Fixed Renpy 8.3</div>
+    <div class="update-text">Fixed Renpy 8+ mods</div>
+    <div class="update-text">A Date With Yuri</div>
+    <div class="update-text">Forever&Ever</div>
   </div>
   </body>
 </template>

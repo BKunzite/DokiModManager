@@ -1,23 +1,22 @@
-1.3.0-release
+1.3.1-release
 Minor (Bug Fixes)
 
 💗 To You all
 
-Sorry, 1.2.0/1.2.1 was rushed for new years, and contained
-a lot of bugs. This version should fix most of them.
+Mod Fixes:
+    Fixed 'A Date With Yuri'
+    Fixed 'Forever&Ever'
 
-Translations:
-     English
-     Español
-     Français
-     粵語
-     日本語
+    (Most Renpy 8 Mods Should Be Fixed,
+    Please Make A Git Issue If You Find Any
+    THat Are Still Broken)
 
-Mod Importing:
-    Fixed Renpy 8.3 (The patch was already out for 8.4,
-        but needed to be on 8.3 aswell)
-           + Fixed True Story
-    Support for standalone .rpa files
+Added Portuguese Translation
+Improved Performance (Mod Size Reading Is Now Async)
+Better OnBoarding
+
+Developer
+    Switched from 'npm' to 'bun'
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under
@@ -28,9 +27,4 @@ Pueden existir errores de traducción.
 Des erreurs de traduction peuvent exister.
 可能存在翻譯錯誤。
 翻訳に誤りがある可能性があります。
-
-Press 'Ok' to update
-Pulsa 'Ok' para actualizar
-Appuyez sur 'Ok' pour mettre à jour
-按 「Ok」 更新
-「Ok」 を押して更新する
+Podem existir erros de tradução.

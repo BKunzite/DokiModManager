@@ -6,6 +6,7 @@
   <div id="loader" class="smooth-hide">
 
     <div class="background"></div>
+    <button class="import-zip hide" id="select-zip">Import Zip</button>
     <header class="load-subtitle" id="loadingsub">PLEASE REFRESH THIS APPLICATION (Control + R)</header>
     <header class="load-title" id="loadinghead">Doki Doki Mod Manager</header>
     <div class="wheel" id="throbber"></div>
@@ -69,7 +70,7 @@
         <img src="./assets/spain.png" class="language-flag" id="language-flag">
         <span id="language-text" class="language-text">es</span>
       </button>
-      <div class="language-list hide" id="language-list">
+      <div class="language-list language-list-hide" id="language-list">
         <button class="language-button-list" id="english">
           <img src="./assets/english.png" class="language-flag-list">
           <span class="language-text-list">English</span>
@@ -89,6 +90,10 @@
         <button class="language-button-list" id="japan">
           <img src="./assets/japan.png" class="language-flag-list">
           <span class="language-text-list">日本語</span>
+        </button>
+        <button class="language-button-list" id="pt">
+          <img src="./assets/pt.png" class="language-flag-list">
+          <span class="language-text-list">Português</span>
         </button>
       </div>
       <button class="close" id="close">&#60313;</button>

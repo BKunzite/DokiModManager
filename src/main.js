@@ -1,20 +1,39 @@
-import {createApp} from "vue";
-import {create, readDir, readFile, readTextFile, remove, watch, writeFile, writeTextFile} from '@tauri-apps/plugin-fs';
-import {open} from '@tauri-apps/plugin-dialog';
-import {invoke} from '@tauri-apps/api/core';
-import {isDir, isExist, metadata,} from "tauri-plugin-fs-pro-api";
-import {homeDir} from "@tauri-apps/api/path";
-import {listen} from "@tauri-apps/api/event";
-import sound_beep from './assets/select.ogg'
-import sound_boop from './assets/hover.ogg'
-import sound_click from './assets/pageflip.ogg'
+// Vue
+import { createApp } from "vue";
+
+// Tauri Based Imports
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from "@tauri-apps/api/event";
+import { homeDir } from "@tauri-apps/api/path";
+import { open } from '@tauri-apps/plugin-dialog';
+import { openUrl } from "@tauri-apps/plugin-opener";
+import {
+    create,
+    readDir,
+    readFile,
+    readTextFile,
+    remove,
+    watch,
+    writeFile,
+    writeTextFile
+} from '@tauri-apps/plugin-fs';
+import { isDir, isExist, metadata } from "tauri-plugin-fs-pro-api";
+
+// Pages
 import App from "./App.vue";
 import Desktop from "./Desktop.vue";
-import jingle from "./assets/jingle_punks_copyrightfree.mp3"
-import {getImage} from "./core/ImageUtils"
-import ImageLoader from "./workers/ImageLoader.js?worker"
 
-let jingle_audio = new Audio(jingle);
+// Utils
+import { getImage } from "./core/ImageUtils";
+import ImageLoader from "./workers/ImageLoader.js?worker";
+
+// Assets
+import sound_beep from './assets/select.ogg';
+import sound_boop from './assets/hover.ogg';
+import sound_click from './assets/pageflip.ogg';
+import jingle from "./assets/jingle_punks_copyrightfree.mp3";
+
+// --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
 let launchers = []
 let currentEntry = ""
 let covers = []
@@ -39,10 +58,10 @@ let tutorial_complete = false;
 let tutorial_step = 0;
 let tutorial_pointer = null
 
-const CLIENT_VERSION = "1.3.0-release"
+const CLIENT_VERSION = "1.3.1-release"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
-    "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER"
+    "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON"
 ]
 const CLIENT_THEMES = {
     NATSUKI: {
@@ -71,8 +90,24 @@ const CLIENT_THEMES = {
         primary_color: [255, 255, 255],
         primary_color_saturated: [150, 150, 150],
         image: "snowflake.svg"
+    },
+    NORD: {
+        primary_color: [59, 66, 82],
+        primary_color_saturated: [136, 192, 208],
+        image: "crown.png"
+    },
+    CREAM: {
+        primary_color: [245, 245, 220],
+        primary_color_saturated: [210, 105, 30],
+        image: "sour-cream.png"
+    },
+    NEON: {
+        primary_color: [240, 6, 153],
+        primary_color_saturated: [0, 245, 255],
+        image: "neon-planet.png"
     }
 }
+
 const heart_empty = "&#62920;";
 const heart_full = "&#62919;";
 
@@ -91,6 +126,9 @@ const TRANSLATION_TABLE = {
         "import": "Import Mod",
         "greet": "Hiya",
         "install": "Set Install Location",
+        "select_zip": "Select the zip file containing DDLC. You can download this at https://ddlc.moe. (Click to open)",
+        "select_zip_button": "Import Zip",
+        "importing_zip": "Importing DDLC",
         "import_image": "Import Image",
         "home": "Home",
         "theme": "Set Theme",
@@ -106,38 +144,103 @@ const TRANSLATION_TABLE = {
         "updating": "Updating",
         "tutorial": {
             "select": "Please select a mod, or download one before continuing!",
-
-            1: {
-                title: "Welcome!",
-                context: "This will be a walk through of how to use Doki Doki Mod Manager. Press 'Next' to continue."
+            "1": {
+                "title": "Welcome!",
+                "context": "This will be a walkthrough of how to use Doki Doki Mod Manager. Press 'Next' to continue."
             },
-            2: {
-                title: "Theme",
-                context: "First of all, lets pick a theme. Click on the highlighted button until it is your favorite character."
+            "2": {
+                "title": "Theme",
+                "context": "First of all, let's pick a theme. Click on the highlighted button until it is your favorite character."
             },
-            3: {
-                title: "Background",
-                context: "Next, click on a background you would like to use, or drag and drop a image to set as the background."
+            "3": {
+                "title": "Background",
+                "context": "Next, click on a background you would like to use, or drag and drop an image to set as the background."
             },
-            4: {
-                title: "Downloads",
-                context: "Next, download a mod through reddit. You can also drag&drop a zip here. Remember to save to your Downloads folder!"
+            "4": {
+                "title": "Downloads",
+                "context": "Next, download a mod through Reddit. You can also drag and drop a zip here. Remember to save to your Downloads folder!"
             },
-            5: {
-                title: "Covers",
-                context: "Use the arrows at the bottom of the selected area to change the cover."
+            "5": {
+                "title": "Covers",
+                "context": "Use the arrows at the bottom of the selected area to change the cover."
             },
-            6: {
-                title: "Name",
-                context: "Click on the mod title to rename it. Press enter to save."
+            "6": {
+                "title": "Name",
+                "context": "Click on the mod title to rename it. Press enter to save."
             },
-            7: {
-                title: "Author",
-                context: "Click on the author (underlined text) to set it. Press enter to save."
+            "7": {
+                "title": "Author",
+                "context": "Click on the author (underlined text) to set it. Press enter to save."
             },
-            8: {
-                title: "Finish",
-                context: "And that is it! Press 'Play' To Start The Mod. Press 'End' To Finish The Tutorial."
+            "8": {
+                "title": "Finish",
+                "context": "And that is it! Press 'Play' To Start The Mod. Press 'End' To Finish The Tutorial."
+            }
+        }
+    },
+    "pt": {
+        "data": {
+            "flag": "pt.png"
+        },
+        "yes": "Sim",
+        "no": "Não",
+        "play": "Jogar",
+        "import-watcher": "Permitir que este mod seja extraído e importado?",
+        "main": "Principal",
+        "mods": "Mods",
+        "search": "Pesquisar",
+        "import": "Importar Mod",
+        "greet": "Opa",
+        "install": "Definir local de instalação",
+        "select_zip": "Selecione o arquivo zip que contém o DDLC. Você pode baixá-lo em https://ddlc.moe. (Clique para abrir)",
+        "select_zip_button": "Importar Zip",
+        "importing_zip": "Importando DDLC",
+        "import_image": "Importar Imagem",
+        "home": "Início",
+        "theme": "Definir Tema",
+        "update-text": "Atualizações (Desktop)",
+        "loading": "Carregando Mod",
+        "description": "Descrição",
+        "screenshot": "Captura de Tela",
+        "tutorial-text": "Tutorial",
+        "tutorial-context": "Parece que você ainda não fez o tutorial, gostaria de fazer agora?",
+        "cancel": "Cancelar",
+        "next": "Próximo",
+        "end": "Finalizar",
+        "updating": "Atualizando",
+        "tutorial": {
+            "select": "Por favor, selecione um mod ou baixe um antes de continuar!",
+            "1": {
+                "title": "Bem-vindo!",
+                "context": "Este será um passo a passo de como usar o Doki Doki Mod Manager. Pressione 'Próximo' para continuar."
+            },
+            "2": {
+                "title": "Tema",
+                "context": "Primeiro, vamos escolher um tema. Clique no botão destacado até encontrar sua personagem favorita."
+            },
+            "3": {
+                "title": "Fundo",
+                "context": "Depois, clique na imagem de fundo que você gostaria de usar, ou arraste e solte uma imagem aqui para defini-la como fundo."
+            },
+            "4": {
+                "title": "Downloads",
+                "context": "Agora, baixe um mod pelo Reddit. Você também pode arrastar e soltar um arquivo zip aqui. Lembre-se de salvar na sua pasta de Downloads!"
+            },
+            "5": {
+                "title": "Capas",
+                "context": "Use as setas na parte inferior da área selecionada para alterar a capa."
+            },
+            "6": {
+                "title": "Nome",
+                "context": "Clique no título do mod para renomeá-lo. Pressione Enter para salvar."
+            },
+            "7": {
+                "title": "Autor",
+                "context": "Clique no autor (texto sublinhado) para defini-lo. Pressione Enter para salvar."
+            },
+            "8": {
+                "title": "Concluir",
+                "context": "E é isso! Pressione 'Jogar' para iniciar o mod. Pressione 'Finalizar' para encerrar o tutorial."
             }
         }
     },
@@ -154,54 +257,56 @@ const TRANSLATION_TABLE = {
         "import": "Importar Mod",
         "mods": "Mods",
         "greet": "¡Hola!",
+        "select_zip": "Selecciona el archivo zip que contiene DDLC. Puedes descargarlo en https://ddlc.moe. (Haz clic para abrir)",
+        "select_zip_button": "Importar Zip",
+        "importing_zip": "Importando DDLC",
         "install": "Establecer Ubicación de Instalación",
         "import_image": "Importar Imagen",
         "home": "Inicio",
         "theme": "Establecer Tema",
-        "update": "Actualizaciones (Escritorio)",
+        "update-text": "Actualizaciones (Escritorio)",
         "loading": "Cargando Mod",
         "description": "Descripción",
         "screenshot": "Captura de Pantalla",
-        "update-text": "Actualizar",
         "tutorial-text": "Guía",
         "tutorial-context": "Parece que aún no has completado el tutorial, ¿te gustaría hacerlo?",
         "cancel": "Cancelar",
         "next": "Siguiente",
         "end": "Terminar",
-        "updating": "Actualizar",
+        "updating": "Actualizando",
         "tutorial": {
             "select": "Por favor, selecciona un mod o descarga uno antes de continuar!",
-            1: {
-                title: "¡Bienvenido!",
-                context: "Este será un recorrido sobre cómo usar Doki Doki Mod Manager. Presiona 'Siguiente' para continuar."
+            "1": {
+                "title": "¡Bienvenido!",
+                "context": "Este será un recorrido sobre cómo usar Doki Doki Mod Manager. Presiona 'Siguiente' para continuar."
             },
-            2: {
-                title: "Tema",
-                context: "En primer lugar, elijamos un tema. Haz clic en el botón resaltado hasta que sea tu personaje favorito."
+            "2": {
+                "title": "Tema",
+                "context": "En primer lugar, elijamos un tema. Haz clic en el botón resaltado hasta que sea tu personaje favorito."
             },
-            3: {
-                title: "Fondo",
-                context: "A continuación, haz clic en el fondo que quieras usar, o arrastra y suelta una imagen para establecerla como fondo."
+            "3": {
+                "title": "Fondo",
+                "context": "A continuación, haz clic en el fondo que quieras usar, o arrastra y suelta una imagen para establecerla como fondo."
             },
-            4: {
-                title: "Descargas",
-                context: "Luego, descarga un mod a través de Reddit. También puedes arrastrar y soltar un archivo zip aquí. ¡Recuerda guardarlo en tu carpeta de Descargas!"
+            "4": {
+                "title": "Descargas",
+                "context": "Luego, descarga un mod a través de Reddit. También puedes arrastrar y soltar un archivo zip aquí. ¡Recuerda guardarlo en tu carpeta de Descargas!"
             },
-            5: {
-                title: "Portadas",
-                context: "Usa las flechas en la parte inferior del área seleccionada para cambiar la portada."
+            "5": {
+                "title": "Portadas",
+                "context": "Usa las flechas en la parte inferior del área seleccionada para cambiar la portada."
             },
-            6: {
-                title: "Nombre",
-                context: "Haz clic en el título del mod para cambiarle el nombre. Presiona Enter para guardar."
+            "6": {
+                "title": "Nombre",
+                "context": "Haz clic en el título del mod para cambiarle el nombre. Presiona Enter para guardar."
             },
-            7: {
-                title: "Autor",
-                context: "Haz clic en el autor (texto subrayado) para establecerlo. Presiona Enter para guardar."
+            "7": {
+                "title": "Autor",
+                "context": "Haz clic en el autor (texto subrayado) para establecerlo. Presiona Enter para guardar."
             },
-            8: {
-                title: "Finalizar",
-                context: "¡Y eso es todo! Presiona 'Jugar' para iniciar el mod. Presiona 'Terminar' para finalizar el tutorial."
+            "8": {
+                "title": "Finalizar",
+                "context": "¡Y eso es todo! Presiona 'Jugar' para iniciar el mod. Presiona 'Terminar' para finalizar el tutorial."
             }
         }
     },
@@ -218,6 +323,9 @@ const TRANSLATION_TABLE = {
         "search": "Rechercher",
         "import": "Importer Mod",
         "greet": "Salut",
+        "select_zip": "Sélectionnez le fichier zip contenant DDLC. Vous pouvez le télécharger sur https://ddlc.moe. (Cliquez pour ouvrir)",
+        "select_zip_button": "Importer le Zip",
+        "importing_zip": "Importation de DDLC",
         "install": "Définir l'emplacement d'installation",
         "import_image": "Importer Image",
         "home": "Accueil",
@@ -234,36 +342,35 @@ const TRANSLATION_TABLE = {
         "updating": "Mise à jour",
         "tutorial": {
             "select": "Veuillez sélectionner un mod, ou en télécharger un avant de continuer !",
-
-            1: {
+            "1": {
                 "title": "Bienvenue !",
                 "context": "Ceci sera un guide sur la façon d'utiliser Doki Doki Mod Manager. Appuyez sur 'Suivant' pour continuer."
             },
-            2: {
+            "2": {
                 "title": "Thème",
                 "context": "Tout d'abord, choisissons un thème. Cliquez sur le bouton mis en surbrillance jusqu'à ce qu'il s'agisse de votre personnage préféré."
             },
-            3: {
+            "3": {
                 "title": "Fond d'écran",
                 "context": "Ensuite, cliquez sur un fond d'écran que vous souhaitez utiliser, ou faites glisser-déposer une image pour l'utiliser comme fond d'écran."
             },
-            4: {
+            "4": {
                 "title": "Téléchargements",
                 "context": "Ensuite, téléchargez un mod via Reddit. Vous pouvez également faire glisser-déposer un fichier zip ici. N'oubliez pas de l'enregistrer dans votre dossier Téléchargements !"
             },
-            5: {
-                "title": "Covers",
-                "context": "Utilisez les flèches en bas de la zone sélectionnée pour changer le cover."
+            "5": {
+                "title": "Couvertures",
+                "context": "Utilisez les flèches en bas de la zone sélectionnée pour changer la couverture."
             },
-            6: {
+            "6": {
                 "title": "Nom",
                 "context": "Cliquez sur le titre du mod pour le renommer. Appuyez sur Entrée pour enregistrer."
             },
-            7: {
+            "7": {
                 "title": "Auteur",
                 "context": "Cliquez sur l'auteur (texte souligné) pour le définir. Appuyez sur Entrée pour enregistrer."
             },
-            8: {
+            "8": {
                 "title": "Terminé",
                 "context": "Et c'est tout ! Appuyez sur 'Jouer' pour démarrer le mod. Appuyez sur 'Terminer' pour finir le tutoriel."
             }
@@ -285,6 +392,9 @@ const TRANSLATION_TABLE = {
         "install": "設定安裝位置",
         "import_image": "導入圖片",
         "home": "主頁",
+        "select_zip": "請選擇包含 DDLC 嘅 zip 檔案。你可以喺 https://ddlc.moe 下載。(撳吓即刻打開)",
+        "select_zip_button": "匯入 Zip",
+        "importing_zip": "正在匯入 DDLC",
         "theme": "設定主題",
         "update-text": "更新 (桌面)",
         "loading": "載入模組",
@@ -298,36 +408,35 @@ const TRANSLATION_TABLE = {
         "updating": "更新緊",
         "tutorial": {
             "select": "請選擇一個模組，或者先下載一個再繼續!",
-
-            1: {
+            "1": {
                 "title": "歡迎!",
                 "context": "呢個會係 Doki Doki Mod Manager 嘅使用教學。按「下一頁」繼續。"
             },
-            2: {
+            "2": {
                 "title": "主題",
                 "context": "首先，揀個主題。點擊高亮嘅按鈕，直到係你鍾意嘅角色。"
             },
-            3: {
+            "3": {
                 "title": "背景",
                 "context": "然後，點擊你想用嘅背景，或者拖放圖片設為背景。"
             },
-            4: {
+            "4": {
                 "title": "下載",
                 "context": "然後，透過 reddit 下載模組。你亦可以拖放 zip 檔案到呢度。記住要儲存到你的下載資料夾!"
             },
-            5: {
+            "5": {
                 "title": "封面",
                 "context": "用選定區域底部嘅箭頭嚟改變封面。"
             },
-            6: {
+            "6": {
                 "title": "名稱",
                 "context": "點擊模組標題嚟改名。按 Enter 儲存。"
             },
-            7: {
+            "7": {
                 "title": "作者",
                 "context": "點擊作者 (底線文字) 設定。按 Enter 儲存。"
             },
-            8: {
+            "8": {
                 "title": "完成",
                 "context": "就係咁多! 按「玩」開始模組。按「結束」完成教學。"
             }
@@ -350,6 +459,9 @@ const TRANSLATION_TABLE = {
         "import_image": "画像をインポート",
         "home": "ホーム",
         "theme": "テーマを設定",
+        "select_zip": "DDLCが含まれているzipファイルを選択してください。https://ddlc.moe からダウンロードできます。(クリックして開く)",
+        "select_zip_button": "Zipをインポート",
+        "importing_zip": "DDLCをインポート中",
         "update-text": "アップデート (デスクトップ)",
         "loading": "Modを読み込み中",
         "description": "説明",
@@ -1124,15 +1236,26 @@ async function requestDirectory(path) {
                             renpy = "Unknown (Please create a git issue on this)";
                         }
 
-                        if (configData.size === 0) {
-                            const data = await metadata(selectedPath + "\\" + entry.name);
-                            configData.size = data.size;
-                        }
+
                         renpy = entry.name + "<br>Renpy: " + renpy + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
                         document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
                         play(sound_boop)
                         const min = Math.floor(configData.time / 60000);
-                        updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
+
+                        if (configData.size === 0) {
+                            updateDisplayinfo(entry.name, configData.author, "Reading...", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
+                            setTimeout(async () => {
+                                const data = await metadata(selectedPath + "\\" + entry.name);
+                                configData.size = data.size;
+                                if (currentEntry === entry.name) {
+                                    updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
+
+                                }
+                            }, 0)
+                        } else {
+                            updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
+
+                        }
                         if (!screenshots) {
                             document.getElementById("screenshots-header").classList.add("hide")
                             document.getElementById("screenshots-parent").classList.add("hide")
@@ -1279,17 +1402,21 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         document.getElementById("optionsmenu").classList.add("hide");
         document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60766;</span>" + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + time;
         document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
-        document.getElementById("authinput").addEventListener("input", async (e) => {
-            document.getElementById("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 225) + "px"
-        })
-        document.getElementById("authinput").addEventListener("blur", async () => {
-            await setauthor();
-        })
-        document.getElementById("authinput").addEventListener("keydown", async (e) => {
-            if (e.key === "Enter") {
-                document.getElementById("authinput").blur();
-            }
-        })
+       if (space !== "Reading...") {
+           document.getElementById("authinput").addEventListener("input", async (e) => {
+               document.getElementById("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 225) + "px"
+           })
+           document.getElementById("authinput").addEventListener("blur", async () => {
+               await setauthor();
+           })
+           document.getElementById("authinput").addEventListener("keydown", async (e) => {
+               if (e.key === "Enter") {
+                   document.getElementById("authinput").blur();
+               }
+           })
+       } else {
+           document.getElementById("authinput").readOnly = true;
+       }
     } else {
         currentEntry = ""
         await setCover(background_cover)
@@ -1536,6 +1663,29 @@ async function onLoad() {
         window.open("https://www.reddit.com/r/DDLCMods/", 'reddit', 'width=1200,height=600')
     })
 
+    document.getElementById("select-zip").addEventListener("mouseup", async () => {
+        let p = await open({
+            directory: false,
+            multiple: false,
+            filters: [{
+                name: 'Zip',
+                extensions: ['zip', 'rar']
+            }],
+            title: 'Select DDLC Zip File'
+        });
+       try {
+           document.getElementById("loadingsub").textContent = translation.importing_zip
+           document.getElementById("select-zip").classList.add("hide")
+           await invoke("set_ddlc_zip", {
+               path: p
+           })
+
+       } catch (Exception) {
+           document.getElementById("select-zip").classList.remove("hide")
+           document.getElementById("loadingsub").textContent = translation.select_zip
+       }
+    })
+
     // Opens up DokiMods
 
     document.getElementById("dokimods").addEventListener("mouseup", async () => {
@@ -1582,7 +1732,7 @@ async function onLoad() {
 
     document.getElementById("loader").classList.remove("hide")
     document.getElementById("main").classList.add("hide")
-    document.getElementById("loadingsub").textContent = "Installing DDLC-Vanilla (If nothing happens after 10s, please restart the program)"
+    document.getElementById("loadingsub").textContent = "Installing DDLC-Vanilla (If nothing happens after 20s, please restart the program)"
 
     globLog("Loading Drag/Drop")
 
@@ -1630,10 +1780,12 @@ async function onLoad() {
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
                 if (navigator.onLine) {
                     let response = await confirm("AUTO UPDATE\nNew Update Available! (Press 'Ok' to update)\n" +
-                        "Pulsa 'Ok' para actualizar\n" +
-                        "Appuyez sur 'Ok' pour mettre à jour\n" +
-                        "按 「Ok」 更新\n" +
-                        "「Ok」 を押して更新する)\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
+                        "¡Nueva actualización disponible! (Presiona 'Ok' para actualizar)\n" +
+                        "Nouvelle mise à jour disponible ! (Appuyez sur 'Ok' pour mettre à jour)\n" +
+                        "有新版本呀！(撳「好」開始更新)\n" +
+                        "新しいアップデートがあります！(「Ok」を押して更新してください)\n" +
+                        "Nova atualização disponível! (Pressione 'Ok' para atualizar)\n" +
+                    ")\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
                     if (response) {
                         await update_client()
 
@@ -1648,29 +1800,6 @@ async function onLoad() {
                 if (localConfig.config.version !== CLIENT_VERSION) {
                     await saveConfig()
                     confirm("Updated! (Wont Pop-Up Again Until Next Update)\n\n" + newest_version + "\n\nPress OK or CANCEL to continue.");
-                }
-            }
-
-            await globLog("DDLC Check (" + (Date.now() - start) + "ms).")
-
-            if (!await isDir("./store/ddlc")) {
-                while (!await isDir("./store/ddlc")) {
-                    try {
-                        let p = await open({
-                            directory: false,
-                            multiple: false,
-                            filters: [{
-                                name: 'Zip',
-                                extensions: ['zip', 'rar']
-                            }],
-                            title: 'Select DDLC Zip File'
-                        });
-                        await invoke("set_ddlc_zip", {
-                            path: p
-                        })
-                    } catch (error) {
-                        await globWarn("Zip Failed: ", error)
-                    }
                 }
             }
 
@@ -1693,6 +1822,25 @@ async function onLoad() {
             } else {
                 await loadTranslation(translation_lan, true)
             }
+
+            await globLog("DDLC Check (" + (Date.now() - start) + "ms).")
+
+            if (!await isDir("./store/ddlc")) {
+                document.getElementById("loadingsub").textContent = translation.select_zip
+                document.getElementById("select-zip").classList.remove("hide")
+                let listener = async () => {
+                    await openUrl("https://ddlc.moe")
+                };
+                document.getElementById("loadingsub").addEventListener("mouseup", listener)
+
+                while (!await isDir("./store/ddlc")) {
+                    await new Promise(resolve => setTimeout(resolve, 100))
+                }
+
+                document.getElementById("loadingsub").removeEventListener("mouseup", listener)
+            }
+
+            document.getElementById("select-zip").remove();
 
             await globLog("Theme (" + (Date.now() - start) + "ms).")
 
@@ -1911,6 +2059,14 @@ async function onLoad() {
         }
     })
 
+    document.getElementById("pt").addEventListener("mouseup", async () => {
+        let old = translation_lan;
+        await loadTranslation("pt", (old === ""))
+        if (old !== "") {
+            saveConfig().then()
+        }
+    })
+
     document.getElementById("spanish").addEventListener("mouseup", async () => {
         let old = translation_lan;
         await loadTranslation("es", (old === ""))
@@ -1944,7 +2100,7 @@ async function onLoad() {
     })
 
     document.getElementById("language").addEventListener("mouseup", async () => {
-        document.getElementById("language-list").classList.toggle("hide")
+        document.getElementById("language-list").classList.toggle("language-list-hide")
     })
 
     document.getElementById("tutorial-no").addEventListener("mouseup", async () => {
@@ -2116,7 +2272,7 @@ async function onLoad() {
 
     // setInterval(snowflake, 100)
     setInterval(update_concurrent_game, 1000)
-    setInterval(keepAlive, 240000)
+    setInterval(keepAlive, 480_000)
 
     // getCurrentWindow().onFocusChanged(({
     //     payload: isfocused
@@ -2155,10 +2311,10 @@ async function update_client() {
     if (await should_update()) {
         await invoke('tracker', {
             event: 'update_launcher',
-            props: {  }
+            props: { from: CLIENT_VERSION }
         });
         document.getElementById("loadingsub").textContent = translation.updating + " Doki Doki Mod Manager"
-        invoke("update_exe")
+        await invoke("update_exe")
     } else {
         console.warn("Already Up To Date (" + CLIENT_VERSION + ")")
     }
@@ -2204,6 +2360,7 @@ async function launch_desktop() {
     document.getElementById("desktop-close").addEventListener("mouseup", () => {
         invoke("close");
     })
+
     document.getElementById("desktop-update").addEventListener("mouseup", () => {
         if (should_update()) {
             previous_app.unmount()

@@ -155,9 +155,9 @@ async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
     let versionint = version.unwrap();
     let equal = default_rpa(&scripts).await;
     println!("Version: {} ({}f32); Equal: {};", renpy, versionint, equal);
-    if versionint >= 8.3 && equal {
+    if versionint >= 8.0 && equal {
         remove_file(PathBuf::from(&scripts).join("scripts.rpa")).unwrap();
-        println!("[REMOVED] scripts.rpa file removed in order to fix DDLC Mods >= RenPy 8.3");
+        println!("[REMOVED] scripts.rpa file removed in order to fix DDLC Mods >= RenPy 8.0");
     }
 }
 
@@ -469,10 +469,10 @@ fn detect_nest_1(zip_archive: Option<&mut ZipArchive<File>>) -> Option<String> {
 async fn detect_nest(string: &str, target_dir: &str,   zip_archive: Option<&mut ZipArchive<File>>) -> String {
     let paths = [
         string,
-        &format!("{}-Renpy7Mod", string),
-        &format!("{}-Renpy8Mod", string),
+        &"-Renpy7Mod".to_string(),
+        &"-Renpy8Mod".to_string(),
         &format!("{}V3", string),
-        &format!("{}-1.0-pc", string),
+        &"-1.0-pc".to_string(),
         "CupcakeDelivery-1.0.1-pc"
     ];
 
@@ -496,10 +496,15 @@ async fn detect_nest(string: &str, target_dir: &str,   zip_archive: Option<&mut 
 
     }
 
-    for path in paths {
-        let inval = is_dir(PathBuf::from(target_dir).join(path)).await;
-        if inval {
-            return PathBuf::from(target_dir).join(path).as_path().to_str().unwrap().to_string();
+    for dir in PathBuf::from(target_dir).read_dir().expect("Failed to read dir") {
+        if let Ok(entry) = dir {
+            let path = entry.path();
+            if !path.is_dir() {continue;}
+            for selected in paths {
+                if path.file_name().unwrap().to_str().unwrap().ends_with(selected) {
+                    return path.to_str().unwrap().to_string();
+                }
+            }
         }
     }
 
@@ -614,14 +619,18 @@ async fn update_exe() {
     out.write_all(&mut resp.bytes().await.expect("Failed to write bytes")).unwrap();
     let update_script = format!(
         r#"
+        $Host.UI.RawUI.WindowTitle = 'Doki Doki Mod Manager Updater';
+        echo "Waiting for DDMM To Close... (3s)";
         Start-Sleep 3;
+        echo "Updating DDMM...";
         if (Test-Path 'dokimodmanager-new.exe') {{
             if (Test-Path 'dokimodmanager.exe') {{
                 Remove-Item 'dokimodmanager.exe' -Force -ErrorAction SilentlyContinue;
             }}
             Rename-Item 'dokimodmanager-new.exe' 'dokimodmanager.exe';
         }}
-        Start-Sleep 2
+        echo "Updated DDMM, Launching... (2s)";
+        Start-Sleep 2;
         if (Test-Path 'dokimodmanager.exe') {{
             $dir = Get-Location
             $binDir = (Get-Location).Path
@@ -636,7 +645,6 @@ async fn update_exe() {
         .current_dir(env::current_dir().unwrap())
         .args([
             "-NoProfile",
-            "-WindowStyle", "Hidden",
             "-Command", &update_script])
         .spawn()
         .expect("failed to launch cmd");
