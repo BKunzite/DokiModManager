@@ -46,6 +46,9 @@
         <header class="subheader hide" id="modinfo">BROKEN</header>
         <button class="play hide" id="play">Play</button>
         <button class="path hide" id="path" title="Open Path In Explorer">&#60792;</button>
+        <button class="extract hide" id="extract" title="Extract RPA">&#60807;</button>
+        <button class="delete-save hide" id="delete-save" title="Delete Save Data">&#62786;</button>
+
         <button class="delete hide" id="delete" title="Delete Mod">&#60450;</button>
         <header class="rename-header hide" style="left: 3.5rem;" id="screenshots-header"><span style="font-family: Icon;">&#60996;</span> <span id="screenshot-text">Screenshots</span></header>
         <div class="screenshots hide" id="screenshots-parent">
@@ -115,6 +118,12 @@
         <header class="tutorial-warn-text" id="tutorial-context">It seems like you have not done the tutorial yet, would you like to?</header>
         <button class="tutorial-warn-accept" id="tutorial">Yes</button>
         <button class="tutorial-warn-deny" id="tutorial-no">No</button>
+      </div>
+      <div class="delete-warn hide smooth-hide" id="delete-prompt">
+        <header class="tutorial-warn-title" id="delete-title">Delete</header>
+        <header class="tutorial-warn-text" id="delete-context" style="text-wrap: pretty; word-break: break-all">Would You Like To Delete The Save Date?</header>
+        <button class="tutorial-warn-accept" id="delete-yes">Yes</button>
+        <button class="tutorial-warn-deny" id="delete-no">No</button>
       </div>
     </div>
 

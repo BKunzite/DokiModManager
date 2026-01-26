@@ -1,6 +1,6 @@
 use std::{env, fs};
 use std::env::{home_dir};
-use std::fs::{create_dir_all, remove_dir_all, remove_file, File};
+use std::fs::{create_dir_all, exists, remove_dir_all, remove_file, File};
 use std::io::{Write};
 use std::os::windows::fs::MetadataExt;
 use std::process::{Command, Stdio};
@@ -9,7 +9,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use window_vibrancy::{apply_acrylic};
 use tokio::fs::{File as TokioFile};
 use tokio::io::{AsyncWriteExt, AsyncReadExt};
-use std::path::{PathBuf};
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use rand::{thread_rng, Rng};
 use tauri_plugin_fs_pro::{is_dir, is_file};
@@ -18,13 +18,16 @@ use zip::ZipArchive;
 use sysinfo::{ProcessesToUpdate, System};
 use regex::Regex;
 use reqwest::get;
-use serde_json::json;
+use serde_json::{json};
 use crate::hash::get_file_hash;
 use tauri_plugin_aptabase::EventTracker;
+use std::io::Read;
+
 static SCRIPTSRPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
 static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/dokimodmanager.exe";
+static UNRPYC: &str = ""
 #[tauri::command]
  fn close(window: tauri::Window) {
     let _ = window.close();
@@ -161,6 +164,138 @@ async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
     }
 }
 
+#[tauri::command]
+fn extract_game_script(path: &str, out: &str) {
+    extract_rpa(path, out);
+}
+
+#[tauri::command]
+fn rpa_data(path: &str, out: &str) -> String {
+    println!("{} | {}", path, out);
+    if !exists(path).unwrap() || !path.ends_with(".rpa") {
+        println!("Invalid RPA File!");
+        return String::new();
+    }
+
+    let binding = PathBuf::from(path);
+    let mut rpa_archive = warpalib::RenpyArchive::open(binding.as_path()).unwrap();
+    let path_out = PathBuf::from(out);
+    create_dir_all(path_out.as_path()).unwrap();
+    if exists(path_out.join("ddmm-temp-options\\options.rpy")).unwrap() {
+        println!("Found Options File!");
+
+        return parse_source(&mut fs::read_to_string(path_out.join("ddmm-temp-options\\options.rpy")).unwrap()).unwrap_or_else(||
+            String::new())
+    }
+    for (output, content) in rpa_archive.content.iter() {
+        if output.as_path().to_str().unwrap().contains("option") {
+            let cmain =  output.as_path().to_str().unwrap();
+            create_dir_all(path_out.join("ddmm-temp-options")).unwrap();
+            let mut file = File::create(path_out.join(format!("ddmm-temp-options\\{}", cmain)).as_path().to_str().unwrap()).unwrap();
+            content.copy_to(&mut rpa_archive.reader, &mut file).unwrap();
+
+            println!("Found Options! Extracting Data");
+            let mut exchild = Command::new("cmd");
+            exchild.args(["/C", env::current_exe().unwrap().parent().unwrap().join("\\unrpyc.exe").as_path().to_str().unwrap(), path_out.join(format!("ddmm-temp-options\\{}", cmain)).as_path().to_str().unwrap()]);
+
+            println!("{:?}", exchild);
+
+            let child = exchild.spawn()
+                .map_err(|e| format!("Failed to start executable: {}", e)).unwrap();
+
+            let rput = child.wait_with_output()
+                .map_err(|e| format!("Failed to wait for child process: {}", e)).unwrap();
+
+            if rput.status.success() {
+                println!("{}", String::from_utf8_lossy(&rput.stdout));
+                let output_src = path_out.join(format!("ddmm-temp-options\\{}", cmain.replace(".rpyc",".rpy")));
+                println!("{:?}", output_src);
+                if output_src.exists() {
+                    println!("Found RPY File! Extracting Data");
+                    let mut src_text = fs::read_to_string(output_src.as_path().to_str().unwrap()).unwrap();
+                    return parse_source(&mut src_text).unwrap_or_else(||
+                        String::new())
+                } else {
+                    eprintln!("Failed to find RPY File!");
+                }
+                break;
+            } else {
+                let error_msg = String::from_utf8_lossy(&rput.stderr);
+                eprintln!("unrpyc failed with status: {}\nError: {}", rput.status, error_msg);
+            }
+        }
+    }
+    println!("Done!");
+    return String::new();
+}
+fn parse_source(source: &str) -> Option<String> {
+    for line in source.split("\n").filter(|line| !line.starts_with("#")) {
+        if !line.contains("save_directory") {
+            continue;
+        }
+        let contents : Vec<&str>= line.split('"').collect();
+        if let Some(content) = contents.get(1) {
+            println!("{}", line);
+            let data = dirs::config_dir().unwrap().join("RenPy").join(content);
+            if data.exists() {
+                println!("Found Mod Data @ {}", data.as_path().to_str().unwrap());
+                return Some(data.to_str().unwrap().to_string());
+            }
+        }
+    }
+    None
+}
+fn extract_rpa(path: &str, out: &str) {
+    if exists(out).unwrap() {return;}
+    let binding = PathBuf::from(path);
+    let mut rpa_archive = warpalib::RenpyArchive::open(binding.as_path()).unwrap();
+    let path_out = PathBuf::from(out);
+    create_dir_all(path_out.as_path()).unwrap();
+    for (output, content) in rpa_archive.content.iter() {
+        let output = path_out.join(output.as_path());
+        if let Some(parent) = output.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent).unwrap();
+            }
+        }
+
+        let mut file = File::create(&output).unwrap();
+        content.copy_to(&mut rpa_archive.reader, &mut file).unwrap();
+    }
+    decrypt_rpa_dir(&path_out.as_path());
+
+}
+
+fn decrypt_rpa_dir(path: &Path) {
+    for item in path.read_dir().unwrap().map(|e| e.unwrap().path()) {
+        if item.is_dir() {
+            decrypt_rpa_dir(item.clone().as_path());
+        } else {
+            let cmain = item.file_name().unwrap().to_str().unwrap();
+            if cmain.ends_with(".rpyc") {
+                let par = path.join(cmain);
+
+                if exists(&par.as_path().to_str().unwrap().replace(".rpyc",".rpy")).unwrap() {
+                    println!("{} already exists!", &par.as_path().to_str().unwrap());
+                    continue;
+                };
+
+                let mut exchild = Command::new("cmd");
+                exchild.args(["/C", env::current_exe().unwrap().parent().unwrap().join("\\unrpyc.exe").as_path().to_str().unwrap(), &par.as_path().to_str().unwrap()]);
+
+                println!("{:?}", exchild);
+
+                let child = exchild.spawn()
+                    .map_err(|e| format!("Failed to start executable: {}", e)).unwrap();
+
+                let rput = child.wait_with_output()
+                    .map_err(|e| format!("Failed to wait for child process: {}", e)).unwrap();
+
+                println!("{:?} - Done", rput);
+            }
+        }
+    }
+}
 #[tauri::command]
 async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(), String> {
     let _ = app.get_window("main").unwrap().minimize();
@@ -716,7 +851,7 @@ pub async fn run() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir, update, set_ddlc_zip, update_exe, tracker])
+        .invoke_handler(tauri::generate_handler![close, minimize, launch, path_select, request_path, open_path, import_mod, delete_path, rename_dir, update, set_ddlc_zip, update_exe, tracker, rpa_data, extract_game_script])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

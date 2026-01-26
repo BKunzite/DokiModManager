@@ -57,9 +57,10 @@ let start = Date.now();
 let tutorial_complete = false;
 let tutorial_step = 0;
 let tutorial_pointer = null
+let save_path = "";
 
-const CLIENT_VERSION = "1.3.1-release"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
+const CLIENT_VERSION = "3.4.0-release"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON"
 ]
@@ -1063,6 +1064,7 @@ async function requestDirectory(path) {
                 launchers[entry.name] = {
                     item: sidetext,
                     location: selectedPath + "\\" + entry.name,
+                    absolute_location: dir,
                     preload: [],
                     preloadImages: async () => {
                         let images = 0;
@@ -1398,6 +1400,8 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         }
         document.getElementById("delete").classList.remove("hide");
         document.getElementById("path").classList.remove("hide");
+        document.getElementById("extract").classList.remove("hide");
+        document.getElementById("delete-save").classList.remove("hide");
         document.getElementById("play").classList.remove("hide");
         document.getElementById("optionsmenu").classList.add("hide");
         document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60766;</span>" + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + time;
@@ -1428,6 +1432,8 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         document.getElementById("info").classList.add("hide");
         document.getElementById("delete").classList.add("hide");
         document.getElementById("path").classList.add("hide");
+        document.getElementById("extract").classList.add("hide");
+        document.getElementById("delete-save").classList.add("hide");
         document.getElementById("play").classList.add("hide");
         document.getElementById("optionsmenu").classList.remove("hide");
         document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61973;</span> " + Math.floor(min / 60) + "h " + (min % 60) + "m";
@@ -1905,7 +1911,7 @@ async function onLoad() {
     })
 
     document.getElementById("play").addEventListener("mouseup", async () => {
-        if (currentEntry !== "") {
+        if (currentEntry !== "" && document.getElementById("delete-prompt").classList.contains("hide")) {
             await launchers[currentEntry].open();
         }
     })
@@ -1954,6 +1960,57 @@ async function onLoad() {
         if (currentEntry !== "") {
             await launchers[currentEntry].path();
         }
+    })
+
+    document.getElementById("delete-save").addEventListener("mouseup", async () => {
+        if (currentEntry !== "") {
+            let final = launchers[currentEntry].absolute_location;
+            let loc = await invoke("rpa_data", {
+                path: final + "\\game\\scripts.rpa",
+                out: final
+            })
+            if (loc !== "") {
+                document.getElementById("delete-prompt").classList.remove("hide")
+                document.getElementById("delete-context").textContent = "Are you sure you want to delete\n" + loc + "?"
+                save_path = loc;
+            } else {
+                confirm("Unknown Save Data Location!")
+            }
+
+        }
+    })
+
+    document.getElementById("extract").addEventListener("mouseup", async () => {
+        if (currentEntry !== "") {
+            let final = launchers[currentEntry].absolute_location + "\\game\\scripts.rpa";
+            console.log(final)
+            document.getElementById("loadingsub").textContent = "Extracting"
+            document.getElementById("loader").classList.remove("hide")
+            document.getElementById("main").classList.add("hide")
+            await invoke("extract_game_script", {
+                path: final,
+                out: launchers[currentEntry].absolute_location + "\\deobf"
+            })
+            await invoke("open_path", {
+                path: launchers[currentEntry].absolute_location + "\\deobf"
+            })
+            await launchers[currentEntry].leftClick()
+            document.getElementById("loader").classList.add("hide")
+            document.getElementById("main").classList.remove("hide")
+        }
+    })
+
+    document.getElementById("delete-yes").addEventListener("mouseup", async () => {
+        document.getElementById("delete-prompt").classList.add("hide")
+        if (save_path === "") return;
+        await invoke("delete_path", {
+            path: save_path
+        });
+    })
+
+    document.getElementById("delete-no").addEventListener("mouseup", async () => {
+        save_path = "";
+        document.getElementById("delete-prompt").classList.add("hide")
     })
 
     document.getElementById("modtitle").addEventListener("focus", async () => {

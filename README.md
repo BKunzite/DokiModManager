@@ -49,3 +49,9 @@ Plus, I wanted to do a project that allowed me to get into rust.
 - Yuri    BG Image - [reddit - Peaceablecolt](https://www.reddit.com/r/DDLC/comments/w9h5yr/i_havent_posted_here_in_like_3_years_heres_a/)
 - Sayori  BG Image - [twitter - Saschaa_SAN](https://x.com/Saschaa_SAN/status/1533897941928525824)
 - Natsuki BG Image - [reddit - The_Fish_Art](https://www.reddit.com/r/DDLC/comments/1ll685l/oc_the_simple_beauty_of_natsuki_202120232025_alts/)
+
+This software uses unrpyc, developed by CensoredUsername and others.
+Source: https://github.com/CensoredUsername/unrpyc
+
+unrpyc License (MIT):
+Copyright (c) 2012-2024 CensoredUsername

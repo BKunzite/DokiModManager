@@ -179,7 +179,24 @@
     corner-shape: squircle;
     transition: top ease-out 0.5s, box-shadow ease-out 0.5s;
 }
-
+.delete-warn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30vw;
+    height: 35vh;
+    background-color: rgba(0,0,0, 0.2);
+    backdrop-filter: blur(20px) saturate(50%);
+    border-radius: 3rem;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    z-index: 10;
+    box-shadow: 0 0 2000px 500px rgba(0,0,0,0.8);
+    corner-shape: squircle;
+    transition: top ease-out 0.5s, box-shadow ease-out 0.5s;
+}
 .tutorial-warn-title {
     position: absolute;
     top: 2vw;
@@ -273,7 +290,21 @@
     z-index: -1;
 }
 
-.tutorial-warn::after {
+.delete-warn::before {
+    content: "";
+    top: 0;
+    left: 0;
+    width: 50vw;
+    height: 50vw;
+    position: absolute;
+    border-radius: 100%;
+    background-color: rgba(185, 40, 40, 0.5);
+    transform: translate(-50%, -50%);
+    filter: blur(100px);
+    z-index: -1;
+}
+
+.tutorial-warn, .delete-warn::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -584,6 +615,41 @@ body {
     box-shadow: rgb(60,60,60) 0 0 30px;
 }
 
+.extract {
+    font-family: "Icon", sans-serif;
+    font-size: 1.5rem;
+    color: white;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 100%;
+    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    position: absolute;
+    left: 36.75rem;
+    text-align: center;
+    top: 30vh;
+    transition: scale ease-in 0.1s, rotate ease-in 0.1s, top ease-in 0.1s;
+    box-shadow: rgb(60,60,60) 0 0 30px;
+}
+
+
+.delete-save {
+    font-family: "Icon", sans-serif;
+    font-size: 1.5rem;
+    color: white;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 100%;
+    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    position: absolute;
+    left: 41.75rem;
+    text-align: center;
+    top: 30vh;
+    transition: scale ease-in 0.1s, rotate ease-in 0.1s, top ease-in 0.1s;
+    box-shadow: rgb(60,60,60) 0 0 30px;
+}
+
 .play {
     font-family: "Aller", sans-serif;
     font-weight: bold;
@@ -667,6 +733,27 @@ body {
 }
 
 .path:active {
+    scale: 0.95
+}
+
+.extract:hover {
+    top: 29vh;
+    scale: 1.05;
+    cursor: pointer;
+}
+
+.extract:active {
+    scale: 0.95
+}
+
+.delete-save:hover {
+    top: 29vh;
+    rotate: -90deg;
+    scale: 1.05;
+    cursor: pointer;
+}
+
+.delete-save:active {
     scale: 0.95
 }
 
