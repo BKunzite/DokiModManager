@@ -304,6 +304,158 @@
     z-index: -1;
 }
 
+.profile-bg {
+    width: 35%;
+    height: 80%;
+    background-color: rgba(0, 0, 0, 0.7);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    border-radius: 2.5rem;
+    corner-shape: squircle;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
+.profile-blur {
+    content: "";
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    left: 50%;
+    top: 50%;
+    z-index: 7;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.5) 100%);
+    backdrop-filter: blur(20px);
+}
+
+.profile-header {
+    position: absolute;
+    font-family: "Aller", sans-serif;
+    font-weight: bold;
+    color: white;
+    font-size: 3vh;
+    top: 2.5vh;
+    left: 2.5vh;
+    text-align: left;
+
+}
+
+.profile-list {
+    width: 94%;
+    height: 65%;
+    background-color: rgba(60, 60, 60, 0.3);
+    position: absolute;
+    top: 7.5vh;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    border-radius: 1.75rem;
+    corner-shape: squircle;
+    overflow-y: auto;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-button {
+    width: 100%;
+    height: 5vh;
+}
+
+.profile-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-button-default {
+    position: absolute;
+    bottom: 11.5vh;
+    width: 46.25%;
+    height: 7vh;
+    border-radius: 1rem;
+    border: none;
+    background-color: rgba(60, 60, 60, 0.3);
+    font-family: "Aller", sans-serif;
+    color: white;
+}
+
+.profile-button-default:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-button-create {
+    left: 2.5%;
+}
+
+.profile-button-copy {
+    right: 2.5%;
+}
+
+.profile-button-save {
+    right: 2.5%;
+    bottom: 2.5vh;
+    width: 95%;
+}
+
+.profile-bg {
+
+}
+
+.profile-item-name {
+    font-family: "Aller", sans-serif;
+    font-weight: bold;
+    color: white;
+    font-size: 2.5vh;
+    top: 1vh;
+    left: 1vh;
+    text-align: left;
+    position: relative;
+}
+
+.profile-item-source {
+    font-family: "Icon", sans-serif;
+    color: white;
+    width: 4vh;
+    height: 4vh;
+    background-color: rgba(255, 255, 255, 0.1);
+    top: -2.5vh;
+    border-radius: 0.5rem;
+    corner-shape: squircle;
+    border: none;
+    position: relative;
+    text-align: center;
+}
+
+.profile-item-source:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.profile-button-active {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.profile-button-selected {
+    filter: invert();
+    background-color: rgba(0, 0, 0, 1);
+
+}
+.profile-button-selected:hover {
+    filter: invert();
+    background-color: rgba(0, 0, 0, 1);
+}
+
+.profile-item-select {
+    transform: translateX(52vh);
+}
+.profile-item-delete {
+    transform: translateX(51vh);
+}
+.profile-item-drag {
+    transform: translateX(53vh);
+}
+
 .tutorial-warn, .delete-warn::after {
     content: "";
     position: absolute;

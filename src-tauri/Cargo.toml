@@ -48,4 +48,6 @@ warpalib = "0.3.1"
 flate2 = "1.1.8"
 serde-pickle = "1.2.0"
 dirs = "6.0.0"
+walkdir = "2.5.0"
+rayon = "1.11.0"
 

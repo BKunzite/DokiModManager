@@ -113,6 +113,20 @@
       <div class="view-background smooth-hide hide" id="view-background">
         <img class="view-image" id="view-image">
       </div>
+      <div class="profile-blur hide smooth-hide" id="profile-blur">
+        <div class="profile-bg">
+          <header class="profile-header">Profiles</header>
+          <div class="profile-list" id="profiles">
+
+          </div>
+          <button class="profile-button-default profile-button-create" id="create-profile">New</button>
+          <button class="profile-button-default profile-button-copy" id="copy-profile">Duplicate</button>
+          <button class="profile-button-default profile-button-save" id="save-profile">Save Changes</button>
+
+        </div>
+
+
+      </div>
       <div class="tutorial-warn" id="warn">
         <header class="tutorial-warn-title" id="tutorial-title">Tutorial</header>
         <header class="tutorial-warn-text" id="tutorial-context">It seems like you have not done the tutorial yet, would you like to?</header>

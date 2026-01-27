@@ -1,12 +1,12 @@
 // Vue
-import { createApp } from "vue";
+import {createApp} from "vue";
 
 // Tauri Based Imports
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from "@tauri-apps/api/event";
-import { homeDir } from "@tauri-apps/api/path";
-import { open } from '@tauri-apps/plugin-dialog';
-import { openUrl } from "@tauri-apps/plugin-opener";
+import {invoke} from '@tauri-apps/api/core';
+import {listen} from "@tauri-apps/api/event";
+import {homeDir} from "@tauri-apps/api/path";
+import {open} from '@tauri-apps/plugin-dialog';
+import {openUrl} from "@tauri-apps/plugin-opener";
 import {
     create,
     readDir,
@@ -15,23 +15,24 @@ import {
     remove,
     watch,
     writeFile,
-    writeTextFile
+    writeTextFile,
+    mkdir
 } from '@tauri-apps/plugin-fs';
-import { isDir, isExist, metadata } from "tauri-plugin-fs-pro-api";
+import {isDir, isExist, metadata} from "tauri-plugin-fs-pro-api";
 
 // Pages
 import App from "./App.vue";
 import Desktop from "./Desktop.vue";
 
 // Utils
-import { getImage } from "./core/ImageUtils";
+import {getImage} from "./core/ImageUtils";
 import ImageLoader from "./workers/ImageLoader.js?worker";
+import {Base64} from 'js-base64';
 
 // Assets
 import sound_beep from './assets/select.ogg';
 import sound_boop from './assets/hover.ogg';
 import sound_click from './assets/pageflip.ogg';
-import jingle from "./assets/jingle_punks_copyrightfree.mp3";
 
 // --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
 let launchers = []
@@ -62,7 +63,7 @@ let save_path = "";
 const CLIENT_VERSION = "3.4.0-release"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
-    "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON"
+    "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "a", "b", "c", "d", "e"
 ]
 const CLIENT_THEMES = {
     NATSUKI: {
@@ -528,20 +529,20 @@ function loadTranslation(lang, first) {
     translation_lan = lang;
 
     const elementMap = [
-        { id: "main-text", key: "main", type: "textContent" },
-        { id: "search", key: "search", type: "placeholder" },
-        { id: "source-text", key: "install", type: "textContent" },
-        { id: "import-text", key: "import", type: "textContent" },
-        { id: "import-image-text", key: "import_image", type: "textContent" },
-        { id: "description-text", key: "description", type: "textContent" },
-        { id: "screenshot-text", key: "screenshot", type: "textContent" },
-        { id: "download", key: "yes", type: "textContent" },
-        { id: "mods-text", key: "mods", type: "textContent" },
-        { id: "cancel", key: "no", type: "textContent" },
-        { id: "theme-text", key: "theme", type: "textContent" },
-        { id: "update-text", key: "update-text", type: "textContent" },
-        { id: "play", key: "play", type: "textContent" },
-        { id: "home-text", key: "home", type: "textContent" },
+        {id: "main-text", key: "main", type: "textContent"},
+        {id: "search", key: "search", type: "placeholder"},
+        {id: "source-text", key: "install", type: "textContent"},
+        {id: "import-text", key: "import", type: "textContent"},
+        {id: "import-image-text", key: "import_image", type: "textContent"},
+        {id: "description-text", key: "description", type: "textContent"},
+        {id: "screenshot-text", key: "screenshot", type: "textContent"},
+        {id: "download", key: "yes", type: "textContent"},
+        {id: "mods-text", key: "mods", type: "textContent"},
+        {id: "cancel", key: "no", type: "textContent"},
+        {id: "theme-text", key: "theme", type: "textContent"},
+        {id: "update-text", key: "update-text", type: "textContent"},
+        {id: "play", key: "play", type: "textContent"},
+        {id: "home-text", key: "home", type: "textContent"},
     ];
 
     if (!tutorial_complete) {
@@ -615,7 +616,7 @@ async function addConstant(msg, isWarn, timestamp) {
 
 // Removes Right Click Menu
 
-document.oncontextmenu = document.body.oncontextmenu = function() {
+document.oncontextmenu = document.body.oncontextmenu = function () {
     return false;
 }
 
@@ -847,7 +848,7 @@ async function import_mod(path) {
         });
         await invoke('tracker', {
             event: 'manual_download',
-            props: { name: selectedPath.split("\\").pop() }
+            props: {name: selectedPath.split("\\").pop()}
         });
     }
     if (selectedPath != null) {
@@ -1097,7 +1098,7 @@ async function requestDirectory(path) {
                     open: async () => {
                         await invoke('tracker', {
                             event: 'game_launch',
-                            props: { mod: entry.name }
+                            props: {mod: entry.name}
                         });
                         showContainers(false)
                         await update_concurrent_game()
@@ -1185,7 +1186,10 @@ async function requestDirectory(path) {
                         const playTime = Date.now() - launch_time;
                         await invoke('tracker', {
                             event: 'game_close',
-                            props: { mod: entry.name, length: Math.floor(playTime / 3600000) + "h " + (Math.floor(playTime / 60000) % 60) + "m " + (Math.floor(playTime / 1000) % 60) + "s" }
+                            props: {
+                                mod: entry.name,
+                                length: Math.floor(playTime / 3600000) + "h " + (Math.floor(playTime / 60000) % 60) + "m " + (Math.floor(playTime / 1000) % 60) + "s"
+                            }
                         });
                         total_time += playTime;
                         configData.time += playTime;
@@ -1231,7 +1235,6 @@ async function requestDirectory(path) {
 
                             }
                         }
-
 
 
                         if (renpy === undefined) {
@@ -1406,21 +1409,21 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         document.getElementById("optionsmenu").classList.add("hide");
         document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60766;</span>" + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + time;
         document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
-       if (space !== "Reading...") {
-           document.getElementById("authinput").addEventListener("input", async (e) => {
-               document.getElementById("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 225) + "px"
-           })
-           document.getElementById("authinput").addEventListener("blur", async () => {
-               await setauthor();
-           })
-           document.getElementById("authinput").addEventListener("keydown", async (e) => {
-               if (e.key === "Enter") {
-                   document.getElementById("authinput").blur();
-               }
-           })
-       } else {
-           document.getElementById("authinput").readOnly = true;
-       }
+        if (space !== "Reading...") {
+            document.getElementById("authinput").addEventListener("input", async (e) => {
+                document.getElementById("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 225) + "px"
+            })
+            document.getElementById("authinput").addEventListener("blur", async () => {
+                await setauthor();
+            })
+            document.getElementById("authinput").addEventListener("keydown", async (e) => {
+                if (e.key === "Enter") {
+                    document.getElementById("authinput").blur();
+                }
+            })
+        } else {
+            document.getElementById("authinput").readOnly = true;
+        }
     } else {
         currentEntry = ""
         await setCover(background_cover)
@@ -1472,7 +1475,7 @@ async function setauthor() {
 async function keepAlive() {
     await invoke('tracker', {
         event: 'keep_alive',
-        props: { name: currentEntry }
+        props: {name: currentEntry}
     });
 }
 
@@ -1568,6 +1571,260 @@ async function rename_mod() {
     }
 }
 
+let selected_button = null;
+let selected_name = ""
+let current_profile = ""
+let current_profile_data = {}
+let concurrent_profile_data = {}
+let profile_path = "";
+let original_profile = "";
+let current_game_data_path = "";
+
+async function update_profiles(path) {
+    /*
+    <div class="profile-button">
+              <header class="profile-item-name">Default</header>
+              <button class="profile-item-delete profile-item-source" id="down-profile">&#60445;</button>
+              <button class="profile-item-select profile-item-source" id="select-profile">&#60285;</button>
+              <button class="profile-item-drag profile-item-source" id="copy-profile">&#62782;</button>
+
+            </div>
+     */
+    if (document.getElementById("profiles").children !== null) {
+        document.getElementById("profiles").replaceChildren();
+    }
+
+    const profiles_path = path + "--profiles";
+    const current_info_path = profiles_path + "\\.info.json";
+
+    profile_path = profiles_path;
+    if (!await isDir(profiles_path)) {
+        await mkdir(profiles_path);
+    }
+    if (!await isExist(current_info_path)) {
+        await writeTextFile(current_info_path, "{}");
+    }
+    let profiles_data = JSON.parse(await readTextFile(current_info_path));
+
+    current_game_data_path = path;
+    selected_name = profiles_data.selected == null ? "profile-Default" : profiles_data.selected;
+    current_profile = profiles_data.current == null ? "Default" : profiles_data.current;
+    original_profile = current_profile;
+    current_profile_data = profiles_data.profiles == null ? {"1": "Default"} : profiles_data.profiles;
+    concurrent_profile_data = {}
+
+    if (!await isExist(get_profile_path(current_profile))) {
+        await writeTextFile(get_profile_path(current_profile), "{}");
+    }
+
+
+    const profile_files = await readDir(profiles_path);
+    for (const profile of profile_files) {
+        if (profile.name.includes(".ddmm.profile.json")) {
+            const name = profile.name.replace(".ddmm.profile.json", "");
+            console.log(name)
+            console.log(current_profile_data)
+            let profile_spot = undefined;
+            for (const key in current_profile_data) {
+                if (current_profile_data[key] === "profile-" + name) {
+                    profile_spot = key;
+                    break
+                }
+            }
+            console.log(profile_spot)
+            create_profile(name, profile_spot);
+        }
+    }
+}
+
+function get_profile_path(name) {
+    if (name === null) {
+        return profile_path + "\\null"
+    }
+    return profile_path + "\\" + (name === undefined ? currentEntry : name).replace("profile-", "") + ".ddmm.profile.json"
+}
+
+async function save_profile_data() {
+    for (const key in current_profile_data) {
+        const profile_path = get_profile_path(current_profile_data[key]);
+        console.log(profile_path)
+        if (!await isExist(profile_path)) {
+            current_profile_data[key] = null;
+        }
+    }
+    const sorted = Object.entries(current_profile_data)
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+        .reduce((acc, [key, value], index) => {
+            acc[index] = value;
+            return acc;
+        }, {});
+    const profiles_data = {
+        "selected": selected_name,
+        "current": current_profile.replace("profile-", ""),
+        "profiles": sorted
+    }
+    writeTextFile(profile_path + "\\.info.json", JSON.stringify(profiles_data)).then(r => {
+    });
+}
+
+async function save_concurrent_profile_data() {
+    let active_profile_path = get_profile_path(original_profile);
+    await writeTextFile(active_profile_path, JSON.stringify(await get_concurrent_game_data()));
+}
+
+async function get_concurrent_game_data(path) {
+    if (path === undefined) path = current_game_data_path;
+    let data = {}
+    for (const file of await readDir(current_game_data_path)) {
+        if (file.isDirectory) {
+            data[file.name] = await get_concurrent_game_data(path + "\\" + file.name)
+        } else {
+            data[file.name] = Base64.fromUint8Array(await readFile(path + "\\" + file.name));
+        }
+    }
+    return data;
+}
+
+async function load_concurrent_profile_data(reload) {
+    const current_info_path = profile_path + "\\.info.json";
+    let profiles_data = JSON.parse(await readTextFile(current_info_path));
+    selected_name = profiles_data.selected == null ? "profile-Default" : "profile-" + profiles_data.selected;
+    current_profile = profiles_data.current == null ? "Default" : profiles_data.current;
+    original_profile = current_profile;
+    current_profile_data = profiles_data.profiles == null ? {"1": "Default"} : profiles_data.profiles;
+    current_profile_data = Object.fromEntries(Object.entries(current_profile_data).sort((a, b) => parseInt(a[0]) - parseInt(b[0])));
+    concurrent_profile_data = {}
+    console.log(" should reload: " + reload)
+    if (reload) {
+        for (const file of await readDir(current_game_data_path)) {
+            await remove(current_game_data_path + "\\" + file.name);
+        }
+        let data = await readTextFile(get_profile_path(current_profile));
+        const self_data = JSON.parse(data);
+
+        for (const f in self_data) {
+            const file = self_data[f]
+            console.log(file)
+            let n = f.replaceAll("\\", "/");
+            if (n.includes("/")) {
+                for (const dir of n.split("/")) {
+                    if (dir === n.split("/").pop()) continue;
+                    await mkdir(current_game_data_path + "\\" + dir, {recursive: true});
+                }
+            }
+            try {
+                await writeFile(current_game_data_path + "\\" + f,
+                    Base64.toUint8Array(file));
+            } catch (e) {
+                console.log(f + " is not encoded in base64!")
+            }
+        }
+    }
+}
+
+async function save_profile() {
+    let changed_profile = original_profile !== current_profile;
+    console.log(await get_concurrent_game_data())
+    await save_profile_data();
+    await save_concurrent_profile_data();
+    await load_concurrent_profile_data(changed_profile);
+}
+
+function create_profile(profile, position) {
+    if (position === undefined) position = get_profile_length()
+    console.log(position)
+    const background = document.createElement("div");
+    const name = document.createElement("header");
+    const b_delete = document.createElement("button");
+    const b_select = document.createElement("button");
+    const b_drag = document.createElement("button");
+
+    background.classList.add("profile-button")
+    background.id = "profile-" + profile;
+    background.style.order = position;
+
+    name.classList.add("profile-item-name")
+    name.textContent = profile;
+
+    b_delete.classList.add("profile-item-delete", "profile-item-source")
+    b_select.classList.add("profile-item-select", "profile-item-source")
+    b_drag.classList.add("profile-item-drag", "profile-item-source")
+
+    b_delete.innerHTML = "&#60445;";
+    b_select.innerHTML = "&#60543;";
+    b_drag.innerHTML = "&#62782;";
+
+    background.appendChild(name)
+    background.appendChild(b_delete)
+    background.appendChild(b_select)
+    background.appendChild(b_drag)
+
+    if (selected_name === background.id) {
+        background.classList.add("profile-button-active")
+    }
+
+    async function onClick() {
+        for (const elm of document.getElementsByClassName("profile-button")) {
+            if (elm.classList.contains("profile-button-active")) {
+                elm.classList.remove("profile-button-active")
+            }
+        }
+        selected_name = background.id;
+        current_profile = profile;
+        background.classList.add("profile-button-active")
+    }
+
+    background.addEventListener("mousedown", onClick)
+
+    b_drag.addEventListener("mousedown", async (e) => {
+        selected_name = background.id;
+        selected_button = document.createElement("div");
+        background.classList.add("profile-button-selected");
+    })
+
+    b_delete.addEventListener("mousedown", async (e) => {
+        await remove(profile_path + "\\" + profile + ".ddmm.profile.json");
+        current_profile = "Default"
+        selected_name = "profile-Default"
+        original_profile = "Default"
+        background.remove()
+        for (const elm of document.getElementsByClassName("profile-button")) {
+            if (elm.classList.contains("profile-button-active")) {
+                elm.classList.remove("profile-button-active")
+            }
+        }
+        document.getElementById("profile-Default").classList.add("profile-button-active")
+        await save_profile_data();
+    })
+
+    concurrent_profile_data[profile] = {
+        files: {}
+    }
+
+
+    isExist(get_profile_path(profile)).then(r => {
+        console.log(profile, r)
+        if (!r) {
+
+            console.log("Creating Profile")
+            writeTextFile(get_profile_path(profile), JSON.stringify(concurrent_profile_data[profile])).then(r => {
+            });
+        }
+    })
+
+    current_profile_data[position] = background.id;
+    document.getElementById("profiles").appendChild(background)
+    return onClick;
+}
+
+function get_profile_length() {
+    let length = 0;
+    for (const profile in current_profile_data) {
+        length++;
+    }
+    return length;
+}
+
 // Waits For Webpage To Load
 
 async function onLoad() {
@@ -1580,12 +1837,130 @@ async function onLoad() {
 
     listen("rename_done", async (event) => {
         await requestDirectory(selectedPath)
-        while (document.getElementById("loader").classList.contains("hide")) {}
+        while (document.getElementById("loader").classList.contains("hide")) {
+        }
         const value = event.payload.text;
         await globLog(value)
         if (launchers[value]) {
             await launchers[value].leftClick();
         }
+    })
+
+    document.getElementById("save-profile").addEventListener("click", async (e) => {
+        await save_profile();
+        document.getElementById("profile-blur").classList.add("hide")
+    });
+
+    document.getElementById("create-profile").addEventListener("click", async () => {
+        let newProfile = "Default 0";
+        while (document.getElementById("profile-" + newProfile) !== null) {
+            newProfile = "Default " + (parseInt(newProfile.split(" ")[1]) + 1);
+        }
+        await create_profile(newProfile)()
+        document.getElementById("profiles").scroll({
+            top: document.getElementById("profiles").scrollHeight,
+            behavior: "smooth"
+        })
+    })
+
+    document.getElementById("copy-profile").addEventListener("click", async () => {
+        let newProfile = "Default 0";
+        while (document.getElementById("profile-" + newProfile) !== null) {
+            newProfile = "Default " + (parseInt(newProfile.split(" ")[1]) + 1);
+        }
+        concurrent_profile_data[newProfile] = concurrent_profile_data[original_profile];
+        await create_profile(newProfile)()
+        await writeTextFile(get_profile_path(newProfile), JSON.stringify(await get_concurrent_game_data()));
+        document.getElementById("profiles").scroll({
+            top: document.getElementById("profiles").scrollHeight,
+            behavior: "smooth"
+        })
+    })
+
+    document.getElementById("profile-blur").addEventListener("mousemove", e => {
+        if (selected_button !== null) {
+            let closest_top = null
+            let cloest_amount = 9999;
+            for (const div of document.getElementsByClassName("profile-button")) {
+                const top_y = div.getBoundingClientRect().top;
+                const yDist = Math.abs(top_y - e.clientY);
+                if (div.id === selected_name) continue;
+                if (yDist < Math.abs(cloest_amount)) {
+                    cloest_amount = top_y - e.clientY;
+                    closest_top = div;
+                }
+            }
+            if (closest_top !== null) {
+                document.getElementById(selected_name).style.order = (parseInt(closest_top.style.order) - (Math.abs(cloest_amount) >= 20 ? Math.sign(cloest_amount) : 0)) + "";
+            }
+        }
+    })
+
+    document.getElementById("profile-blur").addEventListener("mouseup", e => {
+        if (selected_button !== null) {
+            document.getElementById(selected_name).classList.remove("profile-button-selected");
+
+            let list_val = {}
+            const IButtonOrder = parseInt(document.getElementById(selected_name).style.order);
+            let old = 0;
+            for (const profile in current_profile_data) {
+                if (current_profile_data[profile] === selected_name) {
+                    old = parseInt(profile);
+                    break;
+                }
+            }
+
+            if (old < IButtonOrder) {
+                for (const div of document.getElementsByClassName("profile-button")) {
+                    if (div.id === selected_name) continue; // Skip the selected element
+
+                    let order = parseInt(div.style.order);
+                    if (order < old) {
+                        list_val[order] = div.id;
+                    } else if (order <= IButtonOrder) {
+                        list_val[order - 1] = div.id;
+                    } else {
+                        list_val[order] = div.id;
+                    }
+                }
+                list_val[IButtonOrder] = list_val[IButtonOrder - 1];
+                list_val[IButtonOrder - 1] = selected_name;
+
+            } else {
+                for (const div of document.getElementsByClassName("profile-button")) {
+                    if (div.id === selected_name) continue;
+
+                    let order = parseInt(div.style.order);
+                    if (order < IButtonOrder) {
+                        list_val[order] = div.id;
+                    } else if (order < old) {
+                        list_val[order + 1] = div.id;
+                    } else {
+                        list_val[order] = div.id;
+                    }
+                }
+                if (IButtonOrder > 0) {
+                    list_val[IButtonOrder] = list_val[IButtonOrder + 1];
+                    list_val[IButtonOrder + 1] = selected_name;
+                }
+            }
+
+            const sorted = Object.entries(list_val)
+                .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                .reduce((acc, [key, value], index) => {
+                    acc[index] = value;
+                    return acc;
+                }, {});
+            for (const profile in sorted) {
+                console.log(sorted[profile])
+                if (sorted[profile] === undefined) continue;
+                document.getElementById(sorted[profile]).style.order = profile;
+            }
+            current_profile_data = sorted;
+            selected_button = null;
+            selected_name = "";
+        }
+
     })
 
     // Used for sidebar animations
@@ -1679,17 +2054,17 @@ async function onLoad() {
             }],
             title: 'Select DDLC Zip File'
         });
-       try {
-           document.getElementById("loadingsub").textContent = translation.importing_zip
-           document.getElementById("select-zip").classList.add("hide")
-           await invoke("set_ddlc_zip", {
-               path: p
-           })
+        try {
+            document.getElementById("loadingsub").textContent = translation.importing_zip
+            document.getElementById("select-zip").classList.add("hide")
+            await invoke("set_ddlc_zip", {
+                path: p
+            })
 
-       } catch (Exception) {
-           document.getElementById("select-zip").classList.remove("hide")
-           document.getElementById("loadingsub").textContent = translation.select_zip
-       }
+        } catch (Exception) {
+            document.getElementById("select-zip").classList.remove("hide")
+            document.getElementById("loadingsub").textContent = translation.select_zip
+        }
     })
 
     // Opens up DokiMods
@@ -1727,7 +2102,7 @@ async function onLoad() {
             document.getElementById("alert").classList.add("hide")
             await invoke('tracker', {
                 event: 'auto_download',
-                props: { name: alert_path.split("\\").pop() }
+                props: {name: alert_path.split("\\").pop()}
             });
             await import_mod(alert_path)
         }
@@ -1751,7 +2126,7 @@ async function onLoad() {
             if (path.endsWith(".zip") || path.endsWith(".rar") || path.endsWith(".rpa")) {
                 await invoke('tracker', {
                     event: 'manual_download',
-                    props: {  }
+                    props: {}
                 });
                 await import_mod(path)
             } else {
@@ -1791,7 +2166,7 @@ async function onLoad() {
                         "有新版本呀！(撳「好」開始更新)\n" +
                         "新しいアップデートがあります！(「Ok」を押して更新してください)\n" +
                         "Nova atualização disponível! (Pressione 'Ok' para atualizar)\n" +
-                    ")\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
+                        ")\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
                     if (response) {
                         await update_client()
 
@@ -1886,7 +2261,8 @@ async function onLoad() {
         try {
             await requestDirectory(event.payload.final_data)
             await home_main()
-        } catch (e) {}
+        } catch (e) {
+        }
 
     })
 
@@ -1963,7 +2339,8 @@ async function onLoad() {
     })
 
     document.getElementById("delete-save").addEventListener("mouseup", async () => {
-        if (currentEntry !== "") {
+        /*
+         if (currentEntry !== "") {
             let final = launchers[currentEntry].absolute_location;
             let loc = await invoke("rpa_data", {
                 path: final + "\\game\\scripts.rpa",
@@ -1978,13 +2355,29 @@ async function onLoad() {
             }
 
         }
+         */
+        if (currentEntry !== "") {
+            let final = launchers[currentEntry].absolute_location;
+            let loc = await invoke("rpa_data", {
+                path: final + "\\game\\scripts.rpa",
+                out: final
+            })
+            if (loc !== "") {
+                document.getElementById("profile-blur").classList.remove("hide")
+                update_profiles(loc)
+            } else {
+                confirm("Unknown Save Data Location!")
+            }
+
+        }
+
     })
 
     document.getElementById("extract").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
             let final = launchers[currentEntry].absolute_location + "\\game\\scripts.rpa";
             console.log(final)
-            document.getElementById("loadingsub").textContent = "Extracting"
+            document.getElementById("loadingsub").textContent = "Extracting (This will take 20-40s)"
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
             await invoke("extract_game_script", {
@@ -2183,8 +2576,8 @@ async function onLoad() {
             tutorial_pointer.style.width = document.getElementById("modlist").getBoundingClientRect().width + "px";
             tutorial_pointer.style.height = document.getElementById("modlist").getBoundingClientRect().height + "px";
             tutorial_pointer.style.borderRadius = "10px"
-            tutorial_pointer.style.top = (document.getElementById("modlist").getBoundingClientRect().y + (document.getElementById("modlist").getBoundingClientRect().height/2)) + "px"
-            tutorial_pointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width/2))  + "px"
+            tutorial_pointer.style.top = (document.getElementById("modlist").getBoundingClientRect().y + (document.getElementById("modlist").getBoundingClientRect().height / 2)) + "px"
+            tutorial_pointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width / 2)) + "px"
             document.getElementById("tutorial-title").textContent = translation.tutorial[4].title;
             document.getElementById("tutorial-context").textContent = translation.tutorial[4].context;
             confirm(translation.tutorial.select)
@@ -2200,8 +2593,8 @@ async function onLoad() {
                 if (tutorial_pointer == null) {
                     tutorial_pointer = document.createElement("div")
                     tutorial_pointer.classList.add("tutorial-pointer")
-                    tutorial_pointer.style.top = (document.getElementById("themeselect").getBoundingClientRect().y + (document.getElementById("themeselect").getBoundingClientRect().height/2)) + "px"
-                    tutorial_pointer.style.left = (document.getElementById("themeselect").getBoundingClientRect().x + (document.getElementById("themeselect").getBoundingClientRect().width/2))  + "px"
+                    tutorial_pointer.style.top = (document.getElementById("themeselect").getBoundingClientRect().y + (document.getElementById("themeselect").getBoundingClientRect().height / 2)) + "px"
+                    tutorial_pointer.style.left = (document.getElementById("themeselect").getBoundingClientRect().x + (document.getElementById("themeselect").getBoundingClientRect().width / 2)) + "px"
 
                     document.getElementById("main").appendChild(tutorial_pointer)
                 }
@@ -2217,8 +2610,8 @@ async function onLoad() {
                 tutorial_pointer.style.width = document.getElementById("covers").getBoundingClientRect().width + "px";
                 tutorial_pointer.style.height = document.getElementById("covers").getBoundingClientRect().height + "px";
                 tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("covers").getBoundingClientRect().y + (document.getElementById("covers").getBoundingClientRect().height/2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("covers").getBoundingClientRect().x + (document.getElementById("covers").getBoundingClientRect().width/2))  + "px"
+                tutorial_pointer.style.top = (document.getElementById("covers").getBoundingClientRect().y + (document.getElementById("covers").getBoundingClientRect().height / 2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("covers").getBoundingClientRect().x + (document.getElementById("covers").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = translation.tutorial[3].title;
                 document.getElementById("tutorial-context").textContent = translation.tutorial[3].context;
                 break;
@@ -2231,8 +2624,8 @@ async function onLoad() {
                 tutorial_pointer.style.width = document.getElementById("reddit").getBoundingClientRect().width + "px";
                 tutorial_pointer.style.height = document.getElementById("reddit").getBoundingClientRect().height + "px";
                 tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("reddit").getBoundingClientRect().y + (document.getElementById("reddit").getBoundingClientRect().height/2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("reddit").getBoundingClientRect().x + (document.getElementById("reddit").getBoundingClientRect().width/2))  + "px"
+                tutorial_pointer.style.top = (document.getElementById("reddit").getBoundingClientRect().y + (document.getElementById("reddit").getBoundingClientRect().height / 2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("reddit").getBoundingClientRect().x + (document.getElementById("reddit").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = translation.tutorial[4].title;
                 document.getElementById("tutorial-context").textContent = translation.tutorial[4].context;
                 break;
@@ -2245,8 +2638,8 @@ async function onLoad() {
                 tutorial_pointer.style.width = document.getElementById("cove").getBoundingClientRect().width + "px";
                 tutorial_pointer.style.height = document.getElementById("cove").getBoundingClientRect().height + "px";
                 tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("cove").getBoundingClientRect().y + (document.getElementById("cove").getBoundingClientRect().height/2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("cove").getBoundingClientRect().x + (document.getElementById("cove").getBoundingClientRect().width/2))  + "px"
+                tutorial_pointer.style.top = (document.getElementById("cove").getBoundingClientRect().y + (document.getElementById("cove").getBoundingClientRect().height / 2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("cove").getBoundingClientRect().x + (document.getElementById("cove").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = translation.tutorial[5].title;
                 document.getElementById("tutorial-context").textContent = translation.tutorial[5].context;
                 break;
@@ -2259,8 +2652,8 @@ async function onLoad() {
                 tutorial_pointer.style.width = document.getElementById("modtitle").getBoundingClientRect().width + "px";
                 tutorial_pointer.style.height = document.getElementById("modtitle").getBoundingClientRect().height + "px";
                 tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("modtitle").getBoundingClientRect().y + (document.getElementById("modtitle").getBoundingClientRect().height/2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("modtitle").getBoundingClientRect().x + (document.getElementById("modtitle").getBoundingClientRect().width/2))  + "px"
+                tutorial_pointer.style.top = (document.getElementById("modtitle").getBoundingClientRect().y + (document.getElementById("modtitle").getBoundingClientRect().height / 2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("modtitle").getBoundingClientRect().x + (document.getElementById("modtitle").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = translation.tutorial[6].title;
                 document.getElementById("tutorial-context").textContent = translation.tutorial[6].context;
                 break;
@@ -2273,8 +2666,8 @@ async function onLoad() {
                 tutorial_pointer.style.width = document.getElementById("modinfo").getBoundingClientRect().width + "px";
                 tutorial_pointer.style.height = document.getElementById("modinfo").getBoundingClientRect().height + "px";
                 tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("modinfo").getBoundingClientRect().y + (document.getElementById("modinfo").getBoundingClientRect().height/2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("modinfo").getBoundingClientRect().x + (document.getElementById("modinfo").getBoundingClientRect().width/2))  + "px"
+                tutorial_pointer.style.top = (document.getElementById("modinfo").getBoundingClientRect().y + (document.getElementById("modinfo").getBoundingClientRect().height / 2)) + "px"
+                tutorial_pointer.style.left = (document.getElementById("modinfo").getBoundingClientRect().x + (document.getElementById("modinfo").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = translation.tutorial[7].title;
                 document.getElementById("tutorial-context").textContent = translation.tutorial[7].context;
                 break;
@@ -2291,6 +2684,7 @@ async function onLoad() {
                 break;
         }
     })
+
 
     // Prevent Find
 
@@ -2368,7 +2762,7 @@ async function update_client() {
     if (await should_update()) {
         await invoke('tracker', {
             event: 'update_launcher',
-            props: { from: CLIENT_VERSION }
+            props: {from: CLIENT_VERSION}
         });
         document.getElementById("loadingsub").textContent = translation.updating + " Doki Doki Mod Manager"
         await invoke("update_exe")
@@ -2411,7 +2805,7 @@ async function launch_desktop() {
     document.getElementById("desktop-launch").addEventListener("mouseup", () => {
         window.location.reload(true)
     })
-    document.getElementById("desktop-close2").addEventListener("mouseup",() => {
+    document.getElementById("desktop-close2").addEventListener("mouseup", () => {
         invoke("close");
     })
     document.getElementById("desktop-close").addEventListener("mouseup", () => {
