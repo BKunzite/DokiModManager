@@ -47,7 +47,8 @@
         <button class="play hide" id="play">Play</button>
         <button class="path hide" id="path" title="Open Path In Explorer">&#60792;</button>
         <button class="extract hide" id="extract" title="Extract RPA">&#60807;</button>
-        <button class="delete-save hide" id="delete-save" title="Delete Save Data">&#62786;</button>
+        <button class="delete-save hide" id="delete-save" title="Open Profiles">&#60899;</button>
+        <button class="reset-save hide" id="reset-save" title="Reset Current Profile Data">&#62786;</button>
 
         <button class="delete hide" id="delete" title="Delete Mod">&#60450;</button>
         <header class="rename-header hide" style="left: 3.5rem;" id="screenshots-header"><span style="font-family: Icon;">&#60996;</span> <span id="screenshot-text">Screenshots</span></header>
@@ -113,8 +114,14 @@
       <div class="view-background smooth-hide hide" id="view-background">
         <img class="view-image" id="view-image">
       </div>
+      <div class="input-prompt hide" id="input-prompt">
+        <header class="input-prompt-header">Set Profile Name</header>
+        <input class="input-prompt-box" id="input-prompt-box" autocomplete="off">
+        <button class="input-prompt-button input-prompt-yes" id="input-prompt-agree">Save</button>
+        <button class="input-prompt-button input-prompt-no" id="input-prompt-cancel">Cancel</button>
+      </div>
       <div class="profile-blur hide smooth-hide" id="profile-blur">
-        <div class="profile-bg">
+        <div class="profile-bg smooth-hide hide" id="profile-bg">
           <header class="profile-header">Profiles</header>
           <div class="profile-list" id="profiles">
 

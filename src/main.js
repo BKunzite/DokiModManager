@@ -34,6 +34,18 @@ import sound_beep from './assets/select.ogg';
 import sound_boop from './assets/hover.ogg';
 import sound_click from './assets/pageflip.ogg';
 
+// Profile Data
+
+let selected_button = null;
+let selected_name = ""
+let current_profile = ""
+let current_profile_data = {}
+let concurrent_profile_data = {}
+let profile_path = "";
+let original_profile = "";
+let current_game_data_path = "";
+let rename_target = "";
+
 // --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
 let launchers = []
 let currentEntry = ""
@@ -60,7 +72,7 @@ let tutorial_step = 0;
 let tutorial_pointer = null
 let save_path = "";
 
-const CLIENT_VERSION = "3.4.0-release"
+const CLIENT_VERSION = "2.4.0-release"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "a", "b", "c", "d", "e"
@@ -144,6 +156,8 @@ const TRANSLATION_TABLE = {
         "next": "Next",
         "end": "End",
         "updating": "Updating",
+        "error-profile_setname": "You cannot rename the default profile!",
+        "error-profile_delete": "You cannot delete the default profile!",
         "tutorial": {
             "select": "Please select a mod, or download one before continuing!",
             "1": {
@@ -180,10 +194,9 @@ const TRANSLATION_TABLE = {
             }
         }
     },
+
     "pt": {
-        "data": {
-            "flag": "pt.png"
-        },
+        "data": { "flag": "pt.png" },
         "yes": "Sim",
         "no": "Não",
         "play": "Jogar",
@@ -210,6 +223,8 @@ const TRANSLATION_TABLE = {
         "next": "Próximo",
         "end": "Finalizar",
         "updating": "Atualizando",
+        "error-profile_setname": "Você não pode renomear o perfil padrão!",
+        "error-profile_delete": "Você não pode excluir o perfil padrão!",
         "tutorial": {
             "select": "Por favor, selecione um mod ou baixe um antes de continuar!",
             "1": {
@@ -246,23 +261,22 @@ const TRANSLATION_TABLE = {
             }
         }
     },
+
     "es": {
-        "data": {
-            "flag": "spain.png",
-        },
+        "data": { "flag": "spain.png" },
         "yes": "Sí",
         "no": "No",
         "play": "Jugar",
         "import-watcher": "¿Permitir que este mod se extraiga e importe?",
         "main": "Principal",
+        "mods": "Mods",
         "search": "Buscar",
         "import": "Importar Mod",
-        "mods": "Mods",
         "greet": "¡Hola!",
+        "install": "Establecer Ubicación de Instalación",
         "select_zip": "Selecciona el archivo zip que contiene DDLC. Puedes descargarlo en https://ddlc.moe. (Haz clic para abrir)",
         "select_zip_button": "Importar Zip",
         "importing_zip": "Importando DDLC",
-        "install": "Establecer Ubicación de Instalación",
         "import_image": "Importar Imagen",
         "home": "Inicio",
         "theme": "Establecer Tema",
@@ -276,6 +290,8 @@ const TRANSLATION_TABLE = {
         "next": "Siguiente",
         "end": "Terminar",
         "updating": "Actualizando",
+        "error-profile_setname": "¡No puedes cambiar el nombre del perfil predeterminado!",
+        "error-profile_delete": "¡No puedes eliminar el perfil predeterminado!",
         "tutorial": {
             "select": "Por favor, selecciona un mod o descarga uno antes de continuar!",
             "1": {
@@ -312,10 +328,9 @@ const TRANSLATION_TABLE = {
             }
         }
     },
+
     "fr": {
-        "data": {
-            "flag": "france.png",
-        },
+        "data": { "flag": "france.png" },
         "yes": "Oui",
         "no": "Non",
         "play": "Jouer",
@@ -325,10 +340,10 @@ const TRANSLATION_TABLE = {
         "search": "Rechercher",
         "import": "Importer Mod",
         "greet": "Salut",
+        "install": "Définir l'emplacement d'installation",
         "select_zip": "Sélectionnez le fichier zip contenant DDLC. Vous pouvez le télécharger sur https://ddlc.moe. (Cliquez pour ouvrir)",
         "select_zip_button": "Importer le Zip",
         "importing_zip": "Importation de DDLC",
-        "install": "Définir l'emplacement d'installation",
         "import_image": "Importer Image",
         "home": "Accueil",
         "theme": "Définir Thème",
@@ -342,6 +357,8 @@ const TRANSLATION_TABLE = {
         "next": "Suivant",
         "end": "Terminer",
         "updating": "Mise à jour",
+        "error-profile_setname": "Vous ne pouvez pas renommer le profil par défaut !",
+        "error-profile_delete": "Vous ne pouvez pas supprimer le profil par défaut !",
         "tutorial": {
             "select": "Veuillez sélectionner un mod, ou en télécharger un avant de continuer !",
             "1": {
@@ -378,10 +395,9 @@ const TRANSLATION_TABLE = {
             }
         }
     },
+
     "zh-HK": {
-        "data": {
-            "flag": "hong-kong.png",
-        },
+        "data": { "flag": "hong-kong.png" },
         "yes": "係",
         "no": "唔係",
         "play": "玩",
@@ -392,11 +408,11 @@ const TRANSLATION_TABLE = {
         "import": "導入模組",
         "greet": "你好",
         "install": "設定安裝位置",
-        "import_image": "導入圖片",
-        "home": "主頁",
         "select_zip": "請選擇包含 DDLC 嘅 zip 檔案。你可以喺 https://ddlc.moe 下載。(撳吓即刻打開)",
         "select_zip_button": "匯入 Zip",
         "importing_zip": "正在匯入 DDLC",
+        "import_image": "導入圖片",
+        "home": "主頁",
         "theme": "設定主題",
         "update-text": "更新 (桌面)",
         "loading": "載入模組",
@@ -408,6 +424,8 @@ const TRANSLATION_TABLE = {
         "next": "下一頁",
         "end": "結束",
         "updating": "更新緊",
+        "error-profile_setname": "你唔可以重新命名預設設定檔！",
+        "error-profile_delete": "你唔可以刪除預設設定檔！",
         "tutorial": {
             "select": "請選擇一個模組，或者先下載一個再繼續!",
             "1": {
@@ -424,7 +442,7 @@ const TRANSLATION_TABLE = {
             },
             "4": {
                 "title": "下載",
-                "context": "然後，透過 reddit 下載模組。你亦可以拖放 zip 檔案到呢度。記住要儲存到你的下載資料夾!"
+                "context": "然後，透過 Reddit 下載模組。你亦可以拖放 zip 檔案到呢度。記住要儲存到你的下載資料夾!"
             },
             "5": {
                 "title": "封面",
@@ -444,10 +462,9 @@ const TRANSLATION_TABLE = {
             }
         }
     },
+
     "jp": {
-        "data": {
-            "flag": "japan.png"
-        },
+        "data": { "flag": "japan.png" },
         "yes": "はい",
         "no": "いいえ",
         "play": "プレイ",
@@ -458,12 +475,12 @@ const TRANSLATION_TABLE = {
         "import": "Modをインポート",
         "greet": "こんにちは",
         "install": "インストール先を設定",
-        "import_image": "画像をインポート",
-        "home": "ホーム",
-        "theme": "テーマを設定",
         "select_zip": "DDLCが含まれているzipファイルを選択してください。https://ddlc.moe からダウンロードできます。(クリックして開く)",
         "select_zip_button": "Zipをインポート",
         "importing_zip": "DDLCをインポート中",
+        "import_image": "画像をインポート",
+        "home": "ホーム",
+        "theme": "テーマを設定",
         "update-text": "アップデート (デスクトップ)",
         "loading": "Modを読み込み中",
         "description": "説明",
@@ -474,6 +491,8 @@ const TRANSLATION_TABLE = {
         "next": "次へ",
         "end": "終了",
         "updating": "更新中",
+        "error-profile_setname": "デフォルトのプロファイル名は変更できません！",
+        "error-profile_delete": "デフォルトのプロファイルは削除できません！",
         "tutorial": {
             "select": "続行する前に、Modを選択するかダウンロードしてください！",
             "1": {
@@ -814,7 +833,7 @@ async function update_cover_images(first_time) {
 // Saves config to file (./client-config.json)
 
 async function saveConfig(a) {
-    console.log("Saving Config" + a)
+    console.log("Saving Config @ " + Date.now())
     localConfig.config.coverId = background_cover;
     localConfig.config.totalTime = total_time;
     localConfig.config.version = CLIENT_VERSION;
@@ -1402,6 +1421,7 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
             document.getElementById("info").textContent = "No Information Found!";
         }
         document.getElementById("delete").classList.remove("hide");
+        document.getElementById("reset-save").classList.remove("hide");
         document.getElementById("path").classList.remove("hide");
         document.getElementById("extract").classList.remove("hide");
         document.getElementById("delete-save").classList.remove("hide");
@@ -1434,6 +1454,7 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         document.getElementById("setinfo-header").classList.add("hide");
         document.getElementById("info").classList.add("hide");
         document.getElementById("delete").classList.add("hide");
+        document.getElementById("reset-save").classList.add("hide");
         document.getElementById("path").classList.add("hide");
         document.getElementById("extract").classList.add("hide");
         document.getElementById("delete-save").classList.add("hide");
@@ -1571,15 +1592,6 @@ async function rename_mod() {
     }
 }
 
-let selected_button = null;
-let selected_name = ""
-let current_profile = ""
-let current_profile_data = {}
-let concurrent_profile_data = {}
-let profile_path = "";
-let original_profile = "";
-let current_game_data_path = "";
-
 async function update_profiles(path) {
     /*
     <div class="profile-button">
@@ -1610,13 +1622,12 @@ async function update_profiles(path) {
     selected_name = profiles_data.selected == null ? "profile-Default" : profiles_data.selected;
     current_profile = profiles_data.current == null ? "Default" : profiles_data.current;
     original_profile = current_profile;
-    current_profile_data = profiles_data.profiles == null ? {"1": "Default"} : profiles_data.profiles;
+    current_profile_data = profiles_data.profiles == null ? {"0": "Default"} : profiles_data.profiles;
     concurrent_profile_data = {}
 
     if (!await isExist(get_profile_path(current_profile))) {
         await writeTextFile(get_profile_path(current_profile), "{}");
     }
-
 
     const profile_files = await readDir(profiles_path);
     for (const profile of profile_files) {
@@ -1649,26 +1660,39 @@ async function save_profile_data() {
         const profile_path = get_profile_path(current_profile_data[key]);
         console.log(profile_path)
         if (!await isExist(profile_path)) {
-            current_profile_data[key] = null;
+            current_profile_data[key] = undefined;
         }
     }
+
     const sorted = Object.entries(current_profile_data)
         .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-        .reduce((acc, [key, value], index) => {
-            acc[index] = value;
+        .reduce((acc, [key, value], index, array) => {
+            const currentKey = parseInt(key);
+            const prevKey = index > 0 ? parseInt(array[index - 1][0]) : -1;
+            for (let i = prevKey + 1; i < currentKey; i++) {
+                acc[i] = undefined;
+            }
+            acc[currentKey] = value;
             return acc;
         }, {});
+
     const profiles_data = {
         "selected": selected_name,
         "current": current_profile.replace("profile-", ""),
         "profiles": sorted
     }
+
+    console.log(profiles_data, sorted)
+
     writeTextFile(profile_path + "\\.info.json", JSON.stringify(profiles_data)).then(r => {
     });
 }
 
 async function save_concurrent_profile_data() {
     let active_profile_path = get_profile_path(original_profile);
+    if (!await isExist(active_profile_path)) {
+        return;
+    }
     await writeTextFile(active_profile_path, JSON.stringify(await get_concurrent_game_data()));
 }
 
@@ -1685,16 +1709,17 @@ async function get_concurrent_game_data(path) {
     return data;
 }
 
-async function load_concurrent_profile_data(reload) {
-    const current_info_path = profile_path + "\\.info.json";
-    let profiles_data = JSON.parse(await readTextFile(current_info_path));
-    selected_name = profiles_data.selected == null ? "profile-Default" : "profile-" + profiles_data.selected;
-    current_profile = profiles_data.current == null ? "Default" : profiles_data.current;
-    original_profile = current_profile;
-    current_profile_data = profiles_data.profiles == null ? {"1": "Default"} : profiles_data.profiles;
-    current_profile_data = Object.fromEntries(Object.entries(current_profile_data).sort((a, b) => parseInt(a[0]) - parseInt(b[0])));
-    concurrent_profile_data = {}
-    console.log(" should reload: " + reload)
+async function load_concurrent_profile_data(reload, reset_data) {
+    if (reset_data !== true) {
+        let profiles_data = JSON.parse(await readTextFile(profile_path + "\\.info.json"));
+        selected_name = profiles_data.selected == null ? "profile-Default" : "profile-" + profiles_data.selected;
+        current_profile = profiles_data.current == null ? "Default" : profiles_data.current;
+        original_profile = current_profile;
+        current_profile_data = profiles_data.profiles == null ? {"0": "Default"} : profiles_data.profiles;
+        current_profile_data = Object.fromEntries(Object.entries(current_profile_data).sort((a, b) => parseInt(a[0]) - parseInt(b[0])));
+        concurrent_profile_data = {}
+    }
+    console.log(" should reload: " + reload + " file: " + current_profile)
     if (reload) {
         for (const file of await readDir(current_game_data_path)) {
             await remove(current_game_data_path + "\\" + file.name);
@@ -1731,8 +1756,12 @@ async function save_profile() {
 }
 
 function create_profile(profile, position) {
-    if (position === undefined) position = get_profile_length()
-    console.log(position)
+    if (position === undefined) {
+        position = 0;
+        while (current_profile_data[position] !== undefined) {
+            position++;
+        }
+    }
     const background = document.createElement("div");
     const name = document.createElement("header");
     const b_delete = document.createElement("button");
@@ -1770,31 +1799,67 @@ function create_profile(profile, position) {
             }
         }
         selected_name = background.id;
-        current_profile = profile;
+        current_profile =  background.id.replace("profile-", "");
         background.classList.add("profile-button-active")
     }
+
+    b_select.addEventListener("click", (e) => {
+        if (profile === "Default") {
+            confirm(translation["error-profile_setname"])
+            return;
+        }
+        rename_target =  background.id.replace("profile-", "");
+        document.getElementById("profile-bg").classList.add("profile-bg-covered")
+        document.getElementById("input-prompt").classList.remove("hide")
+        document.getElementById("input-prompt-box").value = background.id.replace("profile-", "");
+        document.getElementById("input-prompt-box").focus();
+    })
 
     background.addEventListener("mousedown", onClick)
 
     b_drag.addEventListener("mousedown", async (e) => {
+        if (selected_button !== null) return;
         selected_name = background.id;
         selected_button = document.createElement("div");
-        background.classList.add("profile-button-selected");
+        const text = document.createElement("header");
+        text.classList.add("profile-item-name")
+        text.textContent = background.id.replace("profile-", "");
+
+        selected_button.classList.add("profile-button-hover")
+        selected_button.style.top = background.getBoundingClientRect().y + "px";
+        selected_button.style.left = background.getBoundingClientRect().x + "px";
+        selected_button.id = background.id
+
+        selected_button.appendChild(text)
+        document.getElementById("profile-blur").appendChild(selected_button);
     })
 
     b_delete.addEventListener("mousedown", async (e) => {
-        await remove(profile_path + "\\" + profile + ".ddmm.profile.json");
+        if (profile === "Default") {
+            confirm(translation["error-profile_delete"])
+            return;
+        }
+        await remove(profile_path + "\\" +  background.id.replace("profile-", "") + ".ddmm.profile.json");
+
         current_profile = "Default"
         selected_name = "profile-Default"
-        original_profile = "Default"
+        for (const key in current_profile_data) {
+            if (current_profile_data[key].replace("profile-", "") === background.id.replace("profile-", "")) {
+                delete current_profile_data[key]
+            }
+        }
+
         background.remove()
+
         for (const elm of document.getElementsByClassName("profile-button")) {
             if (elm.classList.contains("profile-button-active")) {
                 elm.classList.remove("profile-button-active")
             }
         }
         document.getElementById("profile-Default").classList.add("profile-button-active")
+
         await save_profile_data();
+        await load_concurrent_profile_data(true, true);
     })
 
     concurrent_profile_data[profile] = {
@@ -1805,7 +1870,6 @@ function create_profile(profile, position) {
     isExist(get_profile_path(profile)).then(r => {
         console.log(profile, r)
         if (!r) {
-
             console.log("Creating Profile")
             writeTextFile(get_profile_path(profile), JSON.stringify(concurrent_profile_data[profile])).then(r => {
             });
@@ -1823,6 +1887,80 @@ function get_profile_length() {
         length++;
     }
     return length;
+}
+
+function move_entries(obj, fromIndex, toIndex) {
+    const values = Object.values(obj);
+
+    if (fromIndex < 0 || fromIndex >= values.length ||
+        toIndex < 0 || toIndex >= values.length) {
+        throw new Error('Invalid index');
+    }
+
+    const [movedValue] = values.splice(fromIndex, 1);
+    values.splice(toIndex, 0, movedValue);
+
+    const result = {};
+    values.forEach((value, index) => {
+        result[index] = value;
+    });
+
+    return result;
+}
+
+// Save Profile Name
+
+function close_profile_rename() {
+    document.getElementById("profile-bg").classList.remove("profile-bg-covered")
+    document.getElementById("input-prompt").classList.add("hide")
+}
+
+async function save_profile_name() {
+    const name = document.getElementById("input-prompt-box").value;
+    if (name.includes("profile-") || name.toLowerCase() === "default") {
+        await confirm("The Name '" + name + "' is already taken!")
+        return;
+    }
+    console.log("[MARKER] -> Rename")
+    if (name !== "") {
+        console.log(current_profile_data)
+        for (const profile in current_profile_data) {
+            console.log(current_profile_data[profile])
+            if (current_profile_data[profile] === null || current_profile_data[profile] === undefined) continue;
+            const comperator = (current_profile_data[profile] + "").toLowerCase().replace("profile-","");
+            const comperason = name.toLowerCase().replace("profile-","");
+            console.log(comperator, comperason, comperator === comperason)
+            if (comperason === comperator || name.toLowerCase().includes("profile-")) {
+                await confirm("The Name '" + name + "' is already taken!")
+                return;
+            }
+        }
+        for (const key in current_profile_data) {
+            if (current_profile_data[key] === "profile-" + rename_target) {
+                console.log(concurrent_profile_data[rename_target], current_profile_data[key])
+                document.getElementById("profile-" + rename_target).querySelector("header").textContent = name;
+                document.getElementById("profile-" + rename_target).id = "profile-" + name;
+                current_profile_data[key] = "profile-" + name;
+                concurrent_profile_data[name] = concurrent_profile_data[rename_target];
+                delete concurrent_profile_data[rename_target];
+
+                if (selected_name === "profile-" + rename_target) {
+                    selected_name = "profile-" + name;
+                    current_profile = name;
+                }
+
+                console.log(rename_target)
+
+                await writeTextFile(get_profile_path(name), await readTextFile(get_profile_path(rename_target)));
+                await remove(get_profile_path(rename_target));
+
+                break
+            }
+        }
+    };
+    await save_profile_data();
+    close_profile_rename()
+
 }
 
 // Waits For Webpage To Load
@@ -1847,6 +1985,7 @@ async function onLoad() {
     })
 
     document.getElementById("save-profile").addEventListener("click", async (e) => {
+        document.getElementById("profile-bg").classList.add("hide")
         await save_profile();
         document.getElementById("profile-blur").classList.add("hide")
     });
@@ -1877,90 +2016,80 @@ async function onLoad() {
         })
     })
 
-    document.getElementById("profile-blur").addEventListener("mousemove", e => {
-        if (selected_button !== null) {
-            let closest_top = null
-            let cloest_amount = 9999;
-            for (const div of document.getElementsByClassName("profile-button")) {
-                const top_y = div.getBoundingClientRect().top;
-                const yDist = Math.abs(top_y - e.clientY);
-                if (div.id === selected_name) continue;
-                if (yDist < Math.abs(cloest_amount)) {
-                    cloest_amount = top_y - e.clientY;
-                    closest_top = div;
-                }
-            }
-            if (closest_top !== null) {
-                document.getElementById(selected_name).style.order = (parseInt(closest_top.style.order) - (Math.abs(cloest_amount) >= 20 ? Math.sign(cloest_amount) : 0)) + "";
-            }
+    document.getElementById("input-prompt-box").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            save_profile_name();
         }
     })
+    document.getElementById("input-prompt-agree").addEventListener("mouseup", save_profile_name)
+    document.getElementById("input-prompt-cancel").addEventListener("mouseup", close_profile_rename)
 
-    document.getElementById("profile-blur").addEventListener("mouseup", e => {
+    document.getElementById("profile-blur").addEventListener("mouseup", (e) => {
         if (selected_button !== null) {
-            document.getElementById(selected_name).classList.remove("profile-button-selected");
-
-            let list_val = {}
-            const IButtonOrder = parseInt(document.getElementById(selected_name).style.order);
-            let old = 0;
-            for (const profile in current_profile_data) {
-                if (current_profile_data[profile] === selected_name) {
-                    old = parseInt(profile);
+            let is_hovering = null;
+            for (const elm of document.getElementsByClassName("profile-button")) {
+                if (elm.contains(e.target)) {
+                    is_hovering = elm;
                     break;
                 }
             }
-
-            if (old < IButtonOrder) {
-                for (const div of document.getElementsByClassName("profile-button")) {
-                    if (div.id === selected_name) continue; // Skip the selected element
-
-                    let order = parseInt(div.style.order);
-                    if (order < old) {
-                        list_val[order] = div.id;
-                    } else if (order <= IButtonOrder) {
-                        list_val[order - 1] = div.id;
-                    } else {
-                        list_val[order] = div.id;
-                    }
-                }
-                list_val[IButtonOrder] = list_val[IButtonOrder - 1];
-                list_val[IButtonOrder - 1] = selected_name;
+            if (is_hovering === null) {
 
             } else {
-                for (const div of document.getElementsByClassName("profile-button")) {
-                    if (div.id === selected_name) continue;
-
-                    let order = parseInt(div.style.order);
-                    if (order < IButtonOrder) {
-                        list_val[order] = div.id;
-                    } else if (order < old) {
-                        list_val[order + 1] = div.id;
-                    } else {
-                        list_val[order] = div.id;
+                let moveNext = 0;
+                let old_index = 0;
+                for (const index in current_profile_data) {
+                    const data = current_profile_data[index];
+                    if (is_hovering.id === data) {
+                        moveNext = parseInt(index);
+                    } else if (data === selected_button.id) {
+                        old_index = parseInt(index);
                     }
                 }
-                if (IButtonOrder > 0) {
-                    list_val[IButtonOrder] = list_val[IButtonOrder + 1];
-                    list_val[IButtonOrder + 1] = selected_name;
+
+                console.log(current_profile_data)
+
+                console.log("moving " + old_index + " to " + moveNext)
+                current_profile_data = move_entries(current_profile_data, old_index, moveNext);
+                console.log(current_profile_data)
+                for (const index in current_profile_data) {
+                    const data = current_profile_data[index];
+                    if (data === undefined || data === null) continue;
+                    console.log(data, index)
+                    document.getElementById(data).style.order = index;
+                }
+                selected_button.style.top = is_hovering.getBoundingClientRect().y + "px";
+                selected_button.style.left = is_hovering.getBoundingClientRect().x + "px";
+            }
+            setTimeout(() => {
+                const button = selected_button;
+                selected_button = null;
+                button.classList.add("bounce-out");
+                button.classList.add("shrink")
+                button.addEventListener("transitionend", () => {
+                    button.remove();
+                })
+            }, 0)
+        }
+    })
+
+    document.getElementById("profile-blur").addEventListener("mousemove", (e) => {
+        if (selected_button !== null) {
+            let is_hovering = null;
+            for (const elm of document.getElementsByClassName("profile-button")) {
+                if (elm.contains(e.target)) {
+                    is_hovering = elm;
+                    break;
                 }
             }
-
-            const sorted = Object.entries(list_val)
-                .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                .reduce((acc, [key, value], index) => {
-                    acc[index] = value;
-                    return acc;
-                }, {});
-            for (const profile in sorted) {
-                console.log(sorted[profile])
-                if (sorted[profile] === undefined) continue;
-                document.getElementById(sorted[profile]).style.order = profile;
+            if (is_hovering === null) {
+                selected_button.style.top = e.pageY + "px";
+                selected_button.style.left = e.pageX + "px";
+            } else {
+                selected_button.style.top = is_hovering.getBoundingClientRect().y + "px";
+                selected_button.style.left = is_hovering.getBoundingClientRect().x + "px";
             }
-            current_profile_data = sorted;
-            selected_button = null;
-            selected_name = "";
         }
-
     })
 
     // Used for sidebar animations
@@ -2337,10 +2466,9 @@ async function onLoad() {
             await launchers[currentEntry].path();
         }
     })
+    document.getElementById("reset-save").addEventListener("mouseup", async () => {
 
-    document.getElementById("delete-save").addEventListener("mouseup", async () => {
-        /*
-         if (currentEntry !== "") {
+        if (currentEntry !== "") {
             let final = launchers[currentEntry].absolute_location;
             let loc = await invoke("rpa_data", {
                 path: final + "\\game\\scripts.rpa",
@@ -2355,7 +2483,10 @@ async function onLoad() {
             }
 
         }
-         */
+
+    })
+    document.getElementById("delete-save").addEventListener("mouseup", async () => {
+
         if (currentEntry !== "") {
             let final = launchers[currentEntry].absolute_location;
             let loc = await invoke("rpa_data", {
@@ -2364,6 +2495,8 @@ async function onLoad() {
             })
             if (loc !== "") {
                 document.getElementById("profile-blur").classList.remove("hide")
+                document.getElementById("profile-bg").classList.remove("hide")
+
                 update_profiles(loc)
             } else {
                 confirm("Unknown Save Data Location!")

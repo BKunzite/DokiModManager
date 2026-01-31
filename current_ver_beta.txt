@@ -1,11 +1,24 @@
-3.4.0-release
-Minor (RPA)
+2.4.0-release
+Minor (RPA/Profiles)
 
 💗 To You all
 
 RPA Extracter (unrpyc + warpalib)
     Delete Save Data
     Extract RPA files
+
+Profiles
+    Add/Remove/Rename Profiles
+    Whats a profile?
+        A profile conntains the data for the specific mod,
+        including save data and current player name/settings
+
+        You can make custom profiles for more save slots
+        or for different players with different names/settings.
+
+        You can also now reset your current profile data.
+
+Better animations
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under
