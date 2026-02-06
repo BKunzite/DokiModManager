@@ -34,7 +34,6 @@
       <div class="container-b smooth-hide" id="container">
         <div class="cover hide" id="cove">
           <p id="covertext"></p>
-          <div class="cover-update" style="left: 8vh;" id="cover-next">&#60014;</div>
           <div class="cover-update" id="cover-last">&#60004;</div>
         </div>
         <div class="covers" id="covers">
@@ -145,6 +144,9 @@
         <header class="tutorial-warn-text" id="delete-context" style="text-wrap: pretty; word-break: break-all">Would You Like To Delete The Save Date?</header>
         <button class="tutorial-warn-accept" id="delete-yes">Yes</button>
         <button class="tutorial-warn-deny" id="delete-no">No</button>
+      </div>
+      <div class="image-picker" id="image-picker-bg">
+        <button class="image-picker-cancel" id="image-picker-cancel">Cancel</button>
       </div>
     </div>
 

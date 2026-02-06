@@ -14,6 +14,7 @@ Mod Fixes:
 Added Portuguese Translation
 Improved Performance (Mod Size Reading Is Now Async)
 Better OnBoarding
+New Image Picker For Covers/Backgrounds
 
 Developer
     Switched from 'npm' to 'bun'

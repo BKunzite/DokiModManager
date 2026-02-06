@@ -781,6 +781,55 @@ async function loadConfig(path) {
 async function update_cover_images(first_time) {
     await sync_covers()
     const images = document.getElementById("images")
+    for (const child of document.querySelectorAll(".image-picker-cover")) {
+        child.remove()
+    }
+    for (const cover in preload_covers) {
+        let cover_img = preload_covers[cover];
+        const div = document.createElement("div");
+        const img = cover_img.cloneNode(true);
+        div.classList.add("image-picker-cover");
+        img.alt = covers.indexOf(cover) + " | " +  cover
+
+        let x = 1;
+        let y = 1;
+
+        let aspect = cover_img.naturalWidth / cover_img.naturalHeight;
+        if (aspect > 1.6) {
+            x = 2;
+            img.classList.add("image-picker-cover-img");
+        } else if (aspect > 1.2) {
+            x = 2;
+            y = 2;
+            img.classList.add("image-picker-cover-img-vertical");
+        } else if (aspect < 0.9) {
+            y = 2;
+            img.classList.add("image-picker-cover-img-vertical");
+        } else {
+            if (aspect > 1) {
+                img.classList.add("image-picker-cover-img-vertical");
+            } else {
+                img.classList.add("image-picker-cover-img");
+            }
+        }
+
+        img.addEventListener("mouseup", async (e) => {
+            if (currentEntry !== "" && e.button === 0) {
+                await launchers[currentEntry].setCover(covers.indexOf(cover));
+            } else if (e.button === 0) {
+                background_cover = covers.indexOf(cover)
+                await setCover(background_cover)
+            }
+            await play(sound_beep)
+            document.getElementById("profile-blur").classList.add("hide")
+            document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
+
+        })
+
+        div.classList.add("image-" + x + "x" + y);
+        div.appendChild(img);
+        document.getElementById("image-picker-bg").appendChild(div);
+    }
 
     for (const cover of document.querySelectorAll(".covers-cover")) {
         cover.remove()
@@ -1167,20 +1216,8 @@ async function requestDirectory(path) {
                             path: dir
                         })
                     },
-                    nextCover: async () => {
-                        configData.coverId++;
-                        if (configData.coverId > covers.length - 1) {
-                            configData.coverId = 0;
-                        }
-                        const contents = JSON.stringify(configData);
-                        await writeTextFile(configPath, contents);
-                        await setCover(configData.coverId);
-                    },
-                    lastCover: async () => {
-                        configData.coverId--;
-                        if (configData.coverId < 0) {
-                            configData.coverId = covers.length - 1;
-                        }
+                    setCover: async (coverId) => {
+                        configData.coverId = coverId;
                         const contents = JSON.stringify(configData);
                         await writeTextFile(configPath, contents);
                         await setCover(configData.coverId);
@@ -2428,17 +2465,17 @@ async function onLoad() {
         launch_desktop()
     })
 
-    document.getElementById("cover-next").addEventListener("mouseenter", () => {
-        mouse_cover_available = true
-    })
-    document.getElementById("cover-next").addEventListener("mouseleave", () => {
-        mouse_cover_available = false
-    })
     document.getElementById("cover-last").addEventListener("mouseenter", () => {
         mouse_cover_available = true
     })
     document.getElementById("cover-last").addEventListener("mouseleave", () => {
         mouse_cover_available = false
+    })
+
+    document.getElementById("image-picker-cancel").addEventListener("mouseup", async () => {
+        await play(sound_beep)
+        document.getElementById("profile-blur").classList.add("hide")
+        document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
     })
 
     document.getElementById("cove").addEventListener("mouseup", async () => {
@@ -2564,28 +2601,26 @@ async function onLoad() {
         await home_main()
     })
 
-    document.getElementById("cover-next").addEventListener("mouseup", async (e) => {
-        if (currentEntry !== "" && e.button === 0) {
-            await launchers[currentEntry].nextCover();
-        } else if (e.button === 0) {
-            background_cover++;
-            if (background_cover > covers.length - 1) {
-                background_cover = 0;
-            }
-            await setCover(background_cover)
-        }
-    })
-
     document.getElementById("cover-last").addEventListener("mouseup", async (e) => {
-        if (currentEntry !== "" && e.button === 0) {
-            await launchers[currentEntry].lastCover();
-        } else if (e.button === 0) {
-            background_cover--;
-            if (background_cover < 0) {
-                background_cover = covers.length - 1;
+        // if (currentEntry !== "" && e.button === 0) {
+        //     await launchers[currentEntry].lastCover();
+        // } else if (e.button === 0) {
+        //     background_cover--;
+        //     if (background_cover < 0) {
+        //         background_cover = covers.length - 1;
+        //     }
+        //     await setCover(background_cover)
+        // }
+        document.getElementById("image-picker-bg").scrollTo(
+            {
+                top: 0,
+                behavior: "smooth"
             }
-            await setCover(background_cover)
-        }
+        )
+        document.getElementById("profile-blur").classList.remove("hide")
+        console.log(e.button)
+        document.getElementById("image-picker-bg").classList.add("image-picker-visible")
+        console.log(document.getElementById("image-picker-bg").classList)
     })
 
     document.getElementById("close").addEventListener("mouseup", async () => {

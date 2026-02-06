@@ -1724,6 +1724,129 @@ body {
     animation: 3s spin linear infinite;
 }
 
+.image-picker {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 54rem;
+    height: 80%;
+    border: none;
+    transform: translate(-50%, -50%) scale(0);
+    background-color: rgba(0,0,0, 0.7);
+    backdrop-filter: blur(20px) saturate(50%);
+    border-radius: 3rem;
+    z-index: 10;
+    display: grid;
+    padding: 1rem;
+    padding-top: 4rem;
+    gap: 1rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    grid-template-columns: repeat(5, 10rem);
+    grid-auto-flow: dense;
+    grid-auto-rows: 10rem;
+    transition: transform 0.3s ease-out;
+    pointer-events: none;
+    corner-shape: squircle;
+}
+
+.image-picker-visible {
+    transform: translate(-50%, -50%) scale(1);
+
+    pointer-events: all;
+}
+
+.image-picker-cover {
+    width: 10rem;
+    height: 10rem;
+    background-color: rgba(255,255,255,1);
+    box-shadow: rgba(30,30,30,0.5) 0 0 10px;
+    border-radius: 2rem;
+    corner-shape: squircle;
+    background-size: contain;
+    overflow: hidden;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.image-picker-cancel {
+    position: fixed;
+    top: 0.75rem;
+    left: 50%;
+    transform: translatex(-50%);
+    font-family: "Aller", sans-serif;
+    color: white;
+    font-size: 1.5rem;
+    z-index: 10;
+    width: 54rem;
+    height: 2.5rem;
+    border-radius: 2rem;
+    corner-shape: squircle;
+    background: rgba(60,60,60,0.5);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: none;
+}
+
+.image-picker-cancel:hover {
+    background: rgba(60,60,60,0.1);
+    transform: scale(1.1) translatex(-45.5%);
+}
+
+.image-picker-cover:hover {
+    z-index: 20;
+    transform: scale(1.2);
+
+}
+
+.image-picker-cover-img {
+    position: relative;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.image-picker-cover-img-vertical {
+    width: auto;
+    height: 100%;
+    position: relative;
+    object-fit: cover;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+}
+
+.image-1x1 {
+    grid-column: span 1;
+    grid-row: span 1;
+    width: 10rem;
+    height: 10rem;
+}
+
+.image-1x2 {
+    grid-column: span 1;
+    grid-row: span 2;
+    width: 10rem;
+    height: 21rem;
+}
+
+.image-2x1 {
+    grid-column: span 2;
+    grid-row: span 1;
+    width: 21rem;
+    height: 10rem;
+}
+
+.image-2x2 {
+    grid-column: span 2;
+    grid-row: span 2;
+    width: 21rem;
+    height: 21rem;
+}
+
 .author-header {
     font-family: "Aller", sans-serif;
     color: white;
