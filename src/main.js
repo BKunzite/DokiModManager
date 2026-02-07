@@ -75,7 +75,7 @@ let save_path = "";
 const CLIENT_VERSION = "2.4.0-release"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
-    "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "a", "b", "c", "d", "e"
+    "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
 ]
 const CLIENT_THEMES = {
     NATSUKI: {
@@ -119,6 +119,11 @@ const CLIENT_THEMES = {
         primary_color: [240, 6, 153],
         primary_color_saturated: [0, 245, 255],
         image: "neon-planet.png"
+    },
+    HACKER: {
+        primary_color: [0,255,0],
+        primary_color_saturated: [0,0,0],
+        image: "hacker-svgrepo-com.svg"
     }
 }
 
@@ -128,7 +133,7 @@ const heart_full = "&#62919;";
 const TRANSLATION_TABLE = {
     "en": {
         "data": {
-            "flag": "english.png",
+            "flag": "english.png"
         },
         "yes": "Yes",
         "no": "No",
@@ -140,7 +145,7 @@ const TRANSLATION_TABLE = {
         "import": "Import Mod",
         "greet": "Hiya",
         "install": "Set Install Location",
-        "select_zip": "Select the zip file containing DDLC. You can download this at https://ddlc.moe. (Click to open)",
+        "select_zip": "Select the zip file containing DDLC. You can download this at [https://ddlc.moe](https://ddlc.moe). (Click to open)",
         "select_zip_button": "Import Zip",
         "importing_zip": "Importing DDLC",
         "import_image": "Import Image",
@@ -192,11 +197,18 @@ const TRANSLATION_TABLE = {
                 "title": "Finish",
                 "context": "And that is it! Press 'Play' To Start The Mod. Press 'End' To Finish The Tutorial."
             }
-        }
+        },
+        "send-report": "Report issue",
+        "message": "Message",
+        "send": "Send",
+        "extracting": "[Extracting]",
+        "delete-mod": "Delete Mod",
+        "reset-data": "Reset Current Profile Data"
     },
-
     "pt": {
-        "data": { "flag": "pt.png" },
+        "data": {
+            "flag": "pt.png"
+        },
         "yes": "Sim",
         "no": "Não",
         "play": "Jogar",
@@ -207,7 +219,7 @@ const TRANSLATION_TABLE = {
         "import": "Importar Mod",
         "greet": "Opa",
         "install": "Definir local de instalação",
-        "select_zip": "Selecione o arquivo zip que contém o DDLC. Você pode baixá-lo em https://ddlc.moe. (Clique para abrir)",
+        "select_zip": "Selecione o arquivo zip que contém o DDLC. Você pode baixá-lo em [https://ddlc.moe](https://ddlc.moe). (Clique para abrir)",
         "select_zip_button": "Importar Zip",
         "importing_zip": "Importando DDLC",
         "import_image": "Importar Imagem",
@@ -259,11 +271,18 @@ const TRANSLATION_TABLE = {
                 "title": "Concluir",
                 "context": "E é isso! Pressione 'Jogar' para iniciar o mod. Pressione 'Finalizar' para encerrar o tutorial."
             }
-        }
+        },
+        "send-report": "Reportar problema",
+        "message": "Mensagem",
+        "send": "Enviar",
+        "extracting": "[Extraindo]",
+        "delete-mod": "Excluir Mod",
+        "reset-data": "Redefinir dados do perfil atual"
     },
-
     "es": {
-        "data": { "flag": "spain.png" },
+        "data": {
+            "flag": "spain.png"
+        },
         "yes": "Sí",
         "no": "No",
         "play": "Jugar",
@@ -274,7 +293,7 @@ const TRANSLATION_TABLE = {
         "import": "Importar Mod",
         "greet": "¡Hola!",
         "install": "Establecer Ubicación de Instalación",
-        "select_zip": "Selecciona el archivo zip que contiene DDLC. Puedes descargarlo en https://ddlc.moe. (Haz clic para abrir)",
+        "select_zip": "Selecciona el archivo zip que contiene DDLC. Puedes descargarlo en [https://ddlc.moe](https://ddlc.moe). (Haz clic para abrir)",
         "select_zip_button": "Importar Zip",
         "importing_zip": "Importando DDLC",
         "import_image": "Importar Imagen",
@@ -293,17 +312,17 @@ const TRANSLATION_TABLE = {
         "error-profile_setname": "¡No puedes cambiar el nombre del perfil predeterminado!",
         "error-profile_delete": "¡No puedes eliminar el perfil predeterminado!",
         "tutorial": {
-            "select": "Por favor, selecciona un mod o descarga uno antes de continuar!",
+            "select": "¡Por favor, selecciona un mod o descarga uno antes de continuar!",
             "1": {
                 "title": "¡Bienvenido!",
-                "context": "Este será un recorrido sobre cómo usar Doki Doki Mod Manager. Presiona 'Siguiente' para continuar."
+                "context": "Esta será una guía sobre cómo usar Doki Doki Mod Manager. Presiona 'Siguiente' para continuar."
             },
             "2": {
                 "title": "Tema",
                 "context": "En primer lugar, elijamos un tema. Haz clic en el botón resaltado hasta que sea tu personaje favorito."
             },
             "3": {
-                "title": "Fondo",
+                "title": "Fundo",
                 "context": "A continuación, haz clic en el fondo que quieras usar, o arrastra y suelta una imagen para establecerla como fondo."
             },
             "4": {
@@ -326,11 +345,18 @@ const TRANSLATION_TABLE = {
                 "title": "Finalizar",
                 "context": "¡Y eso es todo! Presiona 'Jugar' para iniciar el mod. Presiona 'Terminar' para finalizar el tutorial."
             }
-        }
+        },
+        "send-report": "Reportar problema",
+        "message": "Mensaje",
+        "send": "Enviar",
+        "extracting": "[Extrayendo]",
+        "delete-mod": "Eliminar Mod",
+        "reset-data": "Restablecer datos del perfil actual"
     },
-
     "fr": {
-        "data": { "flag": "france.png" },
+        "data": {
+            "flag": "france.png"
+        },
         "yes": "Oui",
         "no": "Non",
         "play": "Jouer",
@@ -341,7 +367,7 @@ const TRANSLATION_TABLE = {
         "import": "Importer Mod",
         "greet": "Salut",
         "install": "Définir l'emplacement d'installation",
-        "select_zip": "Sélectionnez le fichier zip contenant DDLC. Vous pouvez le télécharger sur https://ddlc.moe. (Cliquez pour ouvrir)",
+        "select_zip": "Sélectionnez le fichier zip contenant DDLC. Vous pouvez le télécharger sur [https://ddlc.moe](https://ddlc.moe). (Cliquez pour ouvrir)",
         "select_zip_button": "Importer le Zip",
         "importing_zip": "Importation de DDLC",
         "import_image": "Importer Image",
@@ -363,7 +389,7 @@ const TRANSLATION_TABLE = {
             "select": "Veuillez sélectionner un mod, ou en télécharger un avant de continuer !",
             "1": {
                 "title": "Bienvenue !",
-                "context": "Ceci sera un guide sur la façon d'utiliser Doki Doki Mod Manager. Appuyez sur 'Suivant' pour continuer."
+                "context": "Voici un guide sur la façon d'utiliser Doki Doki Mod Manager. Appuyez sur 'Suivant' pour continuer."
             },
             "2": {
                 "title": "Thème",
@@ -393,11 +419,18 @@ const TRANSLATION_TABLE = {
                 "title": "Terminé",
                 "context": "Et c'est tout ! Appuyez sur 'Jouer' pour démarrer le mod. Appuyez sur 'Terminer' pour finir le tutoriel."
             }
-        }
+        },
+        "send-report": "Signaler un problème",
+        "message": "Message",
+        "send": "Envoyer",
+        "extracting": "[Extraction]",
+        "delete-mod": "Supprimer le Mod",
+        "reset-data": "Réinitialiser les données du profil"
     },
-
     "zh-HK": {
-        "data": { "flag": "hong-kong.png" },
+        "data": {
+            "flag": "hong-kong.png"
+        },
         "yes": "係",
         "no": "唔係",
         "play": "玩",
@@ -408,7 +441,7 @@ const TRANSLATION_TABLE = {
         "import": "導入模組",
         "greet": "你好",
         "install": "設定安裝位置",
-        "select_zip": "請選擇包含 DDLC 嘅 zip 檔案。你可以喺 https://ddlc.moe 下載。(撳吓即刻打開)",
+        "select_zip": "請選擇包含 DDLC 嘅 zip 檔案。你可以喺 [https://ddlc.moe](https://ddlc.moe) 下載。(撳吓即刻打開)",
         "select_zip_button": "匯入 Zip",
         "importing_zip": "正在匯入 DDLC",
         "import_image": "導入圖片",
@@ -442,7 +475,7 @@ const TRANSLATION_TABLE = {
             },
             "4": {
                 "title": "下載",
-                "context": "然後，透過 Reddit 下載模組。你亦可以拖放 zip 檔案到呢度。記住要儲存到你的下載資料夾!"
+                "context": "然後，透過 Reddit 下載模組。你亦可以拖放 zip 檔案到呢度。記住要儲存到你嘅下載資料夾!"
             },
             "5": {
                 "title": "封面",
@@ -460,17 +493,24 @@ const TRANSLATION_TABLE = {
                 "title": "完成",
                 "context": "就係咁多! 按「玩」開始模組。按「結束」完成教學。"
             }
-        }
+        },
+        "send-report": "報告問題",
+        "message": "訊息",
+        "send": "發送",
+        "extracting": "[解壓中]",
+        "delete-mod": "刪除模組",
+        "reset-data": "重置當前設定檔數據"
     },
-
     "jp": {
-        "data": { "flag": "japan.png" },
+        "data": {
+            "flag": "japan.png"
+        },
         "yes": "はい",
         "no": "いいえ",
         "play": "プレイ",
         "import-watcher": "このModの解凍とインポートを許可しますか？",
         "main": "メイン",
-        "mods": "Mod",
+        "mods": "モッド",
         "search": "検索",
         "import": "Modをインポート",
         "greet": "こんにちは",
@@ -527,9 +567,16 @@ const TRANSLATION_TABLE = {
                 "title": "完了",
                 "context": "以上です！「プレイ」を押してModを開始しましょう。「終了」を押すとチュートリアルを閉じます。"
             }
-        }
+        },
+        "send-report": "問題を報告",
+        "message": "メッセージ",
+        "send": "送信",
+        "extracting": "[解凍中]",
+        "delete-mod": "Modを削除",
+        "reset-data": "現在のプロファイルデータをリセット"
     }
 };
+
 
 let translation_lan = ""
 let translation = TRANSLATION_TABLE["en"];
@@ -562,6 +609,12 @@ function loadTranslation(lang, first) {
         {id: "update-text", key: "update-text", type: "textContent"},
         {id: "play", key: "play", type: "textContent"},
         {id: "home-text", key: "home", type: "textContent"},
+        {id: "delete", key: "delete-mod", type: "title"},
+        {id: "reset-save", key: "reset-data", type: "title"},
+        {id: "report-text", key: "send-report", type: "textContent"},
+        {id: "report-title", key: "send-report", type: "textContent"},
+        {id: "report-send", key: "send", type: "textContent"},
+        {id: "report-close", key: "cancel", type: "textContent"},
     ];
 
     if (!tutorial_complete) {
@@ -2062,6 +2115,10 @@ async function onLoad() {
     document.getElementById("input-prompt-cancel").addEventListener("mouseup", close_profile_rename)
 
     document.getElementById("profile-blur").addEventListener("mouseup", (e) => {
+        if (document.getElementById("image-picker-bg").classList.contains("image-picker-visible")) {
+            document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
+            document.getElementById("profile-blur").classList.add("hide")
+        }
         if (selected_button !== null) {
             let is_hovering = null;
             for (const elm of document.getElementsByClassName("profile-button")) {
@@ -2296,7 +2353,8 @@ async function onLoad() {
                 });
                 await import_mod(path)
             } else {
-                await writeFile(local_path + "\\store\\images\\" + path.split("\\").pop(), await readFile(path))
+                let dir = await readDir(local_path + "\\store\\images\\")
+                await writeFile(local_path + "\\store\\images\\z_image-" + (dir.length + 1) + dir.length + "." + path.split("\\").pop().split(".").pop(), await readFile(path))
 
             }
         }
@@ -2444,7 +2502,11 @@ async function onLoad() {
     });
 
     listen('substring', async (event) => {
-        document.getElementById("loadingsub").textContent = event.payload.text
+        if (event.payload.text.startsWith("Extracting")) {
+            document.getElementById("loadingsub").textContent = event.payload.text.replace("Extracting", translation.extracting)
+        } else {
+            document.getElementById("loadingsub").textContent = event.payload.text
+        }
     });
 
     document.getElementById("update").addEventListener("mouseup", async () => {
@@ -2483,7 +2545,6 @@ async function onLoad() {
             await launchers[currentEntry].oncove()
         }
     })
-
 
     document.getElementById("delete").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
@@ -2600,7 +2661,26 @@ async function onLoad() {
 
         await home_main()
     })
-
+    document.getElementById("report-open").addEventListener("mouseup", async () => {
+        document.getElementById("profile-blur").classList.remove("hide")
+        document.getElementById("report-bg").classList.remove("hide")
+    })
+    document.getElementById("report-close").addEventListener("mouseup", async () => {
+        document.getElementById("profile-blur").classList.add("hide")
+        document.getElementById("report-bg").classList.add("hide")
+    })
+    document.getElementById("report-send").addEventListener("mouseup", async () => {
+        if (document.getElementById("report-text").value !== "") {
+            await invoke("tracker", {
+                event: 'issue',
+                props: {issue: document.getElementById("report-textc").value}
+            })
+            console.log(document.getElementById("report-textc").value)
+        }
+        document.getElementById("report-textc").value = ""
+        document.getElementById("profile-blur").classList.add("hide")
+        document.getElementById("report-bg").classList.add("hide")
+    })
     document.getElementById("cover-last").addEventListener("mouseup", async (e) => {
         // if (currentEntry !== "" && e.button === 0) {
         //     await launchers[currentEntry].lastCover();
@@ -2611,12 +2691,7 @@ async function onLoad() {
         //     }
         //     await setCover(background_cover)
         // }
-        document.getElementById("image-picker-bg").scrollTo(
-            {
-                top: 0,
-                behavior: "smooth"
-            }
-        )
+        document.getElementById("image-picker-cancel").textContent = translation.cancel;
         document.getElementById("profile-blur").classList.remove("hide")
         console.log(e.button)
         document.getElementById("image-picker-bg").classList.add("image-picker-visible")

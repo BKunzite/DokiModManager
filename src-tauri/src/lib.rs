@@ -488,7 +488,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         .await
         .map_err(|e| e.to_string())?;
 
-    post_status(&app, &format!("Duplicating DDLC's Files Into '{}'",target_dir.display()));
+    post_status(&app, &format!("Extracting - Duplicating DDLC's Files Into '{}'",target_dir.display()));
 
     let _ = copy_dir_recursive(&PathBuf::from("./store/ddlc"), &target_dir).expect("Failed to copy ddlc!");
 

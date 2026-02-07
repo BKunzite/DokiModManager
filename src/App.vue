@@ -34,7 +34,7 @@
       <div class="container-b smooth-hide" id="container">
         <div class="cover hide" id="cove">
           <p id="covertext"></p>
-          <div class="cover-update" id="cover-last">&#60004;</div>
+          <div class="cover-update" id="cover-last">&#61000;</div>
         </div>
         <div class="covers" id="covers">
           <div class="covers2" id="images">
@@ -69,6 +69,10 @@
         </div>
 
       </div>
+      <button class="report-open" id="report-open">
+        <span class="report-icon">&#59936;</span>
+        <span id="report-text" class="report-text">Report Issue</span>
+      </button>
       <button class="language" id="language">
         <img src="./assets/spain.png" class="language-flag" id="language-flag">
         <span id="language-text" class="language-text">es</span>
@@ -147,6 +151,13 @@
       </div>
       <div class="image-picker" id="image-picker-bg">
         <button class="image-picker-cancel" id="image-picker-cancel">Cancel</button>
+      </div>
+      <div class="report-bg smooth-hide hide" id="report-bg">
+        <header class="report-title" id="report-title">Report Issue</header>
+        <textarea class="report-textbox" id="report-textc" ></textarea>
+        <button class="report-send" id="report-send">Send</button>
+        <button class="report-close" id="report-close">Close</button>
+
       </div>
     </div>
 

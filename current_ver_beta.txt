@@ -1,5 +1,5 @@
 2.4.0-release
-Minor (RPA/Profiles)
+Recommended (RPA/Profiles/Polish)
 
 💗 To You all
 
@@ -18,7 +18,12 @@ Profiles
 
         You can also now reset your current profile data.
 
+Polishes
+    The last few releases have been a bit buggy, apologies,
+    this version should be much more stable.
+
 Better animations
+New Image Picker For Covers/Backgrounds
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

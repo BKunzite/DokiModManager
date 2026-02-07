@@ -1293,6 +1293,7 @@ body {
     height: 1.5rem;
     width: 100%;
     text-align: left;
+    line-height: 1;
 }
 
 .sidebutton {
@@ -1315,6 +1316,7 @@ body {
     text-wrap: nowrap;
     transform: translateX(-50px);
     opacity: 0.25;
+    line-height: 1;
 }
 
 .sidevisible {
@@ -1733,7 +1735,6 @@ body {
     border: none;
     transform: translate(-50%, -50%) scale(0);
     background-color: rgba(0,0,0, 0.7);
-    backdrop-filter: blur(20px) saturate(50%);
     border-radius: 3rem;
     z-index: 10;
     display: grid;
@@ -1746,14 +1747,15 @@ body {
     grid-template-columns: repeat(5, 10rem);
     grid-auto-flow: dense;
     grid-auto-rows: 10rem;
-    transition: transform 0.3s ease-out;
+    opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease-out;
     pointer-events: none;
     corner-shape: squircle;
 }
 
 .image-picker-visible {
     transform: translate(-50%, -50%) scale(1);
-
+    opacity:   1;
     pointer-events: all;
 }
 
@@ -1780,7 +1782,7 @@ body {
     z-index: 10;
     width: 54rem;
     height: 2.5rem;
-    border-radius: 2rem;
+    border-radius: 3rem;
     corner-shape: squircle;
     background: rgba(60,60,60,0.5);
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1788,7 +1790,7 @@ body {
 }
 
 .image-picker-cancel:hover {
-    background: rgba(60,60,60,0.1);
+    background: rgba(60,60,60,0.2);
     transform: scale(1.1) translatex(-45.5%);
 }
 
@@ -2099,3 +2101,133 @@ li:not(.sticky):not(.favorite) {
     height: 2.75rem;
 }
 
+.report-bg {
+    width: 25rem;
+    height: 17rem;
+    background-color: rgba(0, 0, 0, 0.7);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    border-radius: 2.5rem;
+    corner-shape: squircle;
+    transition: filter ease-out 0.1s;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
+.report-title {
+    font-family: "Aller", sans-serif;
+    font-weight: bold;
+    position: absolute;
+    color: white;
+    top: 2rem;
+    left: 2rem;
+    font-size: 1.5rem;
+    line-height: 1;
+    vertical-align: text-top;
+
+}
+
+.report-text {
+    text-wrap: nowrap;
+    overflow: hidden;
+    line-height: 1;
+    width: 6.1rem;
+    position: inherit;
+    font-weight: bold;
+    color: white;
+    text-align: left;
+    font-size: 1rem;
+    left: 2.25rem;
+    top: 1.25vh;
+}
+
+.report-textbox {
+    font-family: "Aller", sans-serif;
+    position: absolute;
+    color: white;
+    top: 4rem;
+    left: 2rem;
+    width: 20rem;
+    border: none;
+    border-radius: 1rem;
+    corner-type: squircle;
+    height: 6rem;
+    background: rgba(0,0,0,0.4);
+    font-size: 1rem;
+    resize: none;
+    scrollbar-width: none;
+    outline: none;
+    line-height: 1;
+    padding: 0.5rem;
+}
+
+.report-close {
+    position: absolute;
+    bottom: 2rem;
+    right: 2rem;
+    width: 10rem;
+    height: 7vh;
+    border-radius: 12rem;
+    border: none;
+    background-color: rgba(60, 60, 60, 0.3);
+    font-family: "Aller", sans-serif;
+    font-size: 1rem;
+    color: white;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.report-send {
+    position: absolute;
+    bottom: 2rem;
+    left: 2rem;
+    width: 10rem;
+    height: 7vh;
+    border-radius: 12rem;
+    border: none;
+    background-color: rgba(60, 60, 60, 0.8);
+    font-family: "Aller", sans-serif;
+    font-size: 1rem;
+    color: white;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.report-open {
+    position: absolute;
+    font-size: 1rem;
+    right: 13.5rem;
+    top: 1.5vh;
+    width: 9rem;
+    height: 2rem;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 1rem;
+
+    border: none;
+    transition: all ease-out 0.25s, scale 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
+    corner-shape: squircle;
+    cursor: grab;
+
+}
+
+.report-send:hover, .report-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.report-icon {
+    position: inherit;
+    font-family: "Icon", sans-serif;
+    color: white;
+    font-size: 1rem;
+    left: 0.75rem;
+    top: 1.25vh;
+}
+.report-open:hover {
+    background-color: rgba(255,255,255, 0.2);
+    z-index: 10;
+    top: 1.5vh;
+    scale: 1.2;
+}
