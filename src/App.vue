@@ -34,6 +34,8 @@
       <div class="container-b smooth-hide" id="container">
         <div class="cover hide" id="cove">
           <p id="covertext"></p>
+          <div class="cover-update" style="left: 8vh;" id="cover-up">&#59982;</div>
+          <div class="cover-update" style="left: 14vh;" id="cover-down">&#59990;</div>
           <div class="cover-update" id="cover-last">&#61000;</div>
         </div>
         <div class="covers" id="covers">
@@ -90,6 +92,10 @@
           <img src="./assets/france.png" class="language-flag-list">
           <span class="language-text-list">Français</span>
         </button>
+        <button class="language-button-list" id="russian">
+          <img src="./assets/russia.svg" class="language-flag-list">
+          <span class="language-text-list">Россия</span>
+        </button>
         <button class="language-button-list" id="cantonese">
           <img src="./assets/hong-kong.png" class="language-flag-list">
           <span class="language-text-list">粵語</span>
@@ -132,6 +138,8 @@
           <button class="profile-button-default profile-button-create" id="create-profile">New</button>
           <button class="profile-button-default profile-button-copy" id="copy-profile">Duplicate</button>
           <button class="profile-button-default profile-button-save" id="save-profile">Save Changes</button>
+          <button class="profile-button-default profile-button-backup" id="backup-profile">Save & Backup All Data</button>
+          <button class="profile-button-default profile-button-backup-load" id="backup-load-profile">Load Backup</button>
 
         </div>
 

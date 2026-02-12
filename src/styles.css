@@ -1,6 +1,7 @@
 :root {
     --primary-color: 128,239,128;
     --primary-color-saturated: 118, 138, 118;
+    --bg-offset: 0%;
 }
 
 @font-face {
@@ -305,8 +306,8 @@
 }
 
 .profile-bg {
-    width: 35%;
-    height: 80%;
+    width: 35vw;
+    height: 81vh;
     background-color: rgba(0, 0, 0, 0.7);
     position: absolute;
     top: 50%;
@@ -350,8 +351,8 @@
 }
 
 .profile-list {
-    width: 94%;
-    height: 65%;
+    width: 33vw;
+    height: 43.5vh;
     background-color: rgba(60, 60, 60, 0.3);
     position: absolute;
     top: 7.5vh;
@@ -425,20 +426,20 @@
 
 .profile-button-default {
     position: absolute;
-    bottom: 11.5vh;
-    width: 46.25%;
+    bottom: 21vh;
+    width: 16.15vw;
     height: 7vh;
     border-radius: 1rem;
     border: none;
-    background-color: rgba(60, 60, 60, 0.3);
+    background-color: rgba(60, 60, 60, 0.2);
     font-family: "Aller", sans-serif;
     color: white;
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .profile-button-default:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: scale(1.05);
+    background-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.04);
 }
 
 .profile-button-create {
@@ -449,10 +450,21 @@
     right: 2.5%;
 }
 
+.profile-button-backup {
+    left: 2.5%;
+    bottom: 12vh;
+}
+
+.profile-button-backup-load {
+    right: 2.5%;
+    bottom: 12vh;
+}
+
 .profile-button-save {
     right: 2.5%;
     bottom: 2.5vh;
     width: 95%;
+    border-radius: 2rem;
 }
 
 .profile-item-name {
@@ -544,7 +556,7 @@
     inset: 0;
     border-radius: 2rem;
     padding: 2px; /* control the border thickness */
-    background: linear-gradient(10deg,rgba(var(--primary-color),0) 0%, rgb(var(--primary-color-saturated)) 50%, rgba(var(--primary-color),0) 100%);
+    background: linear-gradient(10deg,rgba(255,255,255,0) 0%, rgb(255,255,255) 50%, rgba(255,255,255,0) 100%);
     -webkit-mask:
             linear-gradient(#fff 0 0) content-box,
             linear-gradient(#fff 0 0);
@@ -1010,16 +1022,18 @@ body {
 
 .bg {
     position: absolute;
-    top: 70%;
+    top: 0%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     background-image: url("assets/house.webp");
     background-size: cover;
     background-position-x: center;
-    width: 120vw;
-    height: 150vh;
+    background-position-y: -500px;
+    width: 100%;
+    height: auto;
+    background-repeat: no-repeat;
     filter: blur(2px) saturate(0.8);
-    box-shadow: inset black 0 0 50px;
+    box-shadow: inset rgba(0,0,0,0.1) 0 0 50px;
 }
 
 .loader {

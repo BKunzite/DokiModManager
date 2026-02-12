@@ -1,4 +1,4 @@
-2.4.0-release
+2.4.0-valentines
 Recommended (RPA/Profiles/Polish)
 
 💗 To You all
@@ -17,10 +17,16 @@ Profiles
         or for different players with different names/settings.
 
         You can also now reset your current profile data.
+    Profile Backups - Transfer Saves/Profiles Between Computers
+        people, or on a NAS!
 
 Polishes
     The last few releases have been a bit buggy, apologies,
     this version should be much more stable.
+    Adjustable Background Image Position
+
+Language
+    Added Russian
 
 Better animations
 New Image Picker For Covers/Backgrounds
@@ -35,3 +41,4 @@ Des erreurs de traduction peuvent exister.
 可能存在翻譯錯誤。
 翻訳に誤りがある可能性があります。
 Podem existir erros de tradução.
+Возможны ошибки перевода.

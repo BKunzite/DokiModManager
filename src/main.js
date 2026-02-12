@@ -71,8 +71,10 @@ let tutorial_complete = false;
 let tutorial_step = 0;
 let tutorial_pointer = null
 let save_path = "";
+let bg_offset = 0;
+let current_bg_max = 0;
 
-const CLIENT_VERSION = "2.4.0-release"
+const CLIENT_VERSION = "2.4.0-valentines"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
@@ -204,6 +206,80 @@ const TRANSLATION_TABLE = {
         "extracting": "[Extracting]",
         "delete-mod": "Delete Mod",
         "reset-data": "Reset Current Profile Data"
+    },
+    "ru": {
+        "data": {
+            "flag": "russia.svg"
+        },
+        "yes": "Да",
+        "no": "Нет",
+        "play": "Играть",
+        "import-watcher": "Разрешить извлечение и импорт этого мода?",
+        "main": "Главная",
+        "mods": "Моды",
+        "search": "Поиск",
+        "import": "Импорт мода",
+        "greet": "Приветик",
+        "install": "Папка установки",
+        "select_zip": "Выберите zip-файл с DDLC. Вы можете скачать его на [https://ddlc.moe](https://ddlc.moe). (Нажмите, чтобы открыть)",
+        "select_zip_button": "Импорт Zip",
+        "importing_zip": "Импорт DDLC",
+        "import_image": "Импорт изображения",
+        "home": "Домой",
+        "theme": "Тема",
+        "update-text": "Обновления (ПК)",
+        "loading": "Загрузка мода",
+        "description": "Описание",
+        "screenshot": "Скриншот",
+        "tutorial-text": "Обучение",
+        "tutorial-context": "Кажется, вы ещё не прошли обучение. Хотите пройти?",
+        "cancel": "Отмена",
+        "next": "Далее",
+        "end": "Конец",
+        "updating": "Обновление",
+        "error-profile_setname": "Нельзя переименовать профиль по умолчанию!",
+        "error-profile_delete": "Нельзя удалить профиль по умолчанию!",
+        "tutorial": {
+            "select": "Пожалуйста, выберите мод или скачайте его перед продолжением!",
+            "1": {
+                "title": "Добро пожаловать!",
+                "context": "Это краткий обзор того, как использовать Doki Doki Mod Manager. Нажмите 'Далее', чтобы продолжить."
+            },
+            "2": {
+                "title": "Тема",
+                "context": "Прежде всего, давайте выберем тему. Нажимайте на выделенную кнопку, пока не появится ваш любимый персонаж."
+            },
+            "3": {
+                "title": "Фон",
+                "context": "Затем выберите фон, который хотите использовать, или перетащите сюда изображение, чтобы установить его как фон."
+            },
+            "4": {
+                "title": "Загрузки",
+                "context": "Теперь скачайте мод через Reddit. Вы также можете перетащить zip-файл сюда. Не забудьте сохранить его в папку 'Загрузки'!"
+            },
+            "5": {
+                "title": "Обложки",
+                "context": "Используйте стрелки в нижней части выделенной области, чтобы изменить обложку."
+            },
+            "6": {
+                "title": "Название",
+                "context": "Нажмите на название мода, чтобы переименовать его. Нажмите Enter для сохранения."
+            },
+            "7": {
+                "title": "Автор",
+                "context": "Нажмите на имя автора (подчеркнутый текст), чтобы изменить его. Нажмите Enter для сохранения."
+            },
+            "8": {
+                "title": "Финиш",
+                "context": "Вот и всё! Нажмите 'Играть', чтобы запустить мод. Нажмите 'Конец', чтобы завершить обучение."
+            }
+        },
+        "send-report": "Сообщить о проблеме",
+        "message": "Сообщение",
+        "send": "Отправить",
+        "extracting": "[Извлечение]",
+        "delete-mod": "Удалить мод",
+        "reset-data": "Сбросить данные текущего профиля"
     },
     "pt": {
         "data": {
@@ -754,7 +830,8 @@ async function loadConfig(path) {
         tutorial: false,
         theme: "NATSUKI",
         language: "",
-        version: "0.0.0-release"
+        version: "0.0.0-release",
+        bg_offset: 0
     }
 
     local_path = path;
@@ -811,6 +888,7 @@ async function loadConfig(path) {
     configData.tutorial = configData.tutorial || false;
     configData.version = configData.version || "0.0.0-release";
     configData.language = configData.language || "";
+    configData.bg_offset = configData.bg_offset || 0;
 
     console.log("Cover Id: " + configData.coverId)
 
@@ -823,6 +901,7 @@ async function loadConfig(path) {
     background_cover = configData.coverId;
     tutorial_complete = configData.tutorial;
     translation_lan = configData.language;
+    bg_offset = configData.bg_offset;
 
     if (tutorial_complete) {
         document.getElementById("warn").remove()
@@ -941,6 +1020,7 @@ async function saveConfig(a) {
     localConfig.config.version = CLIENT_VERSION;
     localConfig.config.tutorial = tutorial_complete;
     localConfig.config.language = translation_lan;
+    localConfig.config.bg_offset = bg_offset;
     await writeTextFile(localConfig.path, JSON.stringify(localConfig.config))
 }
 
@@ -1001,7 +1081,17 @@ async function setCover(id) {
 
     if (currentEntry === "") {
         document.getElementById("bg").style.backgroundImage = 'url("' + image + '")';
-        background_cover = id;
+        const img = new Image();
+        img.src = image;
+
+        img.onload = () => {
+            const aspectRatio = img.naturalWidth / img.naturalHeight;
+            current_bg_max = img.naturalHeight * (1200/img.naturalWidth);
+            console.log(1200/img.naturalWidth,img.naturalWidth,img.naturalHeight)
+            document.getElementById("bg").style.height = (current_bg_max) + "px";
+            document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
+            img.remove()
+        };
         await saveConfig()
     }
 }
@@ -1517,6 +1607,8 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         document.getElementById("delete-save").classList.remove("hide");
         document.getElementById("play").classList.remove("hide");
         document.getElementById("optionsmenu").classList.add("hide");
+        document.getElementById("cover-up").classList.add("hide");
+        document.getElementById("cover-down").classList.add("hide");
         document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60766;</span>" + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + time;
         document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
         if (space !== "Reading...") {
@@ -1549,6 +1641,8 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         document.getElementById("extract").classList.add("hide");
         document.getElementById("delete-save").classList.add("hide");
         document.getElementById("play").classList.add("hide");
+        document.getElementById("cover-up").classList.remove("hide");
+        document.getElementById("cover-down").classList.remove("hide");
         document.getElementById("optionsmenu").classList.remove("hide");
         document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61973;</span> " + Math.floor(min / 60) + "h " + (min % 60) + "m";
     }
@@ -1653,7 +1747,7 @@ async function rename_mod() {
     if (currentEntry === "") return;
     var value = document.getElementById("modtitle").value;
     var name = await launchers[currentEntry].getName();
-
+    if (value === name) return;
     if (value !== name && value.length !== 0) {
 
         var oldName = (await launchers[currentEntry].getPath()) + "\\" + name;
@@ -1789,14 +1883,27 @@ async function save_concurrent_profile_data() {
 async function get_concurrent_game_data(path) {
     if (path === undefined) path = current_game_data_path;
     let data = {}
-    for (const file of await readDir(current_game_data_path)) {
+    for (const file of await readDir(path)) {
         if (file.isDirectory) {
+            console.log(path, file.name)
             data[file.name] = await get_concurrent_game_data(path + "\\" + file.name)
+            console.log(data[file.name])
         } else {
             data[file.name] = Base64.fromUint8Array(await readFile(path + "\\" + file.name));
         }
     }
     return data;
+}
+
+function get_formatted_date() {
+    const now = new Date();
+
+    return now.getFullYear() + "y_" +
+        String(now.getMonth() + 1).padStart(2, '0') + "m_" +
+        String(now.getDate()).padStart(2, '0') + "d_" +
+        String(now.getHours()).padStart(2, '0') + "hour_" +
+        String(now.getMinutes()).padStart(2, '0') + "min_" +
+        String(now.getSeconds()).padStart(2, '0') + "sec";
 }
 
 async function load_concurrent_profile_data(reload, reset_data) {
@@ -1811,29 +1918,51 @@ async function load_concurrent_profile_data(reload, reset_data) {
     }
     console.log(" should reload: " + reload + " file: " + current_profile)
     if (reload) {
-        for (const file of await readDir(current_game_data_path)) {
-            await remove(current_game_data_path + "\\" + file.name);
-        }
+        await delete_dir(current_game_data_path);
+
         let data = await readTextFile(get_profile_path(current_profile));
         const self_data = JSON.parse(data);
 
-        for (const f in self_data) {
-            const file = self_data[f]
-            console.log(file)
-            let n = f.replaceAll("\\", "/");
-            if (n.includes("/")) {
-                for (const dir of n.split("/")) {
-                    if (dir === n.split("/").pop()) continue;
-                    await mkdir(current_game_data_path + "\\" + dir, {recursive: true});
-                }
-            }
-            try {
-                await writeFile(current_game_data_path + "\\" + f,
-                    Base64.toUint8Array(file));
-            } catch (e) {
-                console.log(f + " is not encoded in base64!")
+        await load_data(self_data, current_game_data_path)
+    }
+}
+
+async function load_data(self_data, upstream) {
+    for (const f in self_data) {
+        const file = self_data[f]
+        console.log(typeof file)
+        if (typeof file === "object") {
+            await mkdir(upstream + "\\" + f);
+            await load_data(file, upstream + "\\" + f)
+            continue;
+        }
+        let n = f.replaceAll("\\", "/");
+        if (n.includes("/")) {
+            for (const dir of n.split("/")) {
+                if (dir === n.split("/").pop()) continue;
+                await mkdir(upstream + "\\" + dir, {recursive: true});
             }
         }
+        try {
+            await writeFile(upstream + "\\" + f,
+                Base64.toUint8Array(file));
+        } catch (e) {
+            console.log(f + " is not encoded in base64!")
+        }
+    }
+}
+
+async function delete_dir(path) {
+    if (!await isExist(path)) {
+        console.log("Path does not exist: " + path)
+        return;
+    }
+    for (const file of await readDir(path)) {
+        console.log(path, file.name)
+        if (file.isDirectory) {
+            await delete_dir(path + "\\" + file.name)
+        }
+        await remove(path + "\\" + file.name);
     }
 }
 
@@ -2025,6 +2154,10 @@ async function save_profile_name() {
                 return;
             }
         }
+        if (name.includes("-_at-") || name.includes("/") || name.includes("\\")) {
+            await confirm("The Name '" + name + "' is invalid!")
+            return;
+        }
         for (const key in current_profile_data) {
             if (current_profile_data[key] === "profile-" + rename_target) {
                 console.log(concurrent_profile_data[rename_target], current_profile_data[key])
@@ -2090,6 +2223,77 @@ async function onLoad() {
             top: document.getElementById("profiles").scrollHeight,
             behavior: "smooth"
         })
+    })
+
+    document.getElementById("backup-profile").addEventListener("click", async () => {
+
+        document.getElementById("profile-bg").classList.add("hide")
+        await save_profile();
+        document.getElementById("profile-blur").classList.add("hide")
+        if (!await isDir(local_path + "\\store\\backup")) {
+            await mkdir(local_path + "\\store\\backup");
+        }
+        await writeTextFile(local_path + "\\store\\backup\\" + profile_path.replaceAll("\\\\","/").replaceAll("\\","/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
+        await invoke("open_path", {
+            path: local_path + "\\store\\backup"
+        })
+    })
+
+    document.getElementById("backup-load-profile").addEventListener("click", async () => {
+        // create backup first -> failsafe
+        let backup_select = await open({
+            directory: false,
+            multiple: false,
+            filters: [{
+                name: 'DDMM Backup Json',
+                extensions: ['json']
+            }],
+            title: 'Select Backup File',
+            defaultPath: local_path + "\\store\\backup\\"
+        });
+        document.getElementById("profile-bg").classList.add("hide")
+        await save_profile();
+        if (backup_select !== null && backup_select !== undefined) {
+            if (!await isDir(local_path + "\\store\\backup")) {
+                await mkdir(local_path + "\\store\\backup");
+            }
+            if (!await isDir(local_path + "\\store\\backup\\autosave")) {
+                await mkdir(local_path + "\\store\\backup\\autosave");
+            }
+            await writeTextFile(local_path + "\\store\\backup\\autosave\\" + profile_path.replaceAll("\\\\","/").replaceAll("\\","/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
+            await delete_dir(profile_path);
+            await load_data(JSON.parse(await readTextFile(backup_select)), profile_path);
+            console.log(current_game_data_path)
+            await update_profiles(current_game_data_path);
+            await load_concurrent_profile_data(true);
+        }
+        document.getElementById("profile-blur").classList.add("hide")
+    })
+
+    document.getElementById("cover-up").addEventListener("click", () => {
+        if (currentEntry !== "") return;
+        bg_offset += 5;
+        if (bg_offset > 100) bg_offset = 0;
+        document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
+        saveConfig();
+    })
+
+    document.getElementById("cover-down").addEventListener("click", () => {
+        if (currentEntry !== "") return;
+        bg_offset -= 5;
+        if (bg_offset < 0) bg_offset = 100;
+        document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
+        saveConfig();
+    })
+
+    document.getElementById("cove").addEventListener("wheel", (e) => {
+        if (currentEntry !== "") return;
+        bg_offset += e.deltaY / 20;
+        if (bg_offset < 0) bg_offset = 100;
+        if (bg_offset > 100) bg_offset = 0;
+
+        document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
+        saveConfig();
     })
 
     document.getElementById("copy-profile").addEventListener("click", async () => {
@@ -2752,6 +2956,14 @@ async function onLoad() {
         }
     })
 
+    document.getElementById("russian").addEventListener("mouseup", async () => {
+        let old = translation_lan;
+        await loadTranslation("ru", (old === ""))
+        if (old !== "") {
+            saveConfig().then()
+        }
+    })
+
     document.getElementById("pt").addEventListener("mouseup", async () => {
         let old = translation_lan;
         await loadTranslation("pt", (old === ""))
@@ -2937,10 +3149,13 @@ async function onLoad() {
         }
     });
 
-    document.getElementById("themeselect").addEventListener("mouseup", async () => {
-        let next = CLIENT_THEME_ENUM.indexOf(localConfig.config.theme) + 1;
+    document.getElementById("themeselect").addEventListener("mouseup", async (e) => {
+        let next = CLIENT_THEME_ENUM.indexOf(localConfig.config.theme) + (e.button === 0 ? 1 : -1);
         if (next > CLIENT_THEME_ENUM.length - 1) {
             next = 0;
+        }
+        if (next <  0) {
+            next = CLIENT_THEME_ENUM.length - 1;
         }
         await play(sound_beep)
         await setTheme(CLIENT_THEME_ENUM[next], false);

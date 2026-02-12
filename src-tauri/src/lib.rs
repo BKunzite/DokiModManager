@@ -192,7 +192,11 @@ fn rpa_data(path: &str, out: &str) -> String {
     for (output, content) in rpa_archive.content.iter() {
         if output.as_path().to_str().unwrap().contains("option") {
             let cmain =  output.as_path().to_str().unwrap();
+            if cmain.contains("/") {
+                continue;
+            }
             create_dir_all(path_out.join("ddmm-temp-options")).unwrap();
+            println!("{}", path_out.join(format!("ddmm-temp-options\\{}", cmain)).to_str().unwrap());
             let mut file = File::create(path_out.join(format!("ddmm-temp-options\\{}", cmain)).as_path().to_str().unwrap()).unwrap();
             content.copy_to(&mut rpa_archive.reader, &mut file).unwrap();
 
@@ -201,10 +205,9 @@ fn rpa_data(path: &str, out: &str) -> String {
             exchild.arg(path_out.join(format!("ddmm-temp-options\\{}", cmain)).as_path().to_str().unwrap());
             println!("{:?}", exchild);
 
-            let child = exchild.spawn()
-                .map_err(|e| format!("Failed to start executable: {}", e)).unwrap();
-
-            let rput = child.wait_with_output()
+            let rput = exchild.spawn()
+                .map_err(|e| format!("Failed to start executable: {}", e)).unwrap()
+                .wait_with_output()
                 .map_err(|e| format!("Failed to wait for child process: {}", e)).unwrap();
 
             if rput.status.success() {
@@ -279,12 +282,6 @@ fn decrypt_rpa_dir(app: &AppHandle, root_path: &Path) {
         .collect();
 
         files.par_iter().for_each(|rpyc_path| {
-        let rpy_path = rpyc_path.with_extension("rpy");
-
-        if rpy_path.exists() {
-            println!("Skipping: {:?}", rpyc_path.file_name().unwrap());
-            return;
-        }
 
         println!("Decompiling: {:?}", rpyc_path.file_name().unwrap());
         post_status(app, format!("Decompiling {}",rpyc_path.file_name().unwrap().to_str().unwrap()).as_str());
