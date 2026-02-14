@@ -1,16 +1,14 @@
 2.4.0-valentines
 Recommended (RPA/Profiles/Polish)
 
-💗 To You all
-
 RPA Extracter (unrpyc + warpalib)
     Delete Save Data
     Extract RPA files
 
 Profiles
     Add/Remove/Rename Profiles
-    Whats a profile?
-        A profile conntains the data for the specific mod,
+    What is a profile?
+        A profile contains the data for the specific mod,
         including save data and current player name/settings
 
         You can make custom profiles for more save slots
@@ -19,6 +17,8 @@ Profiles
         You can also now reset your current profile data.
     Profile Backups - Transfer Saves/Profiles Between Computers
         people, or on a NAS!
+        Or just back data up because your worried about
+        losing it.
 
 Polishes
     The last few releases have been a bit buggy, apologies,
@@ -29,6 +29,7 @@ Language
     Added Russian
 
 Better animations
+Adjustable Image Offset
 New Image Picker For Covers/Backgrounds
 
 Remember, if you have bugs, issues, or questions,

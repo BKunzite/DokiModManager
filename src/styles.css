@@ -2241,7 +2241,7 @@ li:not(.sticky):not(.favorite) {
 }
 .report-open:hover {
     background-color: rgba(255,255,255, 0.2);
-    z-index: 10;
+    z-index: 5;
     top: 1.5vh;
     scale: 1.2;
 }

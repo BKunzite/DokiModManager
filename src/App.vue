@@ -162,7 +162,7 @@
       </div>
       <div class="report-bg smooth-hide hide" id="report-bg">
         <header class="report-title" id="report-title">Report Issue</header>
-        <textarea class="report-textbox" id="report-textc" ></textarea>
+        <textarea class="report-textbox" id="report-textc" placeholder="Type your issue here, please put specific details below!" ></textarea>
         <button class="report-send" id="report-send">Send</button>
         <button class="report-close" id="report-close">Close</button>
 

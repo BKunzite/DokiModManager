@@ -1,22 +1,36 @@
-1.3.1-release
-Minor (Bug Fixes)
+1.4.0-valentines
+Recommended (RPA/Profiles/Polish)
 
-💗 To You all
+RPA Extracter (unrpyc + warpalib)
+    Delete Save Data
+    Extract RPA files
 
-Mod Fixes:
-    Fixed 'A Date With Yuri'
-    Fixed 'Forever&Ever'
+Profiles
+    Add/Remove/Rename Profiles
+    What is a profile?
+        A profile contains the data for the specific mod,
+        including save data and current player name/settings
 
-    (Most Renpy 8 Mods Should Be Fixed,
-    Please Make A Git Issue If You Find Any
-    THat Are Still Broken)
+        You can make custom profiles for more save slots
+        or for different players with different names/settings.
 
-Added Portuguese Translation
-Improved Performance (Mod Size Reading Is Now Async)
-Better OnBoarding
+        You can also now reset your current profile data.
+    Profile Backups - Transfer Saves/Profiles Between Computers
+        people, or on a NAS!
+        Or just back data up because your worried about
+        losing it.
 
-Developer
-    Switched from 'npm' to 'bun'
+Polishes
+    The last few releases have been a bit buggy, apologies,
+    this version should be much more stable.
+    Adjustable Background Image Position
+
+Language
+    Added Russian
+
+Better animations
+Adjustable Image Offset
+New Image Picker For Covers/Backgrounds
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under
@@ -28,3 +42,4 @@ Des erreurs de traduction peuvent exister.
 可能存在翻譯錯誤。
 翻訳に誤りがある可能性があります。
 Podem existir erros de tradução.
+Возможны ошибки перевода.

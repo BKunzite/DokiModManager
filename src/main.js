@@ -74,8 +74,8 @@ let save_path = "";
 let bg_offset = 0;
 let current_bg_max = 0;
 
-const CLIENT_VERSION = "2.4.0-valentines"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
+const CLIENT_VERSION = "1.4.0-valentines"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
 ]
@@ -687,6 +687,7 @@ function loadTranslation(lang, first) {
         {id: "home-text", key: "home", type: "textContent"},
         {id: "delete", key: "delete-mod", type: "title"},
         {id: "reset-save", key: "reset-data", type: "title"},
+        {id: "report-textc", key: "send-report", type: "placeholder"},
         {id: "report-text", key: "send-report", type: "textContent"},
         {id: "report-title", key: "send-report", type: "textContent"},
         {id: "report-send", key: "send", type: "textContent"},
@@ -2868,13 +2869,14 @@ async function onLoad() {
     document.getElementById("report-open").addEventListener("mouseup", async () => {
         document.getElementById("profile-blur").classList.remove("hide")
         document.getElementById("report-bg").classList.remove("hide")
+        document.getElementById("report-textc").focus()
     })
     document.getElementById("report-close").addEventListener("mouseup", async () => {
         document.getElementById("profile-blur").classList.add("hide")
         document.getElementById("report-bg").classList.add("hide")
     })
     document.getElementById("report-send").addEventListener("mouseup", async () => {
-        if (document.getElementById("report-text").value !== "") {
+        if (document.getElementById("report-textc").value !== "") {
             await invoke("tracker", {
                 event: 'issue',
                 props: {issue: document.getElementById("report-textc").value}
