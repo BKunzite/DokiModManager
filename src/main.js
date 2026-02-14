@@ -74,6 +74,7 @@ let save_path = "";
 let bg_offset = 0;
 let current_bg_max = 0;
 
+// CONSTANTS
 const CLIENT_VERSION = "1.4.0-valentines"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
