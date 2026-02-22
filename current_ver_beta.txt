@@ -1,36 +1,10 @@
-2.4.0-valentines
-Recommended (RPA/Profiles/Polish)
+4.4.0-beta
+Minor (Patches)
 
-RPA Extracter (unrpyc + warpalib)
-    Delete Save Data
-    Extract RPA files
-
-Profiles
-    Add/Remove/Rename Profiles
-    What is a profile?
-        A profile contains the data for the specific mod,
-        including save data and current player name/settings
-
-        You can make custom profiles for more save slots
-        or for different players with different names/settings.
-
-        You can also now reset your current profile data.
-    Profile Backups - Transfer Saves/Profiles Between Computers
-        people, or on a NAS!
-        Or just back data up because your worried about
-        losing it.
-
-Polishes
-    The last few releases have been a bit buggy, apologies,
-    this version should be much more stable.
-    Adjustable Background Image Position
-
-Language
-    Added Russian
-
-Better animations
-Adjustable Image Offset
-New Image Picker For Covers/Backgrounds
+Better Search
+Background Clamp instead of Scroll
+Readability for Snow Theme
+Minor Performance Improvements
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

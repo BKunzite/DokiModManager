@@ -35,7 +35,6 @@ import sound_boop from './assets/hover.ogg';
 import sound_click from './assets/pageflip.ogg';
 
 // Profile Data
-
 let selected_button = null;
 let selected_name = ""
 let current_profile = ""
@@ -75,8 +74,8 @@ let bg_offset = 0;
 let current_bg_max = 0;
 
 // CONSTANTS
-const CLIENT_VERSION = "1.4.0-valentines"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
+const CLIENT_VERSION = "4.5.0-beta"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
 ]
@@ -104,8 +103,8 @@ const CLIENT_THEMES = {
 
     },
     WINTER: {
-        primary_color: [255, 255, 255],
-        primary_color_saturated: [150, 150, 150],
+        primary_color: [220,220,220],
+        primary_color_saturated: [120,120,120],
         image: "snowflake.svg"
     },
     NORD: {
@@ -1016,7 +1015,7 @@ async function update_cover_images(first_time) {
 // Saves config to file (./client-config.json)
 
 async function saveConfig(a) {
-    console.log("Saving Config @ " + Date.now())
+    // console.log("Saving Config @ " + Date.now())
     localConfig.config.coverId = background_cover;
     localConfig.config.totalTime = total_time;
     localConfig.config.version = CLIENT_VERSION;
@@ -1076,8 +1075,10 @@ async function setCover(id) {
     if (id > covers.length - 1) {
         id = 0;
     }
-
-    let image = await getImage(id, covers)
+    let image = preload_covers[covers[id]].src;
+    if (image === undefined) {
+        image = await getImage(id, covers)
+    }
 
     document.getElementById("cove").style.backgroundImage = 'url("' + image + '")';
 
@@ -1087,7 +1088,6 @@ async function setCover(id) {
         img.src = image;
 
         img.onload = () => {
-            const aspectRatio = img.naturalWidth / img.naturalHeight;
             current_bg_max = img.naturalHeight * (1200/img.naturalWidth);
             console.log(1200/img.naturalWidth,img.naturalWidth,img.naturalHeight)
             document.getElementById("bg").style.height = (current_bg_max) + "px";
@@ -1224,6 +1224,17 @@ async function requestDirectory(path) {
                     continue;
                 }
 
+                let customExe;
+                let about;
+                for (const localEntry of await readDir(dir)) {
+                    if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && customExe === undefined) {
+                        customExe = localEntry.name;
+                    }
+                    if (localEntry.name.toLowerCase().includes("credit") && about === undefined) {
+                        about = (await readTextFile(dir + "\\" + localEntry.name)).replaceAll("\n", "<br>");
+                    }
+                }
+
                 // Create SideButton And Load Config
 
                 let hasConfig = false;
@@ -1288,6 +1299,11 @@ async function requestDirectory(path) {
                             if (localEntry.name.includes("screenshot")) {
                                 launchers[entry.name].preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + "\\" + localEntry.name, []), entry.name, dir, localEntry.name, entry.name);
                                 images++
+                                setTimeout(() => {
+                                    document.appendChild(launchers[entry.name].preload[localEntry.name])
+
+                                    // document.removeChild(launchers[entry.name].preload[localEntry.name])
+                                }, 0)
                                 if (images >= 2) {
                                     break
                                 }
@@ -1407,8 +1423,7 @@ async function requestDirectory(path) {
                         await setCover(configData.coverId);
 
                         const fdirFiles = await readDir(dir);
-                        let customExe;
-                        let about;
+
                         let renpy = await getRenpy(dir);
                         let screenshots = false;
                         let images = []
@@ -1418,12 +1433,6 @@ async function requestDirectory(path) {
                         }
 
                         for (const localEntry of fdirFiles) {
-                            if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && customExe === undefined) {
-                                customExe = localEntry.name;
-                            }
-                            if (localEntry.name.toLowerCase().includes("credit") && about === undefined) {
-                                about = (await readTextFile(dir + "\\" + localEntry.name)).replaceAll("\n", "<br>");
-                            }
                             if (localEntry.name.includes("screenshot")) {
                                 screenshots = true;
                                 if (launchers[entry.name].preload[localEntry.name] !== undefined) {
@@ -1630,7 +1639,7 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         }
     } else {
         currentEntry = ""
-        await setCover(background_cover)
+        setCover(background_cover).then(() => {})
         let min = Math.floor(total_time / 60000);
         document.getElementById("screenshots-header").classList.add("hide");
         document.getElementById("screenshots-parent").classList.add("hide");
@@ -2291,8 +2300,8 @@ async function onLoad() {
     document.getElementById("cove").addEventListener("wheel", (e) => {
         if (currentEntry !== "") return;
         bg_offset += e.deltaY / 20;
-        if (bg_offset < 0) bg_offset = 100;
-        if (bg_offset > 100) bg_offset = 0;
+        if (bg_offset < 0) bg_offset = 0;
+        if (bg_offset > 100) bg_offset = 100;
 
         document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
         saveConfig();
@@ -2937,12 +2946,46 @@ async function onLoad() {
         if (event.target.value === "") {
             for (const index in launchers) {
                 const element = launchers[index];
-                element.item.classList.remove("hide2");
+                element.item.classList.add("hide2");
+                element.item.style.order = element.item.classList.contains("favorite") ? "0" : "1";
             }
+            setTimeout(() => {
+                for (const index in launchers) {
+                    const element = launchers[index];
+                    element.item.classList.remove("hide2");
+                }
+            }, 0)
         } else {
+            let lowerTarget = event.target.value.toLowerCase();
             for (const index in launchers) {
                 const element = launchers[index];
-                if (element.item.id.toLowerCase().includes(event.target.value.toLowerCase())) {
+                const lowerName = element.item.id.toLowerCase();
+                let isValid = true;
+                let split = lowerName.split(" ");
+                let trunc = lowerName;
+                let markers = 0;
+                for (const letter in lowerTarget) {
+                    if (letter < split.length) {
+                        if (split[letter].startsWith(lowerTarget[letter])) {
+                            markers++;
+                        }
+                    }
+                    if (trunc.indexOf(lowerTarget[letter]) === -1) {
+                        isValid = false;
+                        break;
+                    }
+                    trunc = trunc.replace(lowerTarget[letter], "");
+                }
+
+                if (isValid) {
+                    let index = 10 - (markers * 2)
+                    if (element.item.classList.contains("favorite")) {
+                        index--;
+                    }
+                    if (lowerName.includes(lowerTarget)) {
+                        index-=lowerTarget.length;
+                    }
+                    element.item.style.order = index.toString();
                     element.item.classList.remove("hide2");
                 } else {
                     element.item.classList.add("hide2");

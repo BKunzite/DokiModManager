@@ -1712,7 +1712,7 @@ body {
 }
 
 .sticky {
-    order: -2;
+    order: -999;
 }
 
 .favorite {
