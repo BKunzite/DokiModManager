@@ -1,10 +1,12 @@
-4.4.0-beta
-Minor (Patches)
+3.5.0-beta
+Minor (Fixes)
 
 Better Search
 Background Clamp instead of Scroll
 Readability for Snow Theme
-Minor Performance Improvements
+Major Performance Improvements
+    Clicking on a mod is based on mouse_down not mouse_up
+    Cover Image Picker is now significantly faster
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

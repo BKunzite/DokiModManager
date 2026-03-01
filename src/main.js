@@ -74,7 +74,7 @@ let bg_offset = 0;
 let current_bg_max = 0;
 
 // CONSTANTS
-const CLIENT_VERSION = "4.5.0-beta"
+const CLIENT_VERSION = "3.5.0-beta"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
@@ -923,6 +923,8 @@ async function update_cover_images(first_time) {
         const img = cover_img.cloneNode(true);
         div.classList.add("image-picker-cover");
         img.alt = covers.indexOf(cover) + " | " +  cover
+        img.loading = "lazy";
+        img.decoding = "async";
 
         let x = 1;
         let y = 1;
@@ -1124,6 +1126,7 @@ function createScreenshotDiv(src, entryName, dir, image, entry) {
 
     const cover_bg = document.createElement("div");
     newScreenshot.decoding = "async"
+    newScreenshot.loading = "lazy"
     newScreenshot.classList.add("screenshots-image")
     newScreenshot.src = src;
     newScreenshot.addEventListener("mouseup", () => {
@@ -1503,13 +1506,14 @@ async function requestDirectory(path) {
                 }
                 await launchers[entry.name].preloadImages();
 
-                sidetext.addEventListener("mouseup", async () => {
+                sidetext.addEventListener("click", async () => {
                     await launchers[entry.name].leftClick();
                 })
 
                 document.getElementById("modlist").appendChild(sidetext)
             }
         }
+
         await globLog("finish")
         document.getElementById("loadingsub").textContent = "Loaded Mods | Loading GUI"
 
@@ -2750,7 +2754,7 @@ async function onLoad() {
     })
 
     document.getElementById("image-picker-cancel").addEventListener("mouseup", async () => {
-        await play(sound_beep)
+        await play(sound_boop)
         document.getElementById("profile-blur").classList.add("hide")
         document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
     })
@@ -2907,6 +2911,7 @@ async function onLoad() {
         //     }
         //     await setCover(background_cover)
         // }
+        await play(sound_beep)
         document.getElementById("image-picker-cancel").textContent = translation.cancel;
         document.getElementById("profile-blur").classList.remove("hide")
         console.log(e.button)

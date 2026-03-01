@@ -31,7 +31,7 @@
 @property --angle {
     syntax: '<angle>';
     initial-value: 0deg;
-    inherits: false;
+    inherits: true;
 }
 
 @keyframes spin{
@@ -1472,7 +1472,6 @@ body {
     height: 27vh;
     border-radius: 0.5rem;
     cursor: grab;
-    box-shadow: rgb(60,60,60) 0 0 10px;
     user-select: none;
     transition: border-radius 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
@@ -1738,6 +1737,7 @@ body {
     filter: blur(2px);
     corner-shape: squircle;
     animation: 3s spin linear infinite;
+    /*animation-delay: calc(var(--index) / var(--count) * -2.0s);*/
 }
 
 .image-picker {
@@ -1765,6 +1765,7 @@ body {
     transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease-out;
     pointer-events: none;
     corner-shape: squircle;
+    contain: content;
 }
 
 .image-picker-visible {
@@ -1776,10 +1777,8 @@ body {
 .image-picker-cover {
     width: 10rem;
     height: 10rem;
-    background-color: rgba(255,255,255,1);
-    box-shadow: rgba(30,30,30,0.5) 0 0 10px;
-    border-radius: 2rem;
-    corner-shape: squircle;
+    background-color: rgb(255,255,255);
+    border-radius: 1rem;
     background-size: contain;
     overflow: hidden;
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1796,8 +1795,7 @@ body {
     z-index: 10;
     width: 54rem;
     height: 2.5rem;
-    border-radius: 3rem;
-    corner-shape: squircle;
+    border-radius: 1rem;
     background: rgba(60,60,60,0.5);
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     border: none;
@@ -1955,7 +1953,7 @@ body {
     padding-left: 1.25vw;
     gap: 5px;
     box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
-
+    overscroll-behavior: none;
 }
 
 .container-a-shadow {
@@ -2180,7 +2178,7 @@ li:not(.sticky):not(.favorite) {
 .report-close {
     position: absolute;
     bottom: 2rem;
-    right: 2rem;
+    left: 2rem;
     width: 10rem;
     height: 7vh;
     border-radius: 12rem;
@@ -2195,7 +2193,7 @@ li:not(.sticky):not(.favorite) {
 .report-send {
     position: absolute;
     bottom: 2rem;
-    left: 2rem;
+    right: 2rem;
     width: 10rem;
     height: 7vh;
     border-radius: 12rem;
