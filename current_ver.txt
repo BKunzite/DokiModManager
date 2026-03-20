@@ -1,36 +1,18 @@
-1.4.0-valentines
-Recommended (RPA/Profiles/Polish)
+1.5.0-release
+Minor (Fixes & Major Performance Improvements)
 
-RPA Extracter (unrpyc + warpalib)
-    Delete Save Data
-    Extract RPA files
+* MOD FIX *
+Exit Music Redux 1.1
 
-Profiles
-    Add/Remove/Rename Profiles
-    What is a profile?
-        A profile contains the data for the specific mod,
-        including save data and current player name/settings
+Better Search
+Background Clamp instead of Scroll
+Readability for Snow Theme
+Major Performance Improvements
+    Clicking on a mod is based on mouse_down not mouse_up
+    Cover Image Picker is now significantly faster
 
-        You can make custom profiles for more save slots
-        or for different players with different names/settings.
-
-        You can also now reset your current profile data.
-    Profile Backups - Transfer Saves/Profiles Between Computers
-        people, or on a NAS!
-        Or just back data up because your worried about
-        losing it.
-
-Polishes
-    The last few releases have been a bit buggy, apologies,
-    this version should be much more stable.
-    Adjustable Background Image Position
-
-Language
-    Added Russian
-
-Better animations
-Adjustable Image Offset
-New Image Picker For Covers/Backgrounds
+    Mod loading is now parallel and significantly faster
+    Rust backend was rewritten to be faster
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

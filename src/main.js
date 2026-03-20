@@ -45,7 +45,27 @@ let original_profile = "";
 let current_game_data_path = "";
 let rename_target = "";
 
-// --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
+// Tutorial Variables
+
+let tutorial_complete = false;
+let tutorial_step = 0;
+let tutorial_pointer = null
+
+// Config Variables
+
+let bg_offset = 0;
+let current_bg_max = 0;
+let localConfig = {
+    path: "",
+    config: {}
+}
+let save_path = "";
+
+// Misc
+
+let lastInputLength = 0
+let logs = []
+let start = Date.now();
 let launchers = []
 let currentEntry = ""
 let covers = []
@@ -58,24 +78,17 @@ let local_path;
 let observer;
 let reset = false;
 let focused = true;
-let localConfig = {
-    path: "",
-    config: {}
-}
 let previous_app = null
 let preload_covers = {}
-let logs = []
-let start = Date.now();
-let tutorial_complete = false;
-let tutorial_step = 0;
-let tutorial_pointer = null
-let save_path = "";
-let bg_offset = 0;
-let current_bg_max = 0;
+
+// Event Variables
+
+// --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
 
 // CONSTANTS
-const CLIENT_VERSION = "3.5.0-beta"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
+
+const CLIENT_VERSION = "1.5.0-release"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
 ]
@@ -103,8 +116,8 @@ const CLIENT_THEMES = {
 
     },
     WINTER: {
-        primary_color: [220,220,220],
-        primary_color_saturated: [120,120,120],
+        primary_color: [220, 220, 220],
+        primary_color_saturated: [120, 120, 120],
         image: "snowflake.svg"
     },
     NORD: {
@@ -123,8 +136,8 @@ const CLIENT_THEMES = {
         image: "neon-planet.png"
     },
     HACKER: {
-        primary_color: [0,255,0],
-        primary_color_saturated: [0,0,0],
+        primary_color: [0, 255, 0],
+        primary_color_saturated: [0, 0, 0],
         image: "hacker-svgrepo-com.svg"
     }
 }
@@ -922,7 +935,7 @@ async function update_cover_images(first_time) {
         const div = document.createElement("div");
         const img = cover_img.cloneNode(true);
         div.classList.add("image-picker-cover");
-        img.alt = covers.indexOf(cover) + " | " +  cover
+        img.alt = covers.indexOf(cover) + " | " + cover
         img.loading = "lazy";
         img.decoding = "async";
 
@@ -1090,8 +1103,8 @@ async function setCover(id) {
         img.src = image;
 
         img.onload = () => {
-            current_bg_max = img.naturalHeight * (1200/img.naturalWidth);
-            console.log(1200/img.naturalWidth,img.naturalWidth,img.naturalHeight)
+            current_bg_max = img.naturalHeight * (1200 / img.naturalWidth);
+            console.log(1200 / img.naturalWidth, img.naturalWidth, img.naturalHeight)
             document.getElementById("bg").style.height = (current_bg_max) + "px";
             document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
             img.remove()
@@ -1194,336 +1207,371 @@ async function requestDirectory(path) {
 
         // Update Mods List
 
+        let finished_mods = 0;
+        let mods_to_complete = 0;
+        let finished = []
+
         for (const entry of files) {
             document.getElementById("loadingsub").textContent = translation.loading + " " + entry.name.replace("ddlc-", "").replace("ddlc", "").replace("-", "")
             if (entry.isDirectory) {
-                const localFiles = await readDir(selectedPath + "\\" + entry.name);
-
-                // Find Correct Directory
-
-                let dir = selectedPath + "\\" + entry.name;
-                let isInDir = false;
-                for (const localEntry of localFiles) {
-                    if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
-                        isInDir = true;
-                        break;
-                    }
-                }
-
-                if (!isInDir) {
-                    dir = selectedPath + "\\" + entry.name + "\\DDLC-1.1.1-pc"
-                    if (await isDir(dir)) {
-                        for (const localEntry of await readDir(dir)) {
-                            if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
-                                isInDir = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (!isInDir) {
-                    globWarn(dir + " Does Not Contain DDLC.exe")
-                    continue;
-                }
-
-                let customExe;
-                let about;
-                for (const localEntry of await readDir(dir)) {
-                    if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && customExe === undefined) {
-                        customExe = localEntry.name;
-                    }
-                    if (localEntry.name.toLowerCase().includes("credit") && about === undefined) {
-                        about = (await readTextFile(dir + "\\" + localEntry.name)).replaceAll("\n", "<br>");
-                    }
-                }
-
-                // Create SideButton And Load Config
-
-                let hasConfig = false;
-                let configPath = selectedPath + "\\" + entry.name + "\\.ddmm.config.json";
-                for (const localEntry of localFiles) {
-                    if (localEntry.name === ".ddmm.config.json") {
-                        hasConfig = true;
-                        break;
-                    }
-                }
-
-                let configData = {
-                    author: "unknown",
-                    time: 0,
-                    size: 0,
-                    favorite: false,
-                    coverId: 0
-                }
-
-                if (!hasConfig) {
-                    await create(configPath)
-                    const data = await metadata(selectedPath + "\\" + entry.name);
-                    const contents = JSON.stringify(configData);
-                    configData.size = data.size;
-                    await writeTextFile(configPath, contents);
-                } else {
-                    configData = JSON.parse(await readTextFile(configPath));
-                }
-
-                if (configData.coverId === undefined || configData.coverId === null) {
-                    configData.coverId = 0;
-                }
-
-                let shorthand = entry.name.replace("ddlc-", "").replace("ddlc", "").replace("-", " ");
-                const sidetext = document.createElement("header");
-                const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
-                const faveText = "<span style=\"font-family: Icon,serif\">&#60938;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
-
-                let launch_time = Date.now();
-                sidetext.classList.add("sidebutton");
-                if (configData.favorite) {
-                    sidetext.classList.add("favorite")
-                }
-                sidetext.id = shorthand;
-                if (configData.favorite) {
-                    sidetext.innerHTML = faveText
-                } else {
-                    sidetext.innerHTML = normalText
-                }
-
-                observer.observe(sidetext);
-                launchers[entry.name] = {
-                    item: sidetext,
-                    location: selectedPath + "\\" + entry.name,
-                    absolute_location: dir,
-                    preload: [],
-                    preloadImages: async () => {
-                        let images = 0;
-                        launchers[entry.name].preload = {}
-
-                        for (const localEntry of await readDir(dir)) {
-                            if (localEntry.name.includes("screenshot")) {
-                                launchers[entry.name].preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + "\\" + localEntry.name, []), entry.name, dir, localEntry.name, entry.name);
-                                images++
-                                setTimeout(() => {
-                                    document.appendChild(launchers[entry.name].preload[localEntry.name])
-
-                                    // document.removeChild(launchers[entry.name].preload[localEntry.name])
-                                }, 0)
-                                if (images >= 2) {
-                                    break
-                                }
-                            }
-                        }
-                    },
-                    getData: async () => {
-                        return configData
-                    },
-                    setAuthor: async (author) => {
-                        configData.author = author;
-                        const contents = JSON.stringify(configData);
-                        await writeTextFile(configPath, contents);
-                    },
-                    getPath: async () => {
-                        return selectedPath
-                    },
-                    getName: async () => {
-                        return entry.name
-                    },
-                    open: async () => {
-                        await invoke('tracker', {
-                            event: 'game_launch',
-                            props: {mod: entry.name}
-                        });
-                        showContainers(false)
-                        await update_concurrent_game()
-                        document.getElementById("pill").classList.remove("hide")
-                        setTimeout(async () => {
-                            play(sound_beep)
-                            launch_time = Date.now();
-                            let exes = []
-                            const dirFiles = await readDir(dir);
-
-                            let gameExe = "";
-
-                            for (const localEntry of dirFiles) {
-                                if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe")) {
-                                    exes.push(localEntry.name);
-                                }
-                            }
-                            if (exes.length > 1) {
-                                for (const localEntry of exes) {
-                                    if (localEntry !== "DDLC.exe") {
-                                        gameExe = localEntry;
-                                        break;
-                                    }
-                                }
-                            } else if (exes.length === 1) {
-                                gameExe = exes[0];
-                            } else {
-                                console.error("Game Exe Not Found!")
-                            }
-
-                            if (gameExe !== "") {
-                                await invoke("launch", {
-                                    path: dir + "\\" + gameExe,
-                                    id: entry.name,
-                                    renpy: await getRenpy(dir)
-                                })
-                            }
-                        }, 1000)
-
-
-                    },
-                    get_time: async () => {
-                        return Date.now() - launch_time;
-                    },
-                    path: async () => {
-                        await invoke("open_path", {
-                            path: dir
-                        })
-                    },
-                    setCover: async (coverId) => {
-                        configData.coverId = coverId;
-                        const contents = JSON.stringify(configData);
-                        await writeTextFile(configPath, contents);
-                        await setCover(configData.coverId);
-                    },
-                    oncove: async () => {
-                        configData.favorite = !configData.favorite;
-                        sidetext.classList.toggle("favorite", configData.favorite)
-                        if (configData.favorite) {
-                            sidetext.innerHTML = faveText
-                        } else {
-                            sidetext.innerHTML = normalText
-                        }
-                        const contents = JSON.stringify(configData);
-                        await writeTextFile(configPath, contents);
-                        document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
-                    },
-                    close: async () => {
-                        if (alert_path === undefined) {
-                            showContainers(true)
-                        }
-                        play(sound_click)
-                        const playTime = Date.now() - launch_time;
-                        await invoke('tracker', {
-                            event: 'game_close',
-                            props: {
-                                mod: entry.name,
-                                length: Math.floor(playTime / 3600000) + "h " + (Math.floor(playTime / 60000) % 60) + "m " + (Math.floor(playTime / 1000) % 60) + "s"
-                            }
-                        });
-                        total_time += playTime;
-                        configData.time += playTime;
-                        const data = await metadata(selectedPath + "\\" + entry.name);
-                        const contents = JSON.stringify(configData);
-                        configData.size = data.size;
-                        document.getElementById("pill").classList.add("hide")
-                        await writeTextFile(configPath, contents);
-                        await saveConfig()
-                        await launchers[entry.name].leftClick();
-                    },
-                    leftClick: async () => {
-                        currentEntry = entry.name;
-                        await setCover(configData.coverId);
-
-                        const fdirFiles = await readDir(dir);
-
-                        let renpy = await getRenpy(dir);
-                        let screenshots = false;
-                        let images = []
-
-                        while (document.getElementById("screenshots").firstChild) {
-                            document.getElementById("screenshots").firstChild.remove();
-                        }
-
-                        for (const localEntry of fdirFiles) {
-                            if (localEntry.name.includes("screenshot")) {
-                                screenshots = true;
-                                if (launchers[entry.name].preload[localEntry.name] !== undefined) {
-                                    document.getElementById("screenshots").appendChild(launchers[entry.name].preload[localEntry.name]);
-                                    continue;
-                                }
-                                images.push(
-                                    localEntry.name
-                                )
-
-                            }
-                        }
-
-
-                        if (renpy === undefined) {
-                            renpy = "Unknown (Please create a git issue on this)";
-                        }
-
-
-                        renpy = entry.name + "<br>Renpy: " + renpy + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
-                        document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
-                        play(sound_boop)
-                        const min = Math.floor(configData.time / 60000);
-
-                        if (configData.size === 0) {
-                            updateDisplayinfo(entry.name, configData.author, "Reading...", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
-                            setTimeout(async () => {
-                                const data = await metadata(selectedPath + "\\" + entry.name);
-                                configData.size = data.size;
-                                if (currentEntry === entry.name) {
-                                    updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
-
-                                }
-                            }, 0)
-                        } else {
-                            updateDisplayinfo(entry.name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
-
-                        }
-                        if (!screenshots) {
-                            document.getElementById("screenshots-header").classList.add("hide")
-                            document.getElementById("screenshots-parent").classList.add("hide")
-                            document.getElementById("info").classList.remove("info")
-                            document.getElementById("info").classList.add("expanded")
-                            document.getElementById("setinfo-header").style.left = "16rem";
-                        } else {
-                            document.getElementById("screenshots").scrollLeft = 0;
-                            const image_loader = images.map(async (image) => {
-                                const worker = new ImageLoader();
-
-                                worker.onmessage = (e) => {
-                                    if (currentEntry !== entry.name) return;
-                                    document.getElementById("screenshots").appendChild(
-                                        createScreenshotDiv(e.data, entry.name, dir, image, entry.name)
-                                    );
-                                }
-                                worker.postMessage({
-                                    image: await readFile(dir + "\\" + image)
-                                })
-                            })
-                            await Promise.all(image_loader);
-                            document.getElementById("screenshots-header").classList.remove("hide")
-                            document.getElementById("screenshots-parent").classList.remove("hide")
-                            document.getElementById("info").classList.remove("expanded")
-                            document.getElementById("info").classList.add("info")
-                            document.getElementById("setinfo-header").style.left = "30rem";
-                        }
-                    }
-                }
-                await launchers[entry.name].preloadImages();
-
-                sidetext.addEventListener("click", async () => {
-                    await launchers[entry.name].leftClick();
-                })
-
-                document.getElementById("modlist").appendChild(sidetext)
+                mods_to_complete++;
+                add_mod(entry.name)
+                    .then(() => {
+                        finished.push(entry.name)
+                        finished_mods++;
+                    })
+                    .catch(err => {
+                        console.warn("Failed To Add Mod: " + entry.name + " Error: " + err)
+                    })
             }
         }
 
-        await globLog("finish")
-        document.getElementById("loadingsub").textContent = "Loaded Mods | Loading GUI"
+        let interval = setInterval(async () => {
+            if (finished_mods === mods_to_complete) {
+                clearInterval(interval)
+                await globLog("finish")
+                document.getElementById("loadingsub").textContent = "Loaded Mods | Loading GUI"
 
-        setTimeout(() => {
-            play(sound_click)
-            document.getElementById("loader").classList.add("hide")
-            document.getElementById("main").classList.remove("hide")
-        }, 500)
+                setTimeout(() => {
+                    play(sound_click)
+                    document.getElementById("loader").classList.add("hide")
+                    document.getElementById("main").classList.remove("hide")
+                }, 500)
+            } else {
+                document.getElementById("loadingsub").textContent = "Loaded " + finished_mods + "/" + mods_to_complete + " Mods -> " + finished.join(" | ")
+                finished = []
+
+            }
+        }, 100)
+        return new Promise(async (resolve, reject) => {
+            setInterval(async () => {
+                if (finished_mods === mods_to_complete) {
+                    resolve()
+                }
+            }, 100)
+        })
+
     }
 
+}
+
+async function add_mod(name) {
+    if (!await isExist(selectedPath + "\\" + name)) {
+        await globWarn("Mod " + name + " Does Not Exist!")
+        return
+    }
+    const localFiles = await readDir(selectedPath + "\\" + name);
+    // Find Correct Directory
+
+    let dir = selectedPath + "\\" + name;
+    let isInDir = false;
+    for (const localEntry of localFiles) {
+        if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
+            isInDir = true;
+            break;
+        }
+    }
+
+    if (!isInDir) {
+        dir = selectedPath + "\\" + name + "\\DDLC-1.1.1-pc"
+        if (await isDir(dir)) {
+            for (const localEntry of await readDir(dir)) {
+                if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
+                    isInDir = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!isInDir) {
+        globWarn(dir + " Does Not Contain DDLC.exe")
+        return;
+    }
+
+    let customExe;
+    let about;
+    for (const localEntry of await readDir(dir)) {
+        if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && customExe === undefined) {
+            customExe = localEntry.name;
+        }
+        if (localEntry.name.toLowerCase().includes("credit") && about === undefined) {
+            about = (await readTextFile(dir + "\\" + localEntry.name)).replaceAll("\n", "<br>");
+        }
+    }
+
+    // Create SideButton And Load Config
+
+    let hasConfig = false;
+    let configPath = selectedPath + "\\" + name + "\\.ddmm.config.json";
+    for (const localEntry of localFiles) {
+        if (localEntry.name === ".ddmm.config.json") {
+            hasConfig = true;
+            break;
+        }
+    }
+
+    let configData = {
+        author: "unknown",
+        time: 0,
+        size: 0,
+        favorite: false,
+        coverId: 0
+    }
+
+    if (!hasConfig) {
+        await create(configPath)
+        const data = await metadata(selectedPath + "\\" + name);
+        const contents = JSON.stringify(configData);
+        configData.size = data.size;
+        await writeTextFile(configPath, contents);
+    } else {
+        configData = JSON.parse(await readTextFile(configPath));
+    }
+
+    if (configData.coverId === undefined || configData.coverId === null) {
+        configData.coverId = 0;
+    }
+
+    let shorthand = name.replace("ddlc-", "").replace("ddlc", "").replace("-", " ");
+    const sidetext = document.createElement("header");
+    const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
+    const faveText = "<span style=\"font-family: Icon,serif\">&#60938;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
+
+    let launch_time = Date.now();
+    sidetext.classList.add("sidebutton");
+    if (configData.favorite) {
+        sidetext.classList.add("favorite")
+    }
+    sidetext.id = shorthand;
+    if (configData.favorite) {
+        sidetext.innerHTML = faveText
+    } else {
+        sidetext.innerHTML = normalText
+    }
+
+    observer.observe(sidetext);
+    launchers[name] = {
+        item: sidetext,
+        location: selectedPath + "\\" + name,
+        absolute_location: dir,
+        preload: [],
+        isFavorite: configData.favorite,
+        nameId: name.toLowerCase(),
+        preloadImages: async () => {
+            let images = 0;
+            launchers[name].preload = {}
+
+            for (const localEntry of await readDir(dir)) {
+                if (localEntry.name.includes("screenshot")) {
+                    launchers[name].preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + "\\" + localEntry.name, []), name, dir, localEntry.name, name);
+                    images++
+
+                    if (images >= 2) {
+                        break
+                    }
+                }
+            }
+        },
+        getData: async () => {
+            return configData
+        },
+        setAuthor: async (author) => {
+            configData.author = author;
+            const contents = JSON.stringify(configData);
+            await writeTextFile(configPath, contents);
+        },
+        getPath: async () => {
+            return selectedPath
+        },
+        getName: async () => {
+            return name
+        },
+        open: async () => {
+            await invoke('tracker', {
+                event: 'game_launch',
+                props: {mod: name}
+            });
+            showContainers(false)
+            await update_concurrent_game()
+            document.getElementById("pill").classList.remove("hide")
+            setTimeout(async () => {
+                play(sound_beep)
+                launch_time = Date.now();
+                let exes = []
+                const dirFiles = await readDir(dir);
+
+                let gameExe = "";
+
+                for (const localEntry of dirFiles) {
+                    if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe")) {
+                        exes.push(localEntry.name);
+                    }
+                }
+                if (exes.length > 1) {
+                    for (const localEntry of exes) {
+                        if (localEntry !== "DDLC.exe") {
+                            gameExe = localEntry;
+                            break;
+                        }
+                    }
+                } else if (exes.length === 1) {
+                    gameExe = exes[0];
+                } else {
+                    console.error("Game Exe Not Found!")
+                }
+
+                if (gameExe !== "") {
+                    await invoke("launch", {
+                        path: dir + "\\" + gameExe,
+                        id: name,
+                        renpy: await getRenpy(dir)
+                    })
+                }
+            }, 1000)
+
+
+        },
+        get_time: async () => {
+            return Date.now() - launch_time;
+        },
+        path: async () => {
+            await invoke("open_path", {
+                path: dir
+            })
+        },
+        setCover: async (coverId) => {
+            configData.coverId = coverId;
+            const contents = JSON.stringify(configData);
+            await writeTextFile(configPath, contents);
+            await setCover(configData.coverId);
+        },
+        oncove: async () => {
+            configData.favorite = !configData.favorite;
+            sidetext.classList.toggle("favorite", configData.favorite)
+            if (configData.favorite) {
+                sidetext.innerHTML = faveText
+            } else {
+                sidetext.innerHTML = normalText
+            }
+            launchers[name].isFavorite = configData.favorite;
+            const contents = JSON.stringify(configData);
+            await writeTextFile(configPath, contents);
+            document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
+        },
+        close: async () => {
+            if (alert_path === undefined) {
+                showContainers(true)
+            }
+            play(sound_click)
+            const playTime = Date.now() - launch_time;
+            await invoke('tracker', {
+                event: 'game_close',
+                props: {
+                    mod: name,
+                    length: Math.floor(playTime / 3600000) + "h " + (Math.floor(playTime / 60000) % 60) + "m " + (Math.floor(playTime / 1000) % 60) + "s"
+                }
+            });
+            total_time += playTime;
+            configData.time += playTime;
+            const data = await metadata(selectedPath + "\\" + name);
+            const contents = JSON.stringify(configData);
+            configData.size = data.size;
+            document.getElementById("pill").classList.add("hide")
+            await writeTextFile(configPath, contents);
+            await saveConfig()
+            await launchers[name].leftClick();
+        },
+        leftClick: async () => {
+            currentEntry = name;
+            await setCover(configData.coverId);
+
+            const fdirFiles = await readDir(dir);
+
+            let renpy = await getRenpy(dir);
+            let screenshots = false;
+            let images = []
+
+            while (document.getElementById("screenshots").firstChild) {
+                document.getElementById("screenshots").firstChild.remove();
+            }
+
+            for (const localEntry of fdirFiles) {
+                if (localEntry.name.includes("screenshot")) {
+                    screenshots = true;
+                    if (launchers[name].preload[localEntry.name] !== undefined) {
+                        document.getElementById("screenshots").appendChild(launchers[name].preload[localEntry.name]);
+                        continue;
+                    }
+                    images.push(
+                        localEntry.name
+                    )
+
+                }
+            }
+
+
+            if (renpy === undefined) {
+                renpy = "Unknown (Please create a git issue on this)";
+            }
+
+
+            renpy = name + "<br>Renpy: " + renpy + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
+            document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
+            play(sound_boop)
+            const min = Math.floor(configData.time / 60000);
+
+            if (configData.size === 0) {
+                updateDisplayinfo(name, configData.author, "Reading...", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
+                setTimeout(async () => {
+                    const data = await metadata(selectedPath + "\\" + name);
+                    configData.size = data.size;
+                    if (currentEntry === name) {
+                        updateDisplayinfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
+
+                    }
+                }, 0)
+            } else {
+                updateDisplayinfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
+
+            }
+            if (!screenshots) {
+                document.getElementById("screenshots-header").classList.add("hide")
+                document.getElementById("screenshots-parent").classList.add("hide")
+                document.getElementById("info").classList.remove("info")
+                document.getElementById("info").classList.add("expanded")
+                document.getElementById("setinfo-header").style.left = "16rem";
+            } else {
+                document.getElementById("screenshots").scrollLeft = 0;
+                const image_loader = images.map(async (image) => {
+                    const worker = new ImageLoader();
+
+                    worker.onmessage = (e) => {
+                        if (currentEntry !== name) return;
+                        document.getElementById("screenshots").appendChild(
+                            createScreenshotDiv(e.data, name, dir, image, name)
+                        );
+                    }
+                    worker.postMessage({
+                        image: await readFile(dir + "\\" + image)
+                    })
+                })
+                await Promise.all(image_loader);
+                document.getElementById("screenshots-header").classList.remove("hide")
+                document.getElementById("screenshots-parent").classList.remove("hide")
+                document.getElementById("info").classList.remove("expanded")
+                document.getElementById("info").classList.add("info")
+                document.getElementById("setinfo-header").style.left = "30rem";
+            }
+        }
+    }
+    launchers[name].preloadImages().then(() => {});
+
+    sidetext.addEventListener("click", async () => {
+        launchers[name].leftClick().then(() => {});
+    })
+
+    document.getElementById("modlist").appendChild(sidetext)
 }
 
 // Gets RenPy Version
@@ -1643,7 +1691,8 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
         }
     } else {
         currentEntry = ""
-        setCover(background_cover).then(() => {})
+        setCover(background_cover).then(() => {
+        })
         let min = Math.floor(total_time / 60000);
         document.getElementById("screenshots-header").classList.add("hide");
         document.getElementById("screenshots-parent").classList.add("hide");
@@ -1783,6 +1832,7 @@ async function rename_mod() {
         } catch (e) {
             if (e == "Error: Invalid Name!") {
                 confirm("The Name '" + value + "' is invalid!")
+                document.getElementById("modtitle").value = currentEntry;
             } else {
                 confirm("Cannot Rename The File Due To:\n\n" + e)
             }
@@ -2033,7 +2083,7 @@ function create_profile(profile, position) {
             }
         }
         selected_name = background.id;
-        current_profile =  background.id.replace("profile-", "");
+        current_profile = background.id.replace("profile-", "");
         background.classList.add("profile-button-active")
     }
 
@@ -2042,7 +2092,7 @@ function create_profile(profile, position) {
             confirm(translation["error-profile_setname"])
             return;
         }
-        rename_target =  background.id.replace("profile-", "");
+        rename_target = background.id.replace("profile-", "");
         document.getElementById("profile-bg").classList.add("profile-bg-covered")
         document.getElementById("input-prompt").classList.remove("hide")
         document.getElementById("input-prompt-box").value = background.id.replace("profile-", "");
@@ -2073,7 +2123,7 @@ function create_profile(profile, position) {
             confirm(translation["error-profile_delete"])
             return;
         }
-        await remove(profile_path + "\\" +  background.id.replace("profile-", "") + ".ddmm.profile.json");
+        await remove(profile_path + "\\" + background.id.replace("profile-", "") + ".ddmm.profile.json");
 
         current_profile = "Default"
         selected_name = "profile-Default"
@@ -2161,8 +2211,8 @@ async function save_profile_name() {
         for (const profile in current_profile_data) {
             console.log(current_profile_data[profile])
             if (current_profile_data[profile] === null || current_profile_data[profile] === undefined) continue;
-            const comperator = (current_profile_data[profile] + "").toLowerCase().replace("profile-","");
-            const comperason = name.toLowerCase().replace("profile-","");
+            const comperator = (current_profile_data[profile] + "").toLowerCase().replace("profile-", "");
+            const comperason = name.toLowerCase().replace("profile-", "");
             console.log(comperator, comperason, comperator === comperason)
             if (comperason === comperator || name.toLowerCase().includes("profile-")) {
                 await confirm("The Name '" + name + "' is already taken!")
@@ -2195,7 +2245,7 @@ async function save_profile_name() {
                 break
             }
         }
-    };
+    }
     await save_profile_data();
     close_profile_rename()
 
@@ -2212,7 +2262,10 @@ async function onLoad() {
     // Listens For Rename Finishing
 
     listen("rename_done", async (event) => {
-        await requestDirectory(selectedPath)
+        let promise = await requestDirectory(selectedPath);
+        if (promise !== undefined) {
+            await promise;
+        }
         while (document.getElementById("loader").classList.contains("hide")) {
         }
         const value = event.payload.text;
@@ -2248,7 +2301,7 @@ async function onLoad() {
         if (!await isDir(local_path + "\\store\\backup")) {
             await mkdir(local_path + "\\store\\backup");
         }
-        await writeTextFile(local_path + "\\store\\backup\\" + profile_path.replaceAll("\\\\","/").replaceAll("\\","/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
+        await writeTextFile(local_path + "\\store\\backup\\" + profile_path.replaceAll("\\\\", "/").replaceAll("\\", "/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
         await invoke("open_path", {
             path: local_path + "\\store\\backup"
         })
@@ -2275,7 +2328,7 @@ async function onLoad() {
             if (!await isDir(local_path + "\\store\\backup\\autosave")) {
                 await mkdir(local_path + "\\store\\backup\\autosave");
             }
-            await writeTextFile(local_path + "\\store\\backup\\autosave\\" + profile_path.replaceAll("\\\\","/").replaceAll("\\","/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
+            await writeTextFile(local_path + "\\store\\backup\\autosave\\" + profile_path.replaceAll("\\\\", "/").replaceAll("\\", "/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
             await delete_dir(profile_path);
             await load_data(JSON.parse(await readTextFile(backup_select)), profile_path);
             console.log(current_game_data_path)
@@ -2449,14 +2502,18 @@ async function onLoad() {
             await remove(alert_path);
         }
         document.getElementById("loadingsub").textContent = "Mod Imported | Loading GUI"
-        setTimeout(() => {
+        setTimeout(async () => {
             if (alert_path !== undefined) {
-                remove(alert_path)
+                if (await isExist(alert_path)) {
+                    remove(alert_path)
+                }
                 alert_path = undefined;
             }
         })
-        await requestDirectory(selectedPath)
         let goal = event.payload.text;
+        await add_mod(goal)
+        document.getElementById("loader").classList.add("hide")
+        document.getElementById("main").classList.remove("hide")
         if (launchers[goal]) {
             launchers[goal].leftClick();
         } else {
@@ -2769,11 +2826,15 @@ async function onLoad() {
         if (currentEntry !== "") {
             let confirmed = await confirm("Are you sure you want to delete '" + launchers[currentEntry].location + "' and its data?")
             if (confirmed) {
+                 showContainers(false)
                 await invoke("delete_path", {
                     path: launchers[currentEntry].location
                 });
+                launchers[currentEntry].item.remove();
+                delete launchers[currentEntry];
+                showContainers(true)
                 await home_main()
-                await requestDirectory(selectedPath);
+
             }
         }
     })
@@ -2787,8 +2848,17 @@ async function onLoad() {
 
         if (currentEntry !== "") {
             let final = launchers[currentEntry].absolute_location;
+            let path = final + "\\game\\scripts.rpa";
+            if (!await isExist(path)) {
+                path = final + "\\game\\options.rpyc";
+                if (!await isExist(path)) {
+                    globWarn("No save found!")
+                    confirm("No save found!")
+                    return;
+                }
+            }
             let loc = await invoke("rpa_data", {
-                path: final + "\\game\\scripts.rpa",
+                path: path,
                 out: final
             })
             if (loc !== "") {
@@ -2805,9 +2875,20 @@ async function onLoad() {
     document.getElementById("delete-save").addEventListener("mouseup", async () => {
 
         if (currentEntry !== "") {
+            document.getElementById("profile-blur").classList.remove("hide")
+
             let final = launchers[currentEntry].absolute_location;
+            let path = final + "\\game\\scripts.rpa";
+            if (!await isExist(path)) {
+                path = final + "\\game\\options.rpyc";
+                if (!await isExist(path)) {
+                    globWarn("No save found!")
+                    confirm("No save found!")
+                    return;
+                }
+            }
             let loc = await invoke("rpa_data", {
-                path: final + "\\game\\scripts.rpa",
+                path: path,
                 out: final
             })
             if (loc !== "") {
@@ -2816,6 +2897,8 @@ async function onLoad() {
 
                 update_profiles(loc)
             } else {
+                document.getElementById("profile-blur").classList.add("hide")
+
                 confirm("Unknown Save Data Location!")
             }
 
@@ -2830,13 +2913,20 @@ async function onLoad() {
             document.getElementById("loadingsub").textContent = "Extracting (This will take 20-40s)"
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
-            await invoke("extract_game_script", {
-                path: final,
-                out: launchers[currentEntry].absolute_location + "\\deobf"
-            })
-            await invoke("open_path", {
-                path: launchers[currentEntry].absolute_location + "\\deobf"
-            })
+            if (await isExist(final)) {
+                await invoke("extract_game_script", {
+                    path: final,
+                    out: launchers[currentEntry].absolute_location + "\\deobf"
+                })
+                await invoke("open_path", {
+                    path: launchers[currentEntry].absolute_location + "\\deobf"
+                })
+            } else {
+                confirm("No game script found!")
+
+            }
+
+
             await launchers[currentEntry].leftClick()
             document.getElementById("loader").classList.add("hide")
             document.getElementById("main").classList.remove("hide")
@@ -2960,43 +3050,52 @@ async function onLoad() {
                     element.item.classList.remove("hide2");
                 }
             }, 0)
-        } else {
-            let lowerTarget = event.target.value.toLowerCase();
-            for (const index in launchers) {
-                const element = launchers[index];
-                const lowerName = element.item.id.toLowerCase();
-                let isValid = true;
-                let split = lowerName.split(" ");
-                let trunc = lowerName;
-                let markers = 0;
-                for (const letter in lowerTarget) {
-                    if (letter < split.length) {
-                        if (split[letter].startsWith(lowerTarget[letter])) {
-                            markers++;
-                        }
-                    }
-                    if (trunc.indexOf(lowerTarget[letter]) === -1) {
-                        isValid = false;
-                        break;
-                    }
-                    trunc = trunc.replace(lowerTarget[letter], "");
-                }
+            lastInputLength = 0;
+            return;
+        }
+        let lowerTarget = event.target.value.toLowerCase();
+        const length = lowerTarget.length;
+        const ignoreInvis = length > lastInputLength;
+        for (const index in launchers) {
+            const element = launchers[index];
 
-                if (isValid) {
-                    let index = 10 - (markers * 2)
-                    if (element.item.classList.contains("favorite")) {
-                        index--;
+            if (ignoreInvis && element.item.classList.contains("hide2")) {
+                continue;
+            }
+
+            const lowerName = element.nameId;
+            let isValid = true;
+            let split = lowerName.split(" ");
+            let trunc = lowerName;
+            let markers = 0;
+            for (const letter in lowerTarget) {
+                if (letter < split.length) {
+                    if (split[letter].startsWith(lowerTarget[letter])) {
+                        markers++;
                     }
-                    if (lowerName.includes(lowerTarget)) {
-                        index-=lowerTarget.length;
-                    }
-                    element.item.style.order = index.toString();
-                    element.item.classList.remove("hide2");
-                } else {
-                    element.item.classList.add("hide2");
                 }
+                if (trunc.indexOf(lowerTarget[letter]) === -1) {
+                    isValid = false;
+                    break;
+                }
+                trunc = trunc.replace(lowerTarget[letter], "");
+            }
+
+            if (isValid) {
+                let index = 10 - (markers * 2)
+                if (element.isFavorite) {
+                    index--;
+                }
+                if (lowerName.includes(lowerTarget)) {
+                    index -= lowerTarget.length;
+                }
+                element.item.style.order = index.toString();
+                element.item.classList.remove("hide2");
+            } else {
+                element.item.classList.add("hide2");
             }
         }
+        lastInputLength = length;
     })
 
     document.getElementById("english").addEventListener("mouseup", async () => {
@@ -3205,7 +3304,7 @@ async function onLoad() {
         if (next > CLIENT_THEME_ENUM.length - 1) {
             next = 0;
         }
-        if (next <  0) {
+        if (next < 0) {
             next = CLIENT_THEME_ENUM.length - 1;
         }
         await play(sound_beep)

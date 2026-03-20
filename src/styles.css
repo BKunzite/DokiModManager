@@ -647,6 +647,7 @@
     left: 2rem;
     line-height: 25px;
     top: 12rem;
+    cursor: grab;
 }
 
 .load-subtitle {
@@ -659,6 +660,8 @@
     transform: translateY(-50%);
     text-align: left;
     line-height: 2rem;
+    text-wrap: nowrap;
+    width: 90%;
 }
 .load-title {
     position: absolute;
@@ -902,7 +905,7 @@ body {
     transform: translate(-50%, -50%);
     padding: 3px;
     z-index: -2;
-    border-radius: 0.5rem;
+    border-radius: 1rem;
     filter: blur(10px);
     animation: 3s spin linear infinite;
 }
@@ -1267,7 +1270,7 @@ body {
     bottom: 2vh;
     left: 2vh;
     border-radius: 50%;
-    box-shadow: rgba(0, 0, 0, 0.1) 0 0 10px;
+    box-shadow: rgba(var(--primary-color), 0.1) 0 0 10px;
     z-index: 10;
     transition: all ease-out 0.25s;
     backdrop-filter: blur(5px);
@@ -1277,7 +1280,7 @@ body {
 .cover-update:hover {
     backdrop-filter: blur(5px);
     background-color: rgba(255, 255, 255, 0.4);
-    box-shadow: rgba(0, 0, 0, 0.33) 0 0 15px 5px;
+    box-shadow: rgba(var(--primary-color-saturated), 1) 0 0 15px 5px;
 }
 
 
@@ -1896,7 +1899,7 @@ body {
 }
 
 .sidebutton:hover {
-    scale: 1.05;
+    scale: 1.04;
     z-index: 2;
     font-weight: bold;
 }
@@ -2025,7 +2028,6 @@ li:not(.sticky):not(.favorite) {
     width: 71.75vw;
     bottom: 1vw;
     box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
-
     height: 89.5vh;
     left: 27.25vw;
     /*background-color: rgba(0, 0, 0, 0.6);*/

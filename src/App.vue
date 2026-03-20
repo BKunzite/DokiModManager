@@ -115,7 +115,7 @@
         <header class="alert-title">Download Watcher</header>
         <header class="alert-subtitle">Allow this mod to be extracted and imported?</header>
         <header class="alert-subtitle2"><span style="font-family: Icon;">&#60792;</span>  <span id="alert-name" style="position: absolute; font-size: 1rem; padding-top: 10px; padding-left: 10px;">BrokenPoet.zip</span></header>
-        <header class="alert-subtitle3" id="sub3"><span style="font-family: Icon;">&#60766;</span> Size: <span id="alert-size" style="color: cornflowerblue">800mb</span><br><span style="font-family: Icon;">&#60901;</span> Path: <span id="alert-pth" style="color: cornflowerblue">800mb</span><br><span style="color: cornflowerblue">Goto File</span></header>
+        <header class="alert-subtitle3" id="sub3"><span style="font-family: Icon;">&#60766;</span> Size: <span id="alert-size" style="color: rgb(var(--primary-color))">800mb</span><br><span style="font-family: Icon;">&#60901;</span> Path: <span id="alert-pth" style="color: rgb(var(--primary-color))">800mb</span><br><span style="color: rgb(var(--primary-color))">Goto File</span></header>
         <button class="alert-button" id="download">Yes</button>
         <button class="alert-button2" id="cancel">No</button>
 
@@ -131,15 +131,15 @@
       </div>
       <div class="profile-blur hide smooth-hide" id="profile-blur">
         <div class="profile-bg smooth-hide hide" id="profile-bg">
-          <header class="profile-header">Profiles</header>
-          <div class="profile-list" id="profiles">
+          <header class="profile-header smooth-hide" >Profiles</header>
+          <div class="profile-list smooth-hide" id="profiles">
 
           </div>
-          <button class="profile-button-default profile-button-create" id="create-profile">New</button>
-          <button class="profile-button-default profile-button-copy" id="copy-profile">Duplicate</button>
-          <button class="profile-button-default profile-button-save" id="save-profile">Save Changes</button>
-          <button class="profile-button-default profile-button-backup" id="backup-profile">Save & Backup All Data</button>
-          <button class="profile-button-default profile-button-backup-load" id="backup-load-profile">Load Backup</button>
+          <button class="profile-button-default smooth-hide profile-button-create" id="create-profile">New</button>
+          <button class="profile-button-default smooth-hide profile-button-copy" id="copy-profile">Duplicate</button>
+          <button class="profile-button-default smooth-hide profile-button-save" id="save-profile">Save Changes</button>
+          <button class="profile-button-default smooth-hide profile-button-backup" id="backup-profile">Save & Backup All Data</button>
+          <button class="profile-button-default smooth-hide profile-button-backup-load" id="backup-load-profile">Load Backup</button>
 
         </div>
 

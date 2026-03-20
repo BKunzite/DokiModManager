@@ -1,5 +1,8 @@
-3.5.0-beta
-Minor (Fixes)
+1.5.0-release
+Minor (Fixes & Major Performance Improvements)
+
+* MOD FIX *
+Exit Music Redux 1.1
 
 Better Search
 Background Clamp instead of Scroll
@@ -7,6 +10,9 @@ Readability for Snow Theme
 Major Performance Improvements
     Clicking on a mod is based on mouse_down not mouse_up
     Cover Image Picker is now significantly faster
+
+    Mod loading is now parallel and significantly faster
+    Rust backend was rewritten to be faster
 
 Remember, if you have bugs, issues, or questions,
 create a git issue or put a comment under

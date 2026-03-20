@@ -27,17 +27,12 @@
     </div>
   </div>
   <div class="updates">
-    <div class="update-version" id="desktop-version">Version 1.4.0-release</div>
+    <div class="update-version" id="desktop-version">Version 1.5.0-release</div>
     <div class="update-heaader">Bug Fixes & UI</div>
     <div class="update-text">Polished UI</div>
-    <div class="update-text">Image Picker</div>
-    <div class="update-text">More Themes</div>
     <div class="update-text">Performance Improvements</div>
+    <div class="update-text">Exit Music Redux Fix</div>
 
-    <div class="update-heaader">UnRPYC</div>
-    <div class="update-text">Profiles</div>
-    <div class="update-text">Reset Profile Data</div>
-    <div class="update-heaader">Report Issue</div>
   </div>
   </body>
 </template>
