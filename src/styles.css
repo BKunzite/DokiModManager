@@ -100,6 +100,105 @@
     corner-shape: squircle;
 }
 
+.pill-files {
+    position: absolute;
+    text-align: left;
+    padding-top: 1.05rem;
+    padding-left: 1.15rem;
+    font-size: 0.9rem;
+    font-family: "Aller", sans-serif;
+    color: white;
+    content: "";
+    bottom: 10px;
+    left: calc(55px + 30rem);
+    width: 7.2rem;
+    height: 2.2rem;
+    border-radius: 2rem;
+    text-wrap: nowrap;
+    background-color: rgba(0,0,0,0.3);
+    z-index: 11;
+    backdrop-filter: blur(20px) saturate(50%);
+    box-shadow: black 0 0 150px 20px, inset rgba(255,255,255,0.25) 0 0 10px;
+    corner-shape: squircle;
+    transition: scale cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s;
+}
+
+.pill-files:hover {
+    scale: 1.05;
+}
+
+.changelog {
+    width: 40rem;
+    height: 30rem;
+    transform: translate(-50%, -50%);
+    background-color: rgba(25,25,25,1);
+    backdrop-filter: blur(20px) saturate(50%);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 1.25rem;
+    position: absolute;
+    overflow: hidden;
+    z-index: 12;
+    box-shadow: 0 0 200px 50px rgba(0,0,0,0.8);
+}
+
+.changelog-title {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    font: 2rem "Aller";
+    color: rgb(254, 179, 188);
+}
+
+.changelog-button {
+    position: absolute;
+    font-family: "Aller", sans-serif;
+    color: white;
+    background-color: rgba(0,0,0,0.2);
+    font-size: 1rem;
+    width: auto;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    height: 3rem;
+    border: none;
+    transition: scale cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s;
+    border-radius: 0.75rem;
+    text-wrap: nowrap;
+}
+
+.changelog-button:hover {
+    scale: 1.05;
+}
+
+.changelog-ignore {
+    top: 5rem;
+    left: 9rem;
+}
+
+.changelog-update {
+    background-color: rgba(254, 179, 188,0.2);
+    top: 5rem;
+    left: 2rem;
+}
+
+.changelog-text {
+    position: absolute;
+    top: 9rem;
+    left: 2rem;
+    width: 34rem;
+    height: 17rem;
+    background-color: rgba(0,0,0,0.3);
+    color: white;
+    font: 1rem "Aller";
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: none;
+    scrollbar-width: none;
+    resize: none;
+    outline: none;
+}
+
 .title-colored {
     color: rgb(var(--primary-color));
 }
@@ -550,7 +649,7 @@
     mask-composite: exclude;
     pointer-events: none;
 }
-.pill-container::after {
+.pill-container::after, .pill-files::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -1090,6 +1189,7 @@ body {
 
 .language:hover {
     background-color: rgba(255,255,255, 0.2);
+    z-index: 5;
 
     top: 1.5vh;
     scale: 1.2;
@@ -1230,7 +1330,6 @@ body {
     border-radius: 1rem;
     border: none;
     corner-shape: squircle;
-
     overflow: scroll;
     scrollbar-width: none;
     transition: all ease-out 0.1s, scale 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1736,7 +1835,7 @@ body {
     transform: translate(-50%, -50%);
     padding: 0px;
     z-index: -2;
-    border-radius: 1.5rem;
+    border-radius: 2rem;
     filter: blur(2px);
     corner-shape: squircle;
     animation: 3s spin linear infinite;
@@ -1900,7 +1999,7 @@ body {
 
 .sidebutton:hover {
     scale: 1.04;
-    z-index: 2;
+    z-index: 4;
     font-weight: bold;
 }
 
@@ -1911,7 +2010,7 @@ body {
 .sidebutton:hover::before, .sidebutton:hover::after {
     content: "";
     position: absolute;
-    height: 100%;
+    height: 3.25vw;
     width: 100%;
     top: 50%;
     left: 50%;
@@ -1919,10 +2018,16 @@ body {
     transform: translate(-50%, -50%);
     padding: 3px;
     z-index: -2;
-    border-radius: 1.5rem;
+    border-radius: 3rem;
     corner-shape: squircle;
     filter: blur(5px);
+    box-shadow: 0 0 7px rgba(20,20,20,0.75);
     animation: 3s spin linear infinite;
+}
+
+.sidebutton.favorite:hover::before, .sidebutton.favorite:hover::after {
+    height: 4vw;
+    filter: blur(5px) saturate(150%);
 }
 
 .sidebutton2:hover {
@@ -2117,14 +2222,14 @@ li:not(.sticky):not(.favorite) {
 
 .report-bg {
     width: 25rem;
-    height: 17rem;
+    height: 25rem;
     background-color: rgba(0, 0, 0, 0.7);
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 10;
-    border-radius: 2.5rem;
+    border-radius: 3rem;
     corner-shape: squircle;
     transition: filter ease-out 0.1s;
     box-shadow: 0 0 50px rgba(0,0,0,0.8);
@@ -2136,7 +2241,7 @@ li:not(.sticky):not(.favorite) {
     position: absolute;
     color: white;
     top: 2rem;
-    left: 2rem;
+    left: 2.2rem;
     font-size: 1.5rem;
     line-height: 1;
     vertical-align: text-top;
@@ -2161,20 +2266,20 @@ li:not(.sticky):not(.favorite) {
     font-family: "Aller", sans-serif;
     position: absolute;
     color: white;
-    top: 4rem;
+    top: 5rem;
     left: 2rem;
-    width: 20rem;
+    width: 19rem;
     border: none;
-    border-radius: 1rem;
+    border-radius: 1.5rem;
     corner-type: squircle;
-    height: 6rem;
-    background: rgba(0,0,0,0.4);
+    height: 12rem;
+    background: rgba(0,0,0,0.6);
     font-size: 1rem;
     resize: none;
     scrollbar-width: none;
     outline: none;
     line-height: 1;
-    padding: 0.5rem;
+    padding: 1rem;
 }
 
 .report-close {

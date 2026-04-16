@@ -1,27 +1,15 @@
-1.5.0-release
-Minor (Fixes & Major Performance Improvements)
+3.6.0-release
+Minor (More UI Updates)
 
-* MOD FIX *
-Exit Music Redux 1.1
+Files For Mods
+Reminder - You can see files for each mod by clicking the
+folder icon next to the play button.
+There is now a button to view files once you launch
+the mod.
 
-Better Search
-Background Clamp instead of Scroll
-Readability for Snow Theme
-Major Performance Improvements
-    Clicking on a mod is based on mouse_down not mouse_up
-    Cover Image Picker is now significantly faster
+Also, if you have a issue to report, please
+include a lot of details.
 
-    Mod loading is now parallel and significantly faster
-    Rust backend was rewritten to be faster
-
-Remember, if you have bugs, issues, or questions,
-create a git issue or put a comment under
-the original post!
-
-Translation errors might exist.
-Pueden existir errores de traducción.
-Des erreurs de traduction peuvent exister.
-可能存在翻譯錯誤。
-翻訳に誤りがある可能性があります。
-Podem existir erros de tradução.
-Возможны ошибки перевода.
+New Update Screen
+Yes, pressing update will automatically update the manager,
+you dont have to reinstall.

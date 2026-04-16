@@ -1,6 +1,6 @@
 [package]
 name = "dokimodmanager"
-version = "1.5.0"
+version = "4.6.0"
 description = "(Kunzite) Doki Doki Mod Manager"
 authors = ["kunzite"]
 edition = "2021"

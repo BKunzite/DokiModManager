@@ -87,8 +87,8 @@ let preload_covers = {}
 
 // CONSTANTS
 
-const CLIENT_VERSION = "1.5.0-release"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver.txt"
+const CLIENT_VERSION = "3.6.0-beta"
+const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
 ]
@@ -176,6 +176,8 @@ const TRANSLATION_TABLE = {
         "next": "Next",
         "end": "End",
         "updating": "Updating",
+        "update": "Update",
+        "ignore": "Ignore",
         "error-profile_setname": "You cannot rename the default profile!",
         "error-profile_delete": "You cannot delete the default profile!",
         "tutorial": {
@@ -250,6 +252,8 @@ const TRANSLATION_TABLE = {
         "next": "Далее",
         "end": "Конец",
         "updating": "Обновление",
+        "update": "Обновить",
+        "ignore": "Игнорировать",
         "error-profile_setname": "Нельзя переименовать профиль по умолчанию!",
         "error-profile_delete": "Нельзя удалить профиль по умолчанию!",
         "tutorial": {
@@ -324,6 +328,8 @@ const TRANSLATION_TABLE = {
         "next": "Próximo",
         "end": "Finalizar",
         "updating": "Atualizando",
+        "update": "Atualizar",
+        "ignore": "Ignorar",
         "error-profile_setname": "Você não pode renomear o perfil padrão!",
         "error-profile_delete": "Você não pode excluir o perfil padrão!",
         "tutorial": {
@@ -398,6 +404,8 @@ const TRANSLATION_TABLE = {
         "next": "Siguiente",
         "end": "Terminar",
         "updating": "Actualizando",
+        "update": "Actualizar",
+        "ignore": "Ignorar",
         "error-profile_setname": "¡No puedes cambiar el nombre del perfil predeterminado!",
         "error-profile_delete": "¡No puedes eliminar el perfil predeterminado!",
         "tutorial": {
@@ -472,6 +480,8 @@ const TRANSLATION_TABLE = {
         "next": "Suivant",
         "end": "Terminer",
         "updating": "Mise à jour",
+        "update": "Mettre à jour",
+        "ignore": "Ignorer",
         "error-profile_setname": "Vous ne pouvez pas renommer le profil par défaut !",
         "error-profile_delete": "Vous ne pouvez pas supprimer le profil par défaut !",
         "tutorial": {
@@ -546,6 +556,8 @@ const TRANSLATION_TABLE = {
         "next": "下一頁",
         "end": "結束",
         "updating": "更新緊",
+        "update": "更新",
+        "ignore": "忽略",
         "error-profile_setname": "你唔可以重新命名預設設定檔！",
         "error-profile_delete": "你唔可以刪除預設設定檔！",
         "tutorial": {
@@ -620,6 +632,8 @@ const TRANSLATION_TABLE = {
         "next": "次へ",
         "end": "終了",
         "updating": "更新中",
+        "update": "アップデート",
+        "ignore": "無視",
         "error-profile_setname": "デフォルトのプロファイル名は変更できません！",
         "error-profile_delete": "デフォルトのプロファイルは削除できません！",
         "tutorial": {
@@ -1395,6 +1409,7 @@ async function add_mod(name) {
             showContainers(false)
             await update_concurrent_game()
             document.getElementById("pill").classList.remove("hide")
+            document.getElementById("pill-files").classList.remove("hide")
             setTimeout(async () => {
                 play(sound_beep)
                 launch_time = Date.now();
@@ -1478,6 +1493,7 @@ async function add_mod(name) {
             const contents = JSON.stringify(configData);
             configData.size = data.size;
             document.getElementById("pill").classList.add("hide")
+            document.getElementById("pill-files").classList.add("hide")
             await writeTextFile(configPath, contents);
             await saveConfig()
             await launchers[name].leftClick();
@@ -1652,6 +1668,7 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
     document.getElementById("modtitle").classList.remove("hide");
     document.getElementById("modinfo").classList.remove("hide");
     document.getElementById("cove").classList.remove("hide");
+    document.getElementById("language-list").classList.add("language-list-hide");
 
     if (author.length > 0) {
         currentEntry = mod;
@@ -1755,12 +1772,14 @@ async function update_concurrent_game() {
     if (!document.getElementById("modlist").classList.contains("hide") || alert_path !== undefined) {
         if (!document.getElementById("pill").classList.contains("hide")) {
             document.getElementById("pill").classList.add("hide")
+            document.getElementById("pill-files").classList.add("hide")
         }
         return
     }
 
     if (document.getElementById("pill").classList.contains("hide")) {
         document.getElementById("pill").classList.remove("hide")
+        document.getElementById("pill-files").classList.remove("hide")
     }
 
     const playTime = await launchers[currentEntry].get_time();
@@ -1895,6 +1914,7 @@ async function update_profiles(path) {
             create_profile(name, profile_spot);
         }
     }
+    document.getElementById("profile-bg").classList.remove("hide")
 }
 
 function get_profile_path(name) {
@@ -2660,13 +2680,33 @@ async function onLoad() {
                 await globWarn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
                 if (navigator.onLine) {
-                    let response = await confirm("AUTO UPDATE\nNew Update Available! (Press 'Ok' to update)\n" +
-                        "¡Nueva actualización disponible! (Presiona 'Ok' para actualizar)\n" +
-                        "Nouvelle mise à jour disponible ! (Appuyez sur 'Ok' pour mettre à jour)\n" +
-                        "有新版本呀！(撳「好」開始更新)\n" +
-                        "新しいアップデートがあります！(「Ok」を押して更新してください)\n" +
-                        "Nova atualização disponível! (Pressione 'Ok' para atualizar)\n" +
-                        ")\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
+                    // let response = await confirm("AUTO UPDATE\nNew Update Available! (Press 'Ok' to update)\n" +
+                    //     "¡Nueva actualización disponible! (Presiona 'Ok' para actualizar)\n" +
+                    //     "Nouvelle mise à jour disponible ! (Appuyez sur 'Ok' pour mettre à jour)\n" +
+                    //     "有新版本呀！(撳「好」開始更新)\n" +
+                    //     "新しいアップデートがあります！(「Ok」を押して更新してください)\n" +
+                    //     "Nova atualização disponível! (Pressione 'Ok' para atualizar)\n" +
+                    //     ")\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
+
+                    await loadTranslation(translation_lan, true)
+
+                    document.getElementById("changelog").classList.remove("hide")
+                    document.getElementById("changelog-title").textContent = "New Update! | " + newest_version.split("\n")[0]
+                    document.getElementById("changelog-text").textContent = newest_version.split("\n").slice(1).join("\n")
+                    document.getElementById("changelog-update").textContent = translation.update
+                    document.getElementById("changelog-ignore").textContent = translation.ignore
+                    document.getElementById("changelog-ignore").style.left = "calc(3rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
+                    let response = await new Promise(resolve => {
+                        document.getElementById("changelog-update").addEventListener("mouseup", async () => {
+                            resolve(true)
+                        })
+                        document.getElementById("changelog-ignore").addEventListener("mouseup", async () => {
+                            resolve(false)
+                        })
+                    });
+
+                    document.getElementById("changelog").classList.add("hide")
+
                     if (response) {
                         await update_client()
 
@@ -2697,9 +2737,10 @@ async function onLoad() {
                         clearInterval(interval)
                     }
                 }, 100))
-                document.getElementById("language-list").classList.add("hide")
-                document.getElementById("language-list").classList.remove("language-list-force")
+
                 document.getElementById("main").appendChild(document.getElementById("language-list"))
+                document.getElementById("language-list").classList.add("language-list-hide")
+                document.getElementById("language-list").classList.remove("language-list-force")
             } else {
                 await loadTranslation(translation_lan, true)
             }
@@ -2844,6 +2885,13 @@ async function onLoad() {
             await launchers[currentEntry].path();
         }
     })
+
+    document.getElementById("pill-files").addEventListener("mouseup", async () => {
+        if (currentEntry !== "") {
+            await launchers[currentEntry].path();
+        }
+    })
+
     document.getElementById("reset-save").addEventListener("mouseup", async () => {
 
         if (currentEntry !== "") {
@@ -2893,7 +2941,6 @@ async function onLoad() {
             })
             if (loc !== "") {
                 document.getElementById("profile-blur").classList.remove("hide")
-                document.getElementById("profile-bg").classList.remove("hide")
 
                 update_profiles(loc)
             } else {
@@ -3419,6 +3466,7 @@ async function launch_desktop() {
     document.getElementById("desktop-close").addEventListener("mouseup", () => {
         invoke("close");
     })
+
 
     document.getElementById("desktop-update").addEventListener("mouseup", () => {
         if (should_update()) {
