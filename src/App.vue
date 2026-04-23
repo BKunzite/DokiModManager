@@ -211,7 +211,13 @@
     <button class="changelog-update changelog-button" id="changelog-update">Update</button>
     <textarea class="changelog-text" id="changelog-text" spellcheck="false" readonly="readonly"></textarea>
   </div>
+  <div id="pill-contains" class="pill-contains smooth-hide hide">
+    <div class="pill-profile" id="pill-profile">
 
+    </div>
+    <div class="pill-left"></div>
+    <div class="pill-right"></div>
+  </div>
   <div id="pill" class="pill-container smooth-hide hide">
     <span
         style="font-family: Icon; font-size: 0.5rem; padding-top: 0.3rem; left: 1.2rem; position: absolute; color: rgb(255,100,100)">&#62401;</span>

@@ -1,6 +1,8 @@
 use crate::hash::get_file_hash;
+use jwalk::WalkDir;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
+use rayon::{ThreadPool, ThreadPoolBuilder};
 use regex::Regex;
 use reqwest::get;
 use serde::{Deserialize, Serialize};
@@ -13,10 +15,9 @@ use std::os::windows::fs::MetadataExt;
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use std::{env, fs};
-use std::sync::{OnceLock};
-use rayon::{ThreadPool, ThreadPoolBuilder};
 use sysinfo::{ProcessesToUpdate, System};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_aptabase::EventTracker;
@@ -24,7 +25,6 @@ use tauri_plugin_fs_pro::{is_dir, is_file};
 use tokio::fs::File as TokioFile;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use unrar::Archive;
-use jwalk::WalkDir;
 use window_vibrancy::apply_acrylic;
 use zip::ZipArchive;
 
@@ -40,8 +40,8 @@ static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases
 static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT_BETA/dokimodmanager.exe";
 static UNRPYC: &str =
     "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
-
 static UNRPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
+
 #[tauri::command]
 fn close(window: tauri::Window) {
     let _ = window.close();
@@ -738,7 +738,8 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
                 }
             }
             if is_game {
-                let _ = copy_dir_recursive(&PathBuf::from(nested), &target_dir.join("game")).unwrap();
+                let _ =
+                    copy_dir_recursive(&PathBuf::from(nested), &target_dir.join("game")).unwrap();
             } else {
                 let _ = copy_dir_recursive(&PathBuf::from(nested), &target_dir).unwrap();
             }
@@ -842,19 +843,19 @@ async fn detect_nest(
             if !path.is_dir() {
                 continue;
             }
-            let file_name = path
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap();
+            let file_name = path.file_name().unwrap().to_str().unwrap();
             for selected in paths {
-                println!("Checking: '{}' against '{}' with result '{}'", file_name, selected, file_name.contains(selected) );
-                if file_name.contains(selected)
-                {
+                println!(
+                    "Checking: '{}' against '{}' with result '{}'",
+                    file_name,
+                    selected,
+                    file_name.contains(selected)
+                );
+                if file_name.contains(selected) {
                     return path.to_str().unwrap().to_string();
                 }
             }
-            if file_name.contains(" -") && string == file_name.replace(" -","") {
+            if file_name.contains(" -") && string == file_name.replace(" -", "") {
                 return path.to_str().unwrap().to_string();
             }
         }
@@ -948,12 +949,7 @@ fn import_game_zip(archive: &mut ZipArchive<File>, toppath: &str) -> bool {
 static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
 
 fn get_pool() -> &'static ThreadPool {
-    COPY_POOL.get_or_init(|| {
-        ThreadPoolBuilder::new()
-            .num_threads(8)
-            .build()
-            .unwrap()
-    })
+    COPY_POOL.get_or_init(|| ThreadPoolBuilder::new().num_threads(8).build().unwrap())
 }
 
 pub fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -962,9 +958,7 @@ pub fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
 
     for entry in WalkDir::new(src)
         .parallelism(jwalk::Parallelism::RayonExistingPool {
-            pool: std::sync::Arc::new(
-                ThreadPoolBuilder::new().num_threads(8).build().unwrap()
-            ),
+            pool: std::sync::Arc::new(ThreadPoolBuilder::new().num_threads(8).build().unwrap()),
             busy_timeout: None,
         })
         .into_iter()
@@ -987,9 +981,9 @@ pub fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
     }
 
     get_pool().install(|| {
-        files.par_iter().try_for_each(|(src_file, dst_file)| {
-            fs::copy(src_file, dst_file).map(|_| ())
-        })
+        files
+            .par_iter()
+            .try_for_each(|(src_file, dst_file)| fs::copy(src_file, dst_file).map(|_| ()))
     })
 }
 #[tauri::command]
@@ -1024,27 +1018,60 @@ async fn update_exe() {
     let mut out = File::create("./dokimodmanager-new.exe").expect("Failed to create file");
     out.write_all(&mut resp.bytes().await.expect("Failed to write bytes"))
         .unwrap();
-    let update_script = format!(
-        r#"
-        $Host.UI.RawUI.WindowTitle = 'Doki Doki Mod Manager Updater';
-        echo "Waiting for DDMM To Close... (3s)";
-        Start-Sleep 3;
-        echo "Updating DDMM...";
-        if (Test-Path 'dokimodmanager-new.exe') {{
-            if (Test-Path 'dokimodmanager.exe') {{
-                Remove-Item 'dokimodmanager.exe' -Force -ErrorAction SilentlyContinue;
-            }}
-            Rename-Item 'dokimodmanager-new.exe' 'dokimodmanager.exe';
-        }}
-        echo "Updated DDMM, Launching... (2s)";
-        Start-Sleep 2;
-        if (Test-Path 'dokimodmanager.exe') {{
-            $dir = Get-Location
-            $binDir = (Get-Location).Path
-            Start-Process '.\dokimodmanager.exe' -WorkingDirectory $binDir -WindowStyle Normal
-        }}
-        "#
-    );
+    let update_script = r#"$Host.UI.RawUI.WindowTitle = 'Doki Doki Mod Manager Updater';
+$art = @'
+██████╗  ██████╗ ██╗  ██╗██╗    ██████╗  ██████╗ ██╗  ██╗██╗
+██╔══██╗██╔═══██╗██║ ██╔╝██║    ██╔══██╗██╔═══██╗██║ ██╔╝██║
+██║  ██║██║   ██║█████╔╝ ██║    ██║  ██║██║   ██║█████╔╝ ██║
+██║  ██║██║   ██║██╔═██╗ ██║    ██║  ██║██║   ██║██╔═██╗ ██║
+██████╔╝╚██████╔╝██║  ██╗██║    ██████╔╝╚██████╔╝██║  ██╗██║
+╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝    ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝
+
+███╗   ███╗ ██████╗ ██████╗
+████╗ ████║██╔═══██╗██╔══██╗
+██╔████╔██║██║   ██║██║  ██║
+██║╚██╔╝██║██║   ██║██║  ██║
+██║ ╚═╝ ██║╚██████╔╝██████╔╝
+╚═╝     ╚═╝ ╚═════╝ ╚═════╝
+
+███╗   ███╗ █████╗ ███╗   ██╗ █████╗  ██████╗ ███████╗██████╗
+████╗ ████║██╔══██╗████╗  ██║██╔══██╗██╔════╝ ██╔════╝██╔══██╗
+██╔████╔██║███████║██╔██╗ ██║███████║██║  ███╗█████╗  ██████╔╝
+██║╚██╔╝██║██╔══██║██║╚██╗██║██╔══██║██║   ██║██╔══╝  ██╔══██╗
+██║ ╚═╝ ██║██║  ██║██║ ╚████║██║  ██║╚██████╔╝███████╗██║  ██║
+╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝
+Updater
+By // BKunzite
+'@
+
+$colors = @('Red', 'Yellow', 'Green', 'Cyan', 'Blue', 'Magenta');
+$lines = $art -split "`n";
+$row = 0;
+foreach ($line in $lines) {
+    $col = 0;
+    foreach ($char in $line.ToCharArray()) {
+        $colorIndex = [math]::Floor(($row + $col / 3) % $colors.Length);
+        Write-Host -NoNewline -ForegroundColor $colors[$colorIndex] $char;
+        $col++;
+    };
+    Write-Host "";
+    $row++;
+};
+echo "Waiting for DDMM To Close... (3s)";
+Start-Sleep 3;
+echo "Updating DDMM...";
+if (Test-Path 'dokimodmanager-new.exe') {
+    if (Test-Path 'dokimodmanager.exe') {
+        Remove-Item 'dokimodmanager.exe' -Force -ErrorAction SilentlyContinue;
+    }
+    Rename-Item 'dokimodmanager-new.exe' 'dokimodmanager.exe';
+};
+echo "Updated DDMM, Launching... (2s)";
+Start-Sleep 2;
+if (Test-Path 'dokimodmanager.exe') {
+    $binDir = (Get-Location).Path;
+    Start-Process '.\dokimodmanager.exe' -WorkingDirectory $binDir -WindowStyle Normal;
+}"#;
 
     println!("{:?}", env::current_dir().unwrap().display());
 

@@ -43,9 +43,11 @@ Doki Doki Mod Manager, whilst open, will constantly scan downloads for newly dow
 
 # Linux And Mac Support
 
-There are no plans to support Linux and Mac. If you are on either of those operating systems, please use the original Doki Doki Mod Manager.
+There are now plans for mac support durring this next summer. It will likely come out some time in June 2026.
+
+There are no plans to support Linux. If you are on any linux-based operating system, please use the original Doki Doki Mod Manager.
 No hate towards the original mod manager. I made this because I had a few things that I wanted that were not in the original mod manager.
-Plus, I wanted to do a project that allowed me to get into rust.
+Plus, I wanted to do a project that allowfed me to get into rust.
 
 # Credits
 

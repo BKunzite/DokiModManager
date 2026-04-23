@@ -1,5 +1,19 @@
-3.6.0-release
+3.6.0-beta
 Minor (More UI Updates)
+
+Thank you guys so much for the support recently!
+There have been around 100 new downloads and
+20-30 more daily users on average,
+So many in fact that i have to now pay
+for analytics, but its worth it!
+
+Mac support will be comming this summer as
+i plan to get a macbook soon.
+
+FOR REPORT A ISSUE!
+PLEASE make sure that you report an issue if the
+only when mods dont launch or only
+doesnt work even when the mod is installed otherwise
 
 Files For Mods
 Reminder - You can see files for each mod by clicking the
@@ -7,9 +21,9 @@ folder icon next to the play button.
 There is now a button to view files once you launch
 the mod.
 
-Also, if you have a issue to report, please
-include a lot of details.
+Also, if you have an issue to report, please
+include a lot of details instead of vague info.
 
 New Update Screen
-Yes, pressing update will automatically update the manager,
-you dont have to reinstall.
+Yes, pressing update will automatically update the manager;
+you don't have to reinstall.

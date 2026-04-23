@@ -96,7 +96,7 @@
     background-color: rgba(0,0,0,0.6);
     z-index: 10;
     backdrop-filter: blur(20px) saturate(50%);
-    box-shadow: black 0 0 150px 70px, inset rgba(255,255,255,0.25) 0 0 10px;
+    box-shadow: black 0 0 125px 50px, inset rgba(255,255,255,0.25) 0 0 10px;
     corner-shape: squircle;
 }
 
@@ -174,6 +174,56 @@
 .changelog-ignore {
     top: 5rem;
     left: 9rem;
+}
+
+.pill-contains {
+    width: 100%;
+    height: 100%;
+    bottom: 0.5rem;
+    position: absolute;
+    pointer-events: none;
+    z-index: 11;
+}
+
+.pill-profile {
+    bottom: 5rem;
+    left: 15rem;
+    background-size: cover;
+    background-position: center;
+    width: 7.5vw;
+    height: 20vh;
+    position: absolute;
+    border-radius: 0.75rem;
+    z-index: 2;
+    box-shadow: rgb(var(--primary-color-saturated)) 0px 0px 10px, inset rgb(var(--primary-color)) 0px 0px 10px;
+
+}
+
+.pill-left {
+    bottom: 5rem;
+    left: 13.5rem;
+    background-color: rgb(var(--primary-color-saturated));
+    width: 3.75vw;
+    height: 10vh;
+    position: absolute;
+    border-radius: 0.33rem;
+    rotate: -25deg;
+    box-shadow: rgb(var(--primary-color-saturated)) 0px 0px 50px 5px;
+
+}
+
+.pill-right {
+    bottom: 6rem;
+    left: 19rem;
+    background-color: rgb(var(--primary-color));
+    width: 3.75vw;
+    scale: 140%;
+    height: 10vh;
+    position: absolute;
+    border-radius: 0.4rem;
+    rotate: 35deg;
+    box-shadow: rgb(var(--primary-color)) 0px 0px 50px 5px;
+
 }
 
 .changelog-update {

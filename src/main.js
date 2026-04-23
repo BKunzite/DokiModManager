@@ -33,6 +33,7 @@ import {Base64} from 'js-base64';
 import sound_beep from './assets/select.ogg';
 import sound_boop from './assets/hover.ogg';
 import sound_click from './assets/pageflip.ogg';
+import loadImage from "./workers/ImageLoader.js?worker";
 
 // Profile Data
 let selected_button = null;
@@ -1410,6 +1411,8 @@ async function add_mod(name) {
             await update_concurrent_game()
             document.getElementById("pill").classList.remove("hide")
             document.getElementById("pill-files").classList.remove("hide")
+            document.getElementById("pill-contains").classList.remove("hide")
+            document.getElementById("pill-profile").style.backgroundImage = 'url("' + preload_covers[covers[configData.coverId]].src + '")';
             setTimeout(async () => {
                 play(sound_beep)
                 launch_time = Date.now();
@@ -1494,6 +1497,8 @@ async function add_mod(name) {
             configData.size = data.size;
             document.getElementById("pill").classList.add("hide")
             document.getElementById("pill-files").classList.add("hide")
+            document.getElementById("pill-contains").classList.add("hide")
+
             await writeTextFile(configPath, contents);
             await saveConfig()
             await launchers[name].leftClick();
@@ -1581,10 +1586,12 @@ async function add_mod(name) {
             }
         }
     }
-    launchers[name].preloadImages().then(() => {});
+    launchers[name].preloadImages().then(() => {
+    });
 
     sidetext.addEventListener("click", async () => {
-        launchers[name].leftClick().then(() => {});
+        launchers[name].leftClick().then(() => {
+        });
     })
 
     document.getElementById("modlist").appendChild(sidetext)
@@ -1773,6 +1780,8 @@ async function update_concurrent_game() {
         if (!document.getElementById("pill").classList.contains("hide")) {
             document.getElementById("pill").classList.add("hide")
             document.getElementById("pill-files").classList.add("hide")
+            document.getElementById("pill-contains").classList.add("hide")
+
         }
         return
     }
@@ -1780,6 +1789,8 @@ async function update_concurrent_game() {
     if (document.getElementById("pill").classList.contains("hide")) {
         document.getElementById("pill").classList.remove("hide")
         document.getElementById("pill-files").classList.remove("hide")
+        document.getElementById("pill-contains").classList.remove("hide")
+
     }
 
     const playTime = await launchers[currentEntry].get_time();
@@ -2867,7 +2878,7 @@ async function onLoad() {
         if (currentEntry !== "") {
             let confirmed = await confirm("Are you sure you want to delete '" + launchers[currentEntry].location + "' and its data?")
             if (confirmed) {
-                 showContainers(false)
+                showContainers(false)
                 await invoke("delete_path", {
                     path: launchers[currentEntry].location
                 });
@@ -3378,7 +3389,7 @@ async function onLoad() {
 
     // setInterval(snowflake, 100)
     setInterval(update_concurrent_game, 1000)
-    setInterval(keepAlive, 480_000)
+    setInterval(keepAlive, 600_000)
 
     // getCurrentWindow().onFocusChanged(({
     //     payload: isfocused
