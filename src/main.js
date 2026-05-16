@@ -97,7 +97,7 @@ let part_file = null;
 
 // CONSTANTS
 
-const CLIENT_VERSION = "3.6.0-beta"
+const CLIENT_VERSION = "2.6.0-beta"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
