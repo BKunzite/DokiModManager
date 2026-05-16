@@ -65,6 +65,12 @@ struct StringData<'a> {
 }
 
 #[derive(Clone, Serialize)]
+struct IntData {
+    number: u16,
+    number_goal: u16,
+}
+
+#[derive(Clone, Serialize)]
 struct ReturnPath<'a> {
     final_data: &'a str,
     path: &'a str,
@@ -607,6 +613,14 @@ async fn update(app: AppHandle, close: bool) {
 
 #[tauri::command]
 async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
+    app.emit(
+        "set_bar",
+        IntData {
+            number: 10,
+            number_goal: 0
+        },
+    ).unwrap();
+
     let mut logger = simple_logger::SimpleLogger::new(format!("Import_Mod {}", path));
     let config_contents = tokio::fs::read_to_string("DNNconfig.json")
         .await
@@ -657,12 +671,28 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         ),
     );
 
+    app.emit(
+        "set_bar",
+        IntData {
+            number: 40,
+            number_goal: 80
+        },
+    ).unwrap();
+
     let _ = copy_dir_recursive(&PathBuf::from("./store/ddlc"), &target_dir)
         .expect("Failed to copy ddlc!");
 
     logger.log(String::from("I/O Copy DDLC Files Finished"));
 
     post_status(&app, &format!("Extracting '{}'", source_name_no_ext));
+
+    app.emit(
+        "set_bar",
+        IntData {
+            number: 80,
+            number_goal: 95
+        },
+    ).unwrap();
 
     if path.ends_with(".rar") {
         if import_game_rar(&source_file) {
@@ -707,6 +737,14 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
     let mut loop_time = 0;
 
+    app.emit(
+        "set_bar",
+        IntData {
+            number: 95,
+            number_goal: 0
+        },
+    ).unwrap();
+
     loop {
         let mut is_game = false;
         let nested = &detect_nest(
@@ -749,7 +787,13 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     if is_file(PathBuf::from(&target_dir).join("game/firstrun")).await {
         remove_file(PathBuf::from(&target_dir).join("game/firstrun")).unwrap();
     }
-
+    app.emit(
+        "set_bar",
+        IntData {
+            number: 100,
+            number_goal: 0
+        },
+    ).unwrap();
     app.emit(
         "import_done",
         StringData {
@@ -985,6 +1029,7 @@ pub fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
             .par_iter()
             .try_for_each(|(src_file, dst_file)| fs::copy(src_file, dst_file).map(|_| ()))
     })
+
 }
 #[tauri::command]
 async fn set_ddlc_zip(path: &str) -> Result<(), bool> {

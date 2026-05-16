@@ -1,19 +1,19 @@
-3.6.0-beta
-Minor (More UI Updates)
+2.6.0-beta
+Minor (More UI Updates & Bug Fixes)
 
 Thank you guys so much for the support recently!
 There have been around 100 new downloads and
 20-30 more daily users on average,
-So many in fact that i have to now pay
+So many in fact that I have to now pay
 for analytics, but its worth it!
 
 Mac support will be comming this summer as
-i plan to get a macbook soon.
+I plan to get a macbook soon.
 
 FOR REPORT A ISSUE!
-PLEASE make sure that you report an issue if the
-only when mods dont launch or only
-doesnt work even when the mod is installed otherwise
+PLEASE make sure that you report an issue
+only when mods dont launch, but will work
+when the mod is installed manually
 
 Files For Mods
 Reminder - You can see files for each mod by clicking the
@@ -27,3 +27,9 @@ include a lot of details instead of vague info.
 New Update Screen
 Yes, pressing update will automatically update the manager;
 you don't have to reinstall.
+
++ File Download Indicator
++ Loading Bar
++ Game Cards
+/ Renaming Mod To An Invalid Name Causing A Crash Fixed
+/ Minor UI Errors

@@ -1,7 +1,8 @@
-import { Base64 } from 'js-base64';
+import {Base64} from 'js-base64';
 import {
     readFile
 } from '@tauri-apps/plugin-fs';
+
 export async function getImage(id, covers) {
     const cover = covers[id];
 
@@ -10,17 +11,21 @@ export async function getImage(id, covers) {
         const base64String = Base64.fromUint8Array(contents);
 
         return `data:image/png;base64,${base64String}`
-    } else if (typeof(id) === "object") {
+    } else if (typeof (id) === "object") {
         const base64String = Base64.fromUint8Array(id);
 
         return `data:image/png;base64,${base64String}`
-    } else if (typeof(id) === "string" && id.includes(":")) {
+    } else if (typeof (id) === "string" && id.includes(":")) {
         const contents = await readFile(id);
         const base64String = Base64.fromUint8Array(contents);
 
         return `data:image/png;base64,${base64String}`
     } else {
-        const images = import.meta.glob('../assets/*.{png,jpg,jpeg,svg,json,webp}', { eager: true, as: 'url' });
-        if (cover !== undefined) { return images["../assets/" + cover] } else { return images["../assets/" + id] }
+        const images = import.meta.glob('../assets/*.{png,jpg,jpeg,svg,json,webp}', {eager: true, as: 'url'});
+        if (cover !== undefined) {
+            return images["../assets/" + cover]
+        } else {
+            return images["../assets/" + id]
+        }
     }
 }

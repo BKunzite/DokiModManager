@@ -82,6 +82,15 @@ let focused = true;
 let previous_app = null
 let preload_covers = {}
 
+// Loading Bar
+let goal_slow_bar = -1
+let current_bar = 0;
+
+// Downloads Detector
+let part_file_size = 0;
+let last_change = 0;
+let part_file = null;
+
 // Event Variables
 
 // --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
@@ -142,6 +151,18 @@ const CLIENT_THEMES = {
         image: "hacker-svgrepo-com.svg"
     }
 }
+
+const ILLEGAL_DIRECTORY_CHARACTERS = [
+    "*",
+    "\"",
+    "/",
+    "\\",
+    "<",
+    ">",
+    ":",
+    "|",
+    "?"
+]
 
 const heart_empty = "&#62920;";
 const heart_full = "&#62919;";
@@ -1085,6 +1106,7 @@ async function import_mod(path) {
     }
     if (selectedPath != null) {
         if (selectedPath.endsWith(".zip") || selectedPath.endsWith(".rar") || selectedPath.endsWith("scripts.rpa")) {
+            setLoadingBar(0);
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
             document.getElementById("loadingsub").textContent = "Importing Mod " + selectedPath
@@ -1243,6 +1265,7 @@ async function requestDirectory(path) {
 
         let interval = setInterval(async () => {
             if (finished_mods === mods_to_complete) {
+                setLoadingBar(100)
                 clearInterval(interval)
                 await globLog("finish")
                 document.getElementById("loadingsub").textContent = "Loaded Mods | Loading GUI"
@@ -1253,6 +1276,7 @@ async function requestDirectory(path) {
                     document.getElementById("main").classList.remove("hide")
                 }, 500)
             } else {
+                setLoadingBar((finished_mods/mods_to_complete)*100)
                 document.getElementById("loadingsub").textContent = "Loaded " + finished_mods + "/" + mods_to_complete + " Mods -> " + finished.join(" | ")
                 finished = []
 
@@ -1554,8 +1578,8 @@ async function add_mod(name) {
                 }, 0)
             } else {
                 updateDisplayinfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
-
             }
+
             if (!screenshots) {
                 document.getElementById("screenshots-header").classList.add("hide")
                 document.getElementById("screenshots-parent").classList.add("hide")
@@ -1650,6 +1674,12 @@ function showContainers(show) {
         if (tutorial_pointer != null) {
             document.getElementById("warn").classList.add("hide")
             tutorial_pointer.classList.add("hide")
+        }
+        if (!document.getElementById("pill").classList.contains("hide")) {
+            document.getElementById("pill").classList.add("hide")
+            document.getElementById("pill-files").classList.add("hide")
+            document.getElementById("pill-contains").classList.add("hide")
+
         }
         document.getElementById("modlist").classList.add("hide")
         document.getElementById("container-boarder").classList.add("hide")
@@ -1775,6 +1805,9 @@ async function keepAlive() {
 // Updates Screen With Game Open
 
 async function update_concurrent_game() {
+    if (goal_slow_bar > 0) {
+        setLoadingBar(0, true)
+    }
     if (!document.getElementById("loader").classList.contains("hide")) return;
     if (!document.getElementById("modlist").classList.contains("hide") || alert_path !== undefined) {
         if (!document.getElementById("pill").classList.contains("hide")) {
@@ -1803,6 +1836,25 @@ async function update_concurrent_game() {
     document.getElementById("pill-game").textContent = name
     document.getElementById("pill-author").textContent = author
     document.getElementById("pill-time").textContent = time
+}
+
+// Set Loading Bar
+
+function setLoadingBar(percent = 0, isSlowMode = false) {
+    if (isSlowMode && percent != 0) {
+        goal_slow_bar = percent
+    }
+    if (isSlowMode && goal_slow_bar > 0) {
+        current_bar += (goal_slow_bar - current_bar) * 0.1
+        percent = current_bar;
+    } else {
+        current_bar = percent
+        goal_slow_bar = -1
+    }
+
+    percent = Math.min(Math.max(percent, 0), 100)
+    let width = 125 * (percent/100)
+    document.getElementById("loading-bar-fill").style.width = width + "vh";
 }
 
 // Snowflake Animation
@@ -1848,17 +1900,27 @@ async function rename_mod() {
         var newName = (await launchers[currentEntry].getPath()) + "\\" + value;
 
         try {
-            if (/\\/.test(value) || value.includes("/")) {
+            let isInvalid = false;
+            for (const char of value) {
+                if (ILLEGAL_DIRECTORY_CHARACTERS.includes(char)) {
+                    isInvalid = true;
+                    break
+                }
+            }
+            if (/\\/.test(value) || isInvalid) {
                 throw Error("Invalid Name!")
             }
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
             document.getElementById("loadingsub").textContent = "Renaming Mod"
+            setLoadingBar(0,false)
+            setLoadingBar(100,true)
             await invoke("rename_dir", {
                 path: oldName,
                 newName: newName,
                 id: value
             })
+
         } catch (e) {
             if (e == "Error: Invalid Name!") {
                 confirm("The Name '" + value + "' is invalid!")
@@ -2196,14 +2258,6 @@ function create_profile(profile, position) {
     return onClick;
 }
 
-function get_profile_length() {
-    let length = 0;
-    for (const profile in current_profile_data) {
-        length++;
-    }
-    return length;
-}
-
 function move_entries(obj, fromIndex, toIndex) {
     const values = Object.values(obj);
 
@@ -2535,7 +2589,7 @@ async function onLoad() {
         document.getElementById("loadingsub").textContent = "Mod Imported | Loading GUI"
         setTimeout(async () => {
             if (alert_path !== undefined) {
-                if (await isExist(alert_path)) {
+                if (await isExist(alert_path) && alert_path.toLowerCase().includes("downloads")) {
                     remove(alert_path)
                 }
                 alert_path = undefined;
@@ -2670,6 +2724,17 @@ async function onLoad() {
         }, 1000)
     });
 
+    // Listener for Loading Bar Percent
+
+    listen("set_bar", (event) => {
+        let goal = event.payload.number_goal;
+        setLoadingBar(event.payload.number, false)
+        console.log(event.payload)
+        if (goal > 0) {
+            setLoadingBar(goal, true)
+        }
+    })
+
     // This is what is recieved when you import a mod
     // This is also the first handshake handler that tells the frontend (this) to listen to the downloads folder
 
@@ -2790,6 +2855,10 @@ async function onLoad() {
                         const path = event.paths[index];
                         setTimeout(async () => {
                             if ((path.endsWith(".zip") || path.endsWith(".rar") || path.endsWith(".rpa")) && await isExist(path)) {
+                                part_file_size = 0
+                                part_file = null
+                                document.getElementById("install-info").classList.add("hide")
+
                                 document.getElementById("alert").classList.remove("hide")
                                 showContainers(false)
                                 alert_path = path
@@ -2800,6 +2869,30 @@ async function onLoad() {
 
                                 document.getElementById("alert-pth").innerText = payloadPath;
                                 document.getElementById("alert-name").textContent = split[split.length - 1].split(".")[0];
+                            } else if ((path.includes(".zip") || path.includes(".rar") || path.includes(".rpa")) && path.endsWith(".crdownload") && await isExist(path)) {
+                                if (path == part_file) {
+                                    let old_size = part_file_size;
+                                    let dT = Date.now() - last_change;
+                                    if (dT < 10) {
+                                        return
+                                    }
+                                    last_change = Date.now()
+                                    part_file = path;
+                                    part_file_size = (await metadata(path)).size
+
+                                    let mbs = (part_file_size - old_size) / (dT * 1000);
+                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split("\\").pop().split(".").reverse().pop() + " at " + (Math.round(mbs* 100)/100) + "mb/s"
+                                    console.log("New Download Frame! " + path)
+                                    console.log(part_file_size + " at " + mbs)
+                                } else {
+                                    part_file = path;
+                                    last_change = Date.now();
+                                    part_file_size = (await metadata(path)).size
+                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split("\\").pop().split(".").reverse().pop()
+                                    document.getElementById("install-info").classList.remove("hide")
+                                    console.log("New Download! " + path)
+                                    console.log(part_file_size)
+                                }
                             }
                         }, 1000)
                     }
@@ -3072,7 +3165,8 @@ async function onLoad() {
         document.getElementById("main").classList.add("hide")
         document.getElementById("loadinghead").textContent = "Closing..."
         document.getElementById("loadingsub").textContent = "Saving Data..."
-
+        setLoadingBar(0,false)
+        setLoadingBar(100,true)
 
         setTimeout(() => {
             invoke("close");

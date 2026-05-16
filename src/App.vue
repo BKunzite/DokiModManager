@@ -9,6 +9,11 @@
     <header class="load-subtitle" id="loadingsub">PLEASE REFRESH THIS APPLICATION (Control + R)</header>
     <header class="load-title" id="loadinghead">Doki Doki Mod Manager</header>
     <div class="wheel" id="throbber"></div>
+    <div class="loading-bar">
+      <div class="loading-bar-side"></div>
+      <div class="loading-bar-side loading-bar-right"></div>
+      <div id="loading-bar-fill" class="loading-bar-fill"></div>
+    </div>
 
   </div>
   <div id="main" class="hide smooth-hide">
@@ -91,6 +96,7 @@
       </div>
 
     </div>
+    <header class="install-info hide smooth-hide" id="install-info">Downloading ........ at 10mb/s</header>
     <button class="report-open" id="report-open">
       <span class="report-icon">&#59936;</span>
       <span id="report-text" class="report-text">Report Issue</span>
