@@ -27,13 +27,15 @@ import Desktop from "./Desktop.vue";
 // Utils
 import {getImage} from "./core/ImageUtils";
 import ImageLoader from "./workers/ImageLoader.js?worker";
+import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
+import {TRANSLATION_TABLE} from "./core/Translation.js"
 import {Base64} from 'js-base64';
+import {addLauncher, LauncherAbstract, getLauncher, getLaunchers, clearLaunchers} from "./core/Launchers.js"
 
 // Assets
 import sound_beep from './assets/select.ogg';
 import sound_boop from './assets/hover.ogg';
 import sound_click from './assets/pageflip.ogg';
-import loadImage from "./workers/ImageLoader.js?worker";
 
 // Profile Data
 let selected_button = null;
@@ -67,7 +69,6 @@ let save_path = "";
 let lastInputLength = 0
 let logs = []
 let start = Date.now();
-let launchers = []
 let currentEntry = ""
 let covers = []
 let background_cover = 0
@@ -81,6 +82,7 @@ let reset = false;
 let focused = true;
 let previous_app = null
 let preload_covers = {}
+let fileTerminator = "\\"
 
 // Loading Bar
 let goal_slow_bar = -1
@@ -91,17 +93,16 @@ let part_file_size = 0;
 let last_change = 0;
 let part_file = null;
 
-// Event Variables
+// Event Variables (Save for when next season arrives)
 
 // --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
 
 // CONSTANTS
 
-const CLIENT_VERSION = "2.6.0-beta@2BmD23"
-const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
 ]
+
 const CLIENT_THEMES = {
     NATSUKI: {
         primary_color: [254, 179, 188],
@@ -152,556 +153,8 @@ const CLIENT_THEMES = {
     }
 }
 
-const ILLEGAL_DIRECTORY_CHARACTERS = [
-    "*",
-    "\"",
-    "/",
-    "\\",
-    "<",
-    ">",
-    ":",
-    "|",
-    "?"
-]
-
-const heart_empty = "&#62920;";
-const heart_full = "&#62919;";
-
-const TRANSLATION_TABLE = {
-    "en": {
-        "data": {
-            "flag": "english.png"
-        },
-        "yes": "Yes",
-        "no": "No",
-        "play": "Play",
-        "import-watcher": "Allow this mod to be extracted and imported?",
-        "main": "Main",
-        "mods": "Mods",
-        "search": "Search",
-        "import": "Import Mod",
-        "greet": "Hiya",
-        "install": "Set Install Location",
-        "select_zip": "Select the zip file containing DDLC. You can download this at [https://ddlc.moe](https://ddlc.moe). (Click to open)",
-        "select_zip_button": "Import Zip",
-        "importing_zip": "Importing DDLC",
-        "import_image": "Import Image",
-        "home": "Home",
-        "theme": "Set Theme",
-        "update-text": "Updates (Desktop)",
-        "loading": "Loading Mod",
-        "description": "Description",
-        "screenshot": "Screenshot",
-        "tutorial-text": "Tutorial",
-        "tutorial-context": "It seems like you have not done the tutorial yet, would you like to?",
-        "cancel": "Cancel",
-        "next": "Next",
-        "end": "End",
-        "updating": "Updating",
-        "update": "Update",
-        "ignore": "Ignore",
-        "error-profile_setname": "You cannot rename the default profile!",
-        "error-profile_delete": "You cannot delete the default profile!",
-        "tutorial": {
-            "select": "Please select a mod, or download one before continuing!",
-            "1": {
-                "title": "Welcome!",
-                "context": "This will be a walkthrough of how to use Doki Doki Mod Manager. Press 'Next' to continue."
-            },
-            "2": {
-                "title": "Theme",
-                "context": "First of all, let's pick a theme. Click on the highlighted button until it is your favorite character."
-            },
-            "3": {
-                "title": "Background",
-                "context": "Next, click on a background you would like to use, or drag and drop an image to set as the background."
-            },
-            "4": {
-                "title": "Downloads",
-                "context": "Next, download a mod through Reddit. You can also drag and drop a zip here. Remember to save to your Downloads folder!"
-            },
-            "5": {
-                "title": "Covers",
-                "context": "Use the arrows at the bottom of the selected area to change the cover."
-            },
-            "6": {
-                "title": "Name",
-                "context": "Click on the mod title to rename it. Press enter to save."
-            },
-            "7": {
-                "title": "Author",
-                "context": "Click on the author (underlined text) to set it. Press enter to save."
-            },
-            "8": {
-                "title": "Finish",
-                "context": "And that is it! Press 'Play' To Start The Mod. Press 'End' To Finish The Tutorial."
-            }
-        },
-        "send-report": "Report issue",
-        "message": "Message",
-        "send": "Send",
-        "extracting": "[Extracting]",
-        "delete-mod": "Delete Mod",
-        "reset-data": "Reset Current Profile Data"
-    },
-    "ru": {
-        "data": {
-            "flag": "russia.svg"
-        },
-        "yes": "Да",
-        "no": "Нет",
-        "play": "Играть",
-        "import-watcher": "Разрешить извлечение и импорт этого мода?",
-        "main": "Главная",
-        "mods": "Моды",
-        "search": "Поиск",
-        "import": "Импорт мода",
-        "greet": "Приветик",
-        "install": "Папка установки",
-        "select_zip": "Выберите zip-файл с DDLC. Вы можете скачать его на [https://ddlc.moe](https://ddlc.moe). (Нажмите, чтобы открыть)",
-        "select_zip_button": "Импорт Zip",
-        "importing_zip": "Импорт DDLC",
-        "import_image": "Импорт изображения",
-        "home": "Домой",
-        "theme": "Тема",
-        "update-text": "Обновления (ПК)",
-        "loading": "Загрузка мода",
-        "description": "Описание",
-        "screenshot": "Скриншот",
-        "tutorial-text": "Обучение",
-        "tutorial-context": "Кажется, вы ещё не прошли обучение. Хотите пройти?",
-        "cancel": "Отмена",
-        "next": "Далее",
-        "end": "Конец",
-        "updating": "Обновление",
-        "update": "Обновить",
-        "ignore": "Игнорировать",
-        "error-profile_setname": "Нельзя переименовать профиль по умолчанию!",
-        "error-profile_delete": "Нельзя удалить профиль по умолчанию!",
-        "tutorial": {
-            "select": "Пожалуйста, выберите мод или скачайте его перед продолжением!",
-            "1": {
-                "title": "Добро пожаловать!",
-                "context": "Это краткий обзор того, как использовать Doki Doki Mod Manager. Нажмите 'Далее', чтобы продолжить."
-            },
-            "2": {
-                "title": "Тема",
-                "context": "Прежде всего, давайте выберем тему. Нажимайте на выделенную кнопку, пока не появится ваш любимый персонаж."
-            },
-            "3": {
-                "title": "Фон",
-                "context": "Затем выберите фон, который хотите использовать, или перетащите сюда изображение, чтобы установить его как фон."
-            },
-            "4": {
-                "title": "Загрузки",
-                "context": "Теперь скачайте мод через Reddit. Вы также можете перетащить zip-файл сюда. Не забудьте сохранить его в папку 'Загрузки'!"
-            },
-            "5": {
-                "title": "Обложки",
-                "context": "Используйте стрелки в нижней части выделенной области, чтобы изменить обложку."
-            },
-            "6": {
-                "title": "Название",
-                "context": "Нажмите на название мода, чтобы переименовать его. Нажмите Enter для сохранения."
-            },
-            "7": {
-                "title": "Автор",
-                "context": "Нажмите на имя автора (подчеркнутый текст), чтобы изменить его. Нажмите Enter для сохранения."
-            },
-            "8": {
-                "title": "Финиш",
-                "context": "Вот и всё! Нажмите 'Играть', чтобы запустить мод. Нажмите 'Конец', чтобы завершить обучение."
-            }
-        },
-        "send-report": "Сообщить о проблеме",
-        "message": "Сообщение",
-        "send": "Отправить",
-        "extracting": "[Извлечение]",
-        "delete-mod": "Удалить мод",
-        "reset-data": "Сбросить данные текущего профиля"
-    },
-    "pt": {
-        "data": {
-            "flag": "pt.png"
-        },
-        "yes": "Sim",
-        "no": "Não",
-        "play": "Jogar",
-        "import-watcher": "Permitir que este mod seja extraído e importado?",
-        "main": "Principal",
-        "mods": "Mods",
-        "search": "Pesquisar",
-        "import": "Importar Mod",
-        "greet": "Opa",
-        "install": "Definir local de instalação",
-        "select_zip": "Selecione o arquivo zip que contém o DDLC. Você pode baixá-lo em [https://ddlc.moe](https://ddlc.moe). (Clique para abrir)",
-        "select_zip_button": "Importar Zip",
-        "importing_zip": "Importando DDLC",
-        "import_image": "Importar Imagem",
-        "home": "Início",
-        "theme": "Definir Tema",
-        "update-text": "Atualizações (Desktop)",
-        "loading": "Carregando Mod",
-        "description": "Descrição",
-        "screenshot": "Captura de Tela",
-        "tutorial-text": "Tutorial",
-        "tutorial-context": "Parece que você ainda não fez o tutorial, gostaria de fazer agora?",
-        "cancel": "Cancelar",
-        "next": "Próximo",
-        "end": "Finalizar",
-        "updating": "Atualizando",
-        "update": "Atualizar",
-        "ignore": "Ignorar",
-        "error-profile_setname": "Você não pode renomear o perfil padrão!",
-        "error-profile_delete": "Você não pode excluir o perfil padrão!",
-        "tutorial": {
-            "select": "Por favor, selecione um mod ou baixe um antes de continuar!",
-            "1": {
-                "title": "Bem-vindo!",
-                "context": "Este será um passo a passo de como usar o Doki Doki Mod Manager. Pressione 'Próximo' para continuar."
-            },
-            "2": {
-                "title": "Tema",
-                "context": "Primeiro, vamos escolher um tema. Clique no botão destacado até encontrar sua personagem favorita."
-            },
-            "3": {
-                "title": "Fundo",
-                "context": "Depois, clique na imagem de fundo que você gostaria de usar, ou arraste e solte uma imagem aqui para defini-la como fundo."
-            },
-            "4": {
-                "title": "Downloads",
-                "context": "Agora, baixe um mod pelo Reddit. Você também pode arrastar e soltar um arquivo zip aqui. Lembre-se de salvar na sua pasta de Downloads!"
-            },
-            "5": {
-                "title": "Capas",
-                "context": "Use as setas na parte inferior da área selecionada para alterar a capa."
-            },
-            "6": {
-                "title": "Nome",
-                "context": "Clique no título do mod para renomeá-lo. Pressione Enter para salvar."
-            },
-            "7": {
-                "title": "Autor",
-                "context": "Clique no autor (texto sublinhado) para defini-lo. Pressione Enter para salvar."
-            },
-            "8": {
-                "title": "Concluir",
-                "context": "E é isso! Pressione 'Jogar' para iniciar o mod. Pressione 'Finalizar' para encerrar o tutorial."
-            }
-        },
-        "send-report": "Reportar problema",
-        "message": "Mensagem",
-        "send": "Enviar",
-        "extracting": "[Extraindo]",
-        "delete-mod": "Excluir Mod",
-        "reset-data": "Redefinir dados do perfil atual"
-    },
-    "es": {
-        "data": {
-            "flag": "spain.png"
-        },
-        "yes": "Sí",
-        "no": "No",
-        "play": "Jugar",
-        "import-watcher": "¿Permitir que este mod se extraiga e importe?",
-        "main": "Principal",
-        "mods": "Mods",
-        "search": "Buscar",
-        "import": "Importar Mod",
-        "greet": "¡Hola!",
-        "install": "Establecer Ubicación de Instalación",
-        "select_zip": "Selecciona el archivo zip que contiene DDLC. Puedes descargarlo en [https://ddlc.moe](https://ddlc.moe). (Haz clic para abrir)",
-        "select_zip_button": "Importar Zip",
-        "importing_zip": "Importando DDLC",
-        "import_image": "Importar Imagen",
-        "home": "Inicio",
-        "theme": "Establecer Tema",
-        "update-text": "Actualizaciones (Escritorio)",
-        "loading": "Cargando Mod",
-        "description": "Descripción",
-        "screenshot": "Captura de Pantalla",
-        "tutorial-text": "Guía",
-        "tutorial-context": "Parece que aún no has completado el tutorial, ¿te gustaría hacerlo?",
-        "cancel": "Cancelar",
-        "next": "Siguiente",
-        "end": "Terminar",
-        "updating": "Actualizando",
-        "update": "Actualizar",
-        "ignore": "Ignorar",
-        "error-profile_setname": "¡No puedes cambiar el nombre del perfil predeterminado!",
-        "error-profile_delete": "¡No puedes eliminar el perfil predeterminado!",
-        "tutorial": {
-            "select": "¡Por favor, selecciona un mod o descarga uno antes de continuar!",
-            "1": {
-                "title": "¡Bienvenido!",
-                "context": "Esta será una guía sobre cómo usar Doki Doki Mod Manager. Presiona 'Siguiente' para continuar."
-            },
-            "2": {
-                "title": "Tema",
-                "context": "En primer lugar, elijamos un tema. Haz clic en el botón resaltado hasta que sea tu personaje favorito."
-            },
-            "3": {
-                "title": "Fundo",
-                "context": "A continuación, haz clic en el fondo que quieras usar, o arrastra y suelta una imagen para establecerla como fondo."
-            },
-            "4": {
-                "title": "Descargas",
-                "context": "Luego, descarga un mod a través de Reddit. También puedes arrastrar y soltar un archivo zip aquí. ¡Recuerda guardarlo en tu carpeta de Descargas!"
-            },
-            "5": {
-                "title": "Portadas",
-                "context": "Usa las flechas en la parte inferior del área seleccionada para cambiar la portada."
-            },
-            "6": {
-                "title": "Nombre",
-                "context": "Haz clic en el título del mod para cambiarle el nombre. Presiona Enter para guardar."
-            },
-            "7": {
-                "title": "Autor",
-                "context": "Haz clic en el autor (texto subrayado) para establecerlo. Presiona Enter para guardar."
-            },
-            "8": {
-                "title": "Finalizar",
-                "context": "¡Y eso es todo! Presiona 'Jugar' para iniciar el mod. Presiona 'Terminar' para finalizar el tutorial."
-            }
-        },
-        "send-report": "Reportar problema",
-        "message": "Mensaje",
-        "send": "Enviar",
-        "extracting": "[Extrayendo]",
-        "delete-mod": "Eliminar Mod",
-        "reset-data": "Restablecer datos del perfil actual"
-    },
-    "fr": {
-        "data": {
-            "flag": "france.png"
-        },
-        "yes": "Oui",
-        "no": "Non",
-        "play": "Jouer",
-        "import-watcher": "Autoriser l'extraction et l'importation de ce mod ?",
-        "main": "Principal",
-        "mods": "Mods",
-        "search": "Rechercher",
-        "import": "Importer Mod",
-        "greet": "Salut",
-        "install": "Définir l'emplacement d'installation",
-        "select_zip": "Sélectionnez le fichier zip contenant DDLC. Vous pouvez le télécharger sur [https://ddlc.moe](https://ddlc.moe). (Cliquez pour ouvrir)",
-        "select_zip_button": "Importer le Zip",
-        "importing_zip": "Importation de DDLC",
-        "import_image": "Importer Image",
-        "home": "Accueil",
-        "theme": "Définir Thème",
-        "update-text": "Mises à jour (Bureau)",
-        "loading": "Chargement du Mod",
-        "description": "Description",
-        "screenshot": "Capture d'écran",
-        "tutorial-text": "Tutoriel",
-        "tutorial-context": "Il semble que vous n'ayez pas encore fait le tutoriel, souhaitez-vous le faire ?",
-        "cancel": "Annuler",
-        "next": "Suivant",
-        "end": "Terminer",
-        "updating": "Mise à jour",
-        "update": "Mettre à jour",
-        "ignore": "Ignorer",
-        "error-profile_setname": "Vous ne pouvez pas renommer le profil par défaut !",
-        "error-profile_delete": "Vous ne pouvez pas supprimer le profil par défaut !",
-        "tutorial": {
-            "select": "Veuillez sélectionner un mod, ou en télécharger un avant de continuer !",
-            "1": {
-                "title": "Bienvenue !",
-                "context": "Voici un guide sur la façon d'utiliser Doki Doki Mod Manager. Appuyez sur 'Suivant' pour continuer."
-            },
-            "2": {
-                "title": "Thème",
-                "context": "Tout d'abord, choisissons un thème. Cliquez sur le bouton mis en surbrillance jusqu'à ce qu'il s'agisse de votre personnage préféré."
-            },
-            "3": {
-                "title": "Fond d'écran",
-                "context": "Ensuite, cliquez sur un fond d'écran que vous souhaitez utiliser, ou faites glisser-déposer une image pour l'utiliser comme fond d'écran."
-            },
-            "4": {
-                "title": "Téléchargements",
-                "context": "Ensuite, téléchargez un mod via Reddit. Vous pouvez également faire glisser-déposer un fichier zip ici. N'oubliez pas de l'enregistrer dans votre dossier Téléchargements !"
-            },
-            "5": {
-                "title": "Couvertures",
-                "context": "Utilisez les flèches en bas de la zone sélectionnée pour changer la couverture."
-            },
-            "6": {
-                "title": "Nom",
-                "context": "Cliquez sur le titre du mod pour le renommer. Appuyez sur Entrée pour enregistrer."
-            },
-            "7": {
-                "title": "Auteur",
-                "context": "Cliquez sur l'auteur (texte souligné) pour le définir. Appuyez sur Entrée pour enregistrer."
-            },
-            "8": {
-                "title": "Terminé",
-                "context": "Et c'est tout ! Appuyez sur 'Jouer' pour démarrer le mod. Appuyez sur 'Terminer' pour finir le tutoriel."
-            }
-        },
-        "send-report": "Signaler un problème",
-        "message": "Message",
-        "send": "Envoyer",
-        "extracting": "[Extraction]",
-        "delete-mod": "Supprimer le Mod",
-        "reset-data": "Réinitialiser les données du profil"
-    },
-    "zh-HK": {
-        "data": {
-            "flag": "hong-kong.png"
-        },
-        "yes": "係",
-        "no": "唔係",
-        "play": "玩",
-        "import-watcher": "可唔可以提取同埋導入呢個模組?",
-        "main": "主頁",
-        "mods": "模組",
-        "search": "搜尋",
-        "import": "導入模組",
-        "greet": "你好",
-        "install": "設定安裝位置",
-        "select_zip": "請選擇包含 DDLC 嘅 zip 檔案。你可以喺 [https://ddlc.moe](https://ddlc.moe) 下載。(撳吓即刻打開)",
-        "select_zip_button": "匯入 Zip",
-        "importing_zip": "正在匯入 DDLC",
-        "import_image": "導入圖片",
-        "home": "主頁",
-        "theme": "設定主題",
-        "update-text": "更新 (桌面)",
-        "loading": "載入模組",
-        "description": "描述",
-        "screenshot": "截圖",
-        "tutorial-text": "教學",
-        "tutorial-context": "好似你仲未做過教學，你想唔想做?",
-        "cancel": "取消",
-        "next": "下一頁",
-        "end": "結束",
-        "updating": "更新緊",
-        "update": "更新",
-        "ignore": "忽略",
-        "error-profile_setname": "你唔可以重新命名預設設定檔！",
-        "error-profile_delete": "你唔可以刪除預設設定檔！",
-        "tutorial": {
-            "select": "請選擇一個模組，或者先下載一個再繼續!",
-            "1": {
-                "title": "歡迎!",
-                "context": "呢個會係 Doki Doki Mod Manager 嘅使用教學。按「下一頁」繼續。"
-            },
-            "2": {
-                "title": "主題",
-                "context": "首先，揀個主題。點擊高亮嘅按鈕，直到係你鍾意嘅角色。"
-            },
-            "3": {
-                "title": "背景",
-                "context": "然後，點擊你想用嘅背景，或者拖放圖片設為背景。"
-            },
-            "4": {
-                "title": "下載",
-                "context": "然後，透過 Reddit 下載模組。你亦可以拖放 zip 檔案到呢度。記住要儲存到你嘅下載資料夾!"
-            },
-            "5": {
-                "title": "封面",
-                "context": "用選定區域底部嘅箭頭嚟改變封面。"
-            },
-            "6": {
-                "title": "名稱",
-                "context": "點擊模組標題嚟改名。按 Enter 儲存。"
-            },
-            "7": {
-                "title": "作者",
-                "context": "點擊作者 (底線文字) 設定。按 Enter 儲存。"
-            },
-            "8": {
-                "title": "完成",
-                "context": "就係咁多! 按「玩」開始模組。按「結束」完成教學。"
-            }
-        },
-        "send-report": "報告問題",
-        "message": "訊息",
-        "send": "發送",
-        "extracting": "[解壓中]",
-        "delete-mod": "刪除模組",
-        "reset-data": "重置當前設定檔數據"
-    },
-    "jp": {
-        "data": {
-            "flag": "japan.png"
-        },
-        "yes": "はい",
-        "no": "いいえ",
-        "play": "プレイ",
-        "import-watcher": "このModの解凍とインポートを許可しますか？",
-        "main": "メイン",
-        "mods": "モッド",
-        "search": "検索",
-        "import": "Modをインポート",
-        "greet": "こんにちは",
-        "install": "インストール先を設定",
-        "select_zip": "DDLCが含まれているzipファイルを選択してください。https://ddlc.moe からダウンロードできます。(クリックして開く)",
-        "select_zip_button": "Zipをインポート",
-        "importing_zip": "DDLCをインポート中",
-        "import_image": "画像をインポート",
-        "home": "ホーム",
-        "theme": "テーマを設定",
-        "update-text": "アップデート (デスクトップ)",
-        "loading": "Modを読み込み中",
-        "description": "説明",
-        "screenshot": "スクリーンショット",
-        "tutorial-text": "チュートリアル",
-        "tutorial-context": "まだチュートリアルを完了していないようです。開始しますか？",
-        "cancel": "キャンセル",
-        "next": "次へ",
-        "end": "終了",
-        "updating": "更新中",
-        "update": "アップデート",
-        "ignore": "無視",
-        "error-profile_setname": "デフォルトのプロファイル名は変更できません！",
-        "error-profile_delete": "デフォルトのプロファイルは削除できません！",
-        "tutorial": {
-            "select": "続行する前に、Modを選択するかダウンロードしてください！",
-            "1": {
-                "title": "ようこそ！",
-                "context": "Doki Doki Mod Managerの使い方をご案内します。「次へ」を押して進んでください。"
-            },
-            "2": {
-                "title": "テーマ",
-                "context": "まず最初に、テーマを選びましょう。ハイライトされたボタンをクリックして、お気に入りのキャラクターを選んでください。"
-            },
-            "3": {
-                "title": "背景",
-                "context": "次に、使用したい背景をクリックするか、画像をドラッグ＆ドロップして背景に設定してください。"
-            },
-            "4": {
-                "title": "ダウンロード",
-                "context": "次に、RedditからModをダウンロードしてください。ここにZIPファイルをドラッグ＆ドロップすることもできます。ダウンロードフォルダに保存するのを忘れないでください！"
-            },
-            "5": {
-                "title": "カバー",
-                "context": "選択範囲の下部にある矢印を使用して、カバーを変更します。"
-            },
-            "6": {
-                "title": "名前",
-                "context": "Modのタイトルをクリックして名前を変更できます。Enterキーを押して保存します。"
-            },
-            "7": {
-                "title": "作者",
-                "context": "下線付きのテキスト（作者名）をクリックして設定します。Enterキーを押して保存します。"
-            },
-            "8": {
-                "title": "完了",
-                "context": "以上です！「プレイ」を押してModを開始しましょう。「終了」を押すとチュートリアルを閉じます。"
-            }
-        },
-        "send-report": "問題を報告",
-        "message": "メッセージ",
-        "send": "送信",
-        "extracting": "[解凍中]",
-        "delete-mod": "Modを削除",
-        "reset-data": "現在のプロファイルデータをリセット"
-    }
-};
-
+const HEART_EMPTY = "&#62920;";
+const HEART_FULL = "&#62919;";
 
 let translation_lan = ""
 let translation = TRANSLATION_TABLE["en"];
@@ -776,7 +229,7 @@ function loadTranslation(lang, first) {
             home_main().then()
         }
     } else {
-        launchers[currentEntry].leftClick().then();
+        getLauncher(currentEntry).functions().leftClick().then();
     }
 }
 
@@ -832,10 +285,11 @@ async function sync_covers() {
     for (const cover of covers) {
         preload_covers[cover] = await preloadImage(cover);
     }
-    if (await isDir(local_path + "\\store\\images")) {
-        for (const image of await readDir(local_path + "\\store\\images")) {
+    const imageLocation = terminatePath("\\store\\images")
+    if (await isDir(local_path + imageLocation)) {
+        for (const image of await readDir(local_path + imageLocation)) {
             if (image.name.endsWith(".png") || image.name.endsWith(".jpg") || image.name.endsWith(".jpeg") || image.name.endsWith(".webp")) {
-                const path = local_path + "\\store\\images" + "\\" + image.name;
+                const path = local_path + imageLocation + fileTerminator + image.name;
                 covers.push(path);
                 preload_covers[path] = await preloadImage(path);
             }
@@ -844,34 +298,19 @@ async function sync_covers() {
 
 }
 
-// Gets The Current Client Version From Github
-
-async function getVersion() {
-    try {
-        const response = await fetch(VERSION_URL)
-
-        if (!response.ok) {
-            console.warn(`Client Version Check Failed! Returned Status ${response.status}`)
-            return CLIENT_VERSION;
-        }
-
-        const version = await response.text();
-        return version.trim()
-    } catch (error) {
-        console.warn(`Client Version Check Failed! Error with: ${error}`)
-    }
-    return CLIENT_VERSION;
+function terminatePath(path) {
+    return path.replace(/\\/g, "/");
 }
 
 // Loads local config which includes background cover id
 // and the total amount of time you have played mods
 //
 // Also includes whether it has warned you to
-// save downloads to the users download folder
+// save downloads to the user's download folder
 
 async function loadConfig(path) {
     let hasConfig = false;
-    let configPath = path + "\\client-config.json";
+    let configPath = path + fileTerminator + "client-config.json";
     const localFiles = await readDir(path);
     let configData = {
         coverId: 0,
@@ -899,9 +338,9 @@ async function loadConfig(path) {
         if (selectedPath !== "" && selectedPath !== undefined) {
             for (const entry of await readDir(selectedPath)) {
                 if (entry.isDirectory) {
-                    const localFiles2 = await readDir(selectedPath + "\\" + entry.name);
+                    const localFiles2 = await readDir(selectedPath + fileTerminator + entry.name);
                     let hasConfig2 = false;
-                    let configPath2 = selectedPath + "\\" + entry.name + "\\.ddmm.config.json";
+                    let configPath2 = selectedPath + fileTerminator + entry.name + fileTerminator + ".ddmm.config.json";
                     for (const localEntry of localFiles2) {
                         if (localEntry.name === ".ddmm.config.json") {
                             hasConfig2 = true;
@@ -999,12 +438,12 @@ async function update_cover_images(first_time) {
 
         img.addEventListener("mouseup", async (e) => {
             if (currentEntry !== "" && e.button === 0) {
-                await launchers[currentEntry].setCover(covers.indexOf(cover));
+                await getLauncher(currentEntry).functions().setCover(covers.indexOf(cover));
             } else if (e.button === 0) {
                 background_cover = covers.indexOf(cover)
                 await setCover(background_cover)
             }
-            await play(sound_beep)
+            play(sound_beep)
             document.getElementById("profile-blur").classList.add("hide")
             document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
 
@@ -1065,7 +504,7 @@ async function update_cover_images(first_time) {
 
 // Saves config to file (./client-config.json)
 
-async function saveConfig(a) {
+async function saveConfig() {
     // console.log("Saving Config @ " + Date.now())
     localConfig.config.coverId = background_cover;
     localConfig.config.totalTime = total_time;
@@ -1079,10 +518,11 @@ async function saveConfig(a) {
 // Plays interaction sounds
 
 function play(song) {
-    var beep = new Audio(song)
+    let beep = new Audio(song)
     beep.volume = 0.5;
 
-    beep.play()
+    beep.play().then(() => {
+    })
 }
 
 // Import Requested Mod Or Prompts User To Select Mod
@@ -1101,7 +541,7 @@ async function import_mod(path) {
         });
         await invoke('tracker', {
             event: 'manual_download',
-            props: {name: selectedPath.split("\\").pop()}
+            props: {name: selectedPath.split(fileTerminator).pop()}
         });
     }
     if (selectedPath != null) {
@@ -1185,14 +625,14 @@ function createScreenshotDiv(src, entryName, dir, image, entry) {
         document.getElementById("view-background").classList.remove("hide")
     })
     cover_text.addEventListener("click", async () => {
-        await remove(dir + "\\" + image);
-        await launchers[entryName].leftClick();
+        await remove(dir + fileTerminator + image);
+        await getLauncher(entryName).functions().leftClick();
         if (entry.preload[image]) {
-            await launchers[entry].preloadImages()
+            await getLauncher(entry).functions().preloadImages()
         }
     })
     path_text.addEventListener("click", async () => {
-        await launchers[entryName].path();
+        await getLauncher(entryName).functions().path();
     })
     path_text.classList.add("screenshots-path");
     path_text.innerHTML = "&#60792;"
@@ -1230,17 +670,17 @@ async function requestDirectory(path) {
             selectedPath = ppath;
         }
 
-        for (const element in launchers) {
-            launchers[element]["item"].remove();
+        for (const element in getLaunchers()) {
+            getLauncher(element).functions()["item"].remove();
         }
 
-        launchers = []
+        clearLaunchers()
         const files = await readDir(selectedPath);
 
         document.getElementById("search").value = ""
         document.getElementById("loader").classList.remove("hide")
         document.getElementById("main").classList.add("hide")
-        document.getElementById("nummods").textContent = files.length;
+        document.getElementById("nummods").textContent = files.length.toString();
 
         // Update Mods List
 
@@ -1282,7 +722,7 @@ async function requestDirectory(path) {
 
             }
         }, 100)
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             setInterval(async () => {
                 if (finished_mods === mods_to_complete) {
                     resolve()
@@ -1295,14 +735,14 @@ async function requestDirectory(path) {
 }
 
 async function add_mod(name) {
-    if (!await isExist(selectedPath + "\\" + name)) {
+    if (!await isExist(selectedPath + fileTerminator + name)) {
         await globWarn("Mod " + name + " Does Not Exist!")
         return
     }
-    const localFiles = await readDir(selectedPath + "\\" + name);
+    const localFiles = await readDir(selectedPath + fileTerminator + name);
     // Find Correct Directory
 
-    let dir = selectedPath + "\\" + name;
+    let dir = selectedPath + fileTerminator + name;
     let isInDir = false;
     for (const localEntry of localFiles) {
         if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
@@ -1312,7 +752,7 @@ async function add_mod(name) {
     }
 
     if (!isInDir) {
-        dir = selectedPath + "\\" + name + "\\DDLC-1.1.1-pc"
+        dir = selectedPath + fileTerminator + name + fileTerminator + "DDLC-1.1.1-pc"
         if (await isDir(dir)) {
             for (const localEntry of await readDir(dir)) {
                 if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
@@ -1324,7 +764,7 @@ async function add_mod(name) {
     }
 
     if (!isInDir) {
-        globWarn(dir + " Does Not Contain DDLC.exe")
+        await globWarn(dir + " Does Not Contain DDLC.exe")
         return;
     }
 
@@ -1335,14 +775,14 @@ async function add_mod(name) {
             customExe = localEntry.name;
         }
         if (localEntry.name.toLowerCase().includes("credit") && about === undefined) {
-            about = (await readTextFile(dir + "\\" + localEntry.name)).replaceAll("\n", "<br>");
+            about = htmlEscape((await readTextFile(dir + fileTerminator + localEntry.name))).replaceAll("\n", "<br>");
         }
     }
 
     // Create SideButton And Load Config
 
     let hasConfig = false;
-    let configPath = selectedPath + "\\" + name + "\\.ddmm.config.json";
+    let configPath = selectedPath + fileTerminator + name + fileTerminator + ".ddmm.config.json";
     for (const localEntry of localFiles) {
         if (localEntry.name === ".ddmm.config.json") {
             hasConfig = true;
@@ -1360,7 +800,7 @@ async function add_mod(name) {
 
     if (!hasConfig) {
         await create(configPath)
-        const data = await metadata(selectedPath + "\\" + name);
+        const data = await metadata(selectedPath + fileTerminator + name);
         const contents = JSON.stringify(configData);
         configData.size = data.size;
         await writeTextFile(configPath, contents);
@@ -1375,7 +815,7 @@ async function add_mod(name) {
     let shorthand = name.replace("ddlc-", "").replace("ddlc", "").replace("-", " ");
     const sidetext = document.createElement("header");
     const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
-    const faveText = "<span style=\"font-family: Icon,serif\">&#60938;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
+    const favoriteText = "<span style=\"font-family: Icon,serif\">&#60938;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
 
     let launch_time = Date.now();
     sidetext.classList.add("sidebutton");
@@ -1384,26 +824,26 @@ async function add_mod(name) {
     }
     sidetext.id = shorthand;
     if (configData.favorite) {
-        sidetext.innerHTML = faveText
+        sidetext.innerHTML = favoriteText
     } else {
         sidetext.innerHTML = normalText
     }
 
     observer.observe(sidetext);
-    launchers[name] = {
+    const launcher = new LauncherAbstract({
         item: sidetext,
-        location: selectedPath + "\\" + name,
+        location: selectedPath + fileTerminator + name,
         absolute_location: dir,
-        preload: [],
+        preload: {},
         isFavorite: configData.favorite,
         nameId: name.toLowerCase(),
         preloadImages: async () => {
             let images = 0;
-            launchers[name].preload = {}
+            getLauncher(name).functions().preload = {}
 
             for (const localEntry of await readDir(dir)) {
                 if (localEntry.name.includes("screenshot")) {
-                    launchers[name].preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + "\\" + localEntry.name, []), name, dir, localEntry.name, name);
+                    getLauncher(name).functions().preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name, []), name, dir, localEntry.name, name);
                     images++
 
                     if (images >= 2) {
@@ -1465,7 +905,7 @@ async function add_mod(name) {
 
                 if (gameExe !== "") {
                     await invoke("launch", {
-                        path: dir + "\\" + gameExe,
+                        path: dir + fileTerminator + gameExe,
                         id: name,
                         renpy: await getRenpy(dir)
                     })
@@ -1488,18 +928,18 @@ async function add_mod(name) {
             await writeTextFile(configPath, contents);
             await setCover(configData.coverId);
         },
-        oncove: async () => {
+        onFavorite: async () => {
             configData.favorite = !configData.favorite;
             sidetext.classList.toggle("favorite", configData.favorite)
             if (configData.favorite) {
-                sidetext.innerHTML = faveText
+                sidetext.innerHTML = favoriteText
             } else {
                 sidetext.innerHTML = normalText
             }
-            launchers[name].isFavorite = configData.favorite;
+            getLauncher(name).functions().isFavorite = configData.favorite;
             const contents = JSON.stringify(configData);
             await writeTextFile(configPath, contents);
-            document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
+            document.getElementById("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
         },
         close: async () => {
             if (alert_path === undefined) {
@@ -1516,7 +956,7 @@ async function add_mod(name) {
             });
             total_time += playTime;
             configData.time += playTime;
-            const data = await metadata(selectedPath + "\\" + name);
+            const data = await metadata(selectedPath + fileTerminator + name);
             const contents = JSON.stringify(configData);
             configData.size = data.size;
             document.getElementById("pill").classList.add("hide")
@@ -1525,13 +965,13 @@ async function add_mod(name) {
 
             await writeTextFile(configPath, contents);
             await saveConfig()
-            await launchers[name].leftClick();
+            await getLauncher(name).functions().leftClick();
         },
         leftClick: async () => {
             currentEntry = name;
             await setCover(configData.coverId);
 
-            const fdirFiles = await readDir(dir);
+            const screenshotWanderer = await readDir(dir);
 
             let renpy = await getRenpy(dir);
             let screenshots = false;
@@ -1541,11 +981,11 @@ async function add_mod(name) {
                 document.getElementById("screenshots").firstChild.remove();
             }
 
-            for (const localEntry of fdirFiles) {
+            for (const localEntry of screenshotWanderer) {
                 if (localEntry.name.includes("screenshot")) {
                     screenshots = true;
-                    if (launchers[name].preload[localEntry.name] !== undefined) {
-                        document.getElementById("screenshots").appendChild(launchers[name].preload[localEntry.name]);
+                    if (getLauncher(name).functions().preload[localEntry.name] !== undefined) {
+                        document.getElementById("screenshots").appendChild(getLauncher(name).functions().preload[localEntry.name]);
                         continue;
                     }
                     images.push(
@@ -1560,16 +1000,15 @@ async function add_mod(name) {
                 renpy = "Unknown (Please create a git issue on this)";
             }
 
-
-            renpy = name + "<br>Renpy: " + renpy + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
-            document.getElementById("covertext").innerHTML = configData.favorite ? heart_full : heart_empty;
+            renpy = name + "<br>Renpy: " + htmlEscape(renpy) + "<br>Custom Exe: " + (customExe !== undefined ? "Yes | " + customExe : "No") + "<br><br>Credits: <br>" + (about !== undefined ? about : "None Found!");
+            document.getElementById("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
             play(sound_boop)
             const min = Math.floor(configData.time / 60000);
 
             if (configData.size === 0) {
                 updateDisplayinfo(name, configData.author, "Reading...", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
                 setTimeout(async () => {
-                    const data = await metadata(selectedPath + "\\" + name);
+                    const data = await metadata(selectedPath + fileTerminator + name);
                     configData.size = data.size;
                     if (currentEntry === name) {
                         updateDisplayinfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
@@ -1588,6 +1027,7 @@ async function add_mod(name) {
                 document.getElementById("setinfo-header").style.left = "16rem";
             } else {
                 document.getElementById("screenshots").scrollLeft = 0;
+                let accepted = false
                 const image_loader = images.map(async (image) => {
                     const worker = new ImageLoader();
 
@@ -1598,10 +1038,16 @@ async function add_mod(name) {
                         );
                     }
                     worker.postMessage({
-                        image: await readFile(dir + "\\" + image)
+                        image: await readFile(dir + fileTerminator + image)
                     })
                 })
-                await Promise.all(image_loader);
+
+                document.getElementById("screenshots").onscroll = async () => {
+                    if (!accepted) {
+                        accepted = true;
+                        await Promise.all(image_loader);
+                    }
+                }
                 document.getElementById("screenshots-header").classList.remove("hide")
                 document.getElementById("screenshots-parent").classList.remove("hide")
                 document.getElementById("info").classList.remove("expanded")
@@ -1609,26 +1055,31 @@ async function add_mod(name) {
                 document.getElementById("setinfo-header").style.left = "30rem";
             }
         }
-    }
-    launchers[name].preloadImages().then(() => {
+    })
+    addLauncher(name, launcher)
+    launcher.functions().preloadImages().then(() => {
     });
 
     sidetext.addEventListener("click", async () => {
-        launchers[name].leftClick().then(() => {
+        launcher.functions().leftClick().then(() => {
         });
     })
 
     document.getElementById("modlist").appendChild(sidetext)
 }
 
+function htmlEscape(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
 // Gets RenPy Version
 
 async function getRenpy(dir) {
     let renpy;
-    const dirFiles = await readDir(dir + "\\renpy");
+    const dirFiles = await readDir(dir + fileTerminator + "renpy");
     for (const localEntry of dirFiles) {
         if (localEntry.name === "__init__.py") {
-            const code = await readTextFile(dir + "\\renpy\\" + localEntry.name);
+            const code = await readTextFile(dir + fileTerminator + "renpy" + fileTerminator + localEntry.name);
             const lines = code.split("\n");
             for (const line of lines) {
                 if (line.startsWith("version_tuple = ") && !line.includes("*")) {
@@ -1641,7 +1092,7 @@ async function getRenpy(dir) {
             }
         }
         if (localEntry.name === "vc_version.py" && renpy === undefined) {
-            const code = await readTextFile(dir + "\\renpy\\" + localEntry.name);
+            const code = await readTextFile(dir + fileTerminator + "renpy" + fileTerminator + localEntry.name);
             const lines = code.split("\n");
             for (const line of lines) {
                 if (line.startsWith("version = ")) {
@@ -1733,7 +1184,7 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
                 document.getElementById("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 225) + "px"
             })
             document.getElementById("authinput").addEventListener("blur", async () => {
-                await setauthor();
+                await setAuthor();
             })
             document.getElementById("authinput").addEventListener("keydown", async (e) => {
                 if (e.key === "Enter") {
@@ -1769,27 +1220,34 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
 // Sets Home Screen To Main
 
 async function home_main() {
-    // await updateDisplayinfo("Hi " + (await invoke("whois", {})) + "!", "", "", "") -- This could leak the users full name; deprecated
+    // await updateDisplayinfo("Hi " + (await invoke("whois", {})) + "!", "", "", "") -- This could leak the user's full name; deprecated
     document.getElementById("covertext").innerHTML = ""
-    await updateDisplayinfo(translation.greet + " " + (await homeDir()).replace("C:\\Users\\", "") + "!", "", "", "")
+    let username = ""
+    const home_path = await homeDir();
+    if (home_path.includes(":\\Users\\")) {
+        username = home_path.replace("C:\\Users\\", "")
+    } else {
+        username = "Monika"
+    }
+    await updateDisplayinfo(translation.greet + " " + username + "!", "", "", "")
 }
 
 // Sets Author Of Mod And Saves To File
 
-async function setauthor() {
+async function setAuthor() {
     if (currentEntry === "") return;
     document.getElementById("authinput").blur()
-    var value = document.getElementById("authinput").value.trimEnd();
+    let value = document.getElementById("authinput").value.trimEnd();
     console.log(value)
     if (value === "") {
-        const author = (await launchers[currentEntry].getData()).author;
+        const author = (await getLauncher(currentEntry).functions().getData()).author;
         document.getElementById("authinput").value = author;
         document.getElementById("authinput").placeholder = author;
         document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
 
     } else {
-        await launchers[currentEntry].setAuthor(value);
-        await launchers[currentEntry].leftClick();
+        await getLauncher(currentEntry).functions().setAuthor(value);
+        await getLauncher(currentEntry).functions().leftClick();
     }
 }
 
@@ -1826,11 +1284,11 @@ async function update_concurrent_game() {
 
     }
 
-    const playTime = await launchers[currentEntry].get_time();
+    const playTime = await getLauncher(currentEntry).functions().get_time();
     const second = Math.floor(playTime / 1000) % 60;
     const min = Math.floor(playTime / 60000);
-    const name = await launchers[currentEntry].getName() + " ";
-    const author = (await launchers[currentEntry].getData()).author;
+    const name = await getLauncher(currentEntry).functions().getName() + " ";
+    const author = (await getLauncher(currentEntry).functions().getData()).author;
     const time = Math.floor(min / 60) + "h " + (min % 60) + "m " + second + "s";
 
     document.getElementById("pill-game").textContent = name
@@ -1841,7 +1299,7 @@ async function update_concurrent_game() {
 // Set Loading Bar
 
 function setLoadingBar(percent = 0, isSlowMode = false) {
-    if (isSlowMode && percent != 0) {
+    if (isSlowMode && percent !== 0) {
         goal_slow_bar = percent
     }
     if (isSlowMode && goal_slow_bar > 0) {
@@ -1871,7 +1329,7 @@ async function snowflake() {
     snowflake.classList.add("snowflake");
     snowflake.style.transition = "top " + speed + "s linear, rotate " + speed + "s ease";
     snowflake.style.rotate = Math.floor(Math.random() * 360) + "deg";
-    snowflake.style.opacity = Math.random() * 0.5 + 0.5;
+    snowflake.style.opacity = (Math.random() * 0.5 + 0.5).toString();
     document.body.appendChild(snowflake);
 
     setTimeout(() => {
@@ -1891,25 +1349,21 @@ async function snowflake() {
 
 async function rename_mod() {
     if (currentEntry === "") return;
-    var value = document.getElementById("modtitle").value;
-    var name = await launchers[currentEntry].getName();
+    let value = document.getElementById("modtitle").value;
+    let name = await getLauncher(currentEntry).functions().getName();
     if (value === name) return;
     if (value !== name && value.length !== 0) {
 
-        var oldName = (await launchers[currentEntry].getPath()) + "\\" + name;
-        var newName = (await launchers[currentEntry].getPath()) + "\\" + value;
+        let oldName = (await getLauncher(currentEntry).functions().getPath()) + fileTerminator + name;
+        let newName = (await getLauncher(currentEntry).functions().getPath()) + fileTerminator + value;
+
+        if (value.match(/[^.\\\\/:*?\"<>|]?[^\\\\/:*?\"<>|]*/g)) {
+            confirm("The Name '" + value + "' is invalid!")
+            document.getElementById("modtitle").value = currentEntry;
+            return;
+        }
 
         try {
-            let isInvalid = false;
-            for (const char of value) {
-                if (ILLEGAL_DIRECTORY_CHARACTERS.includes(char)) {
-                    isInvalid = true;
-                    break
-                }
-            }
-            if (/\\/.test(value) || isInvalid) {
-                throw Error("Invalid Name!")
-            }
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
             document.getElementById("loadingsub").textContent = "Renaming Mod"
@@ -1922,12 +1376,7 @@ async function rename_mod() {
             })
 
         } catch (e) {
-            if (e == "Error: Invalid Name!") {
-                confirm("The Name '" + value + "' is invalid!")
-                document.getElementById("modtitle").value = currentEntry;
-            } else {
-                confirm("Cannot Rename The File Due To:\n\n" + e)
-            }
+            confirm("Cannot Rename The File Due To:\n\n" + e)
         }
 
     }
@@ -1948,7 +1397,7 @@ async function update_profiles(path) {
     }
 
     const profiles_path = path + "--profiles";
-    const current_info_path = profiles_path + "\\.info.json";
+    const current_info_path = profiles_path + fileTerminator + ".info.json";
 
     profile_path = profiles_path;
     if (!await isDir(profiles_path)) {
@@ -1992,9 +1441,9 @@ async function update_profiles(path) {
 
 function get_profile_path(name) {
     if (name === null) {
-        return profile_path + "\\null"
+        return profile_path + fileTerminator + "null"
     }
-    return profile_path + "\\" + (name === undefined ? currentEntry : name).replace("profile-", "") + ".ddmm.profile.json"
+    return profile_path + fileTerminator + (name === undefined ? currentEntry : name).replace("profile-", "") + ".ddmm.profile.json"
 }
 
 async function save_profile_data() {
@@ -2026,7 +1475,7 @@ async function save_profile_data() {
 
     console.log(profiles_data, sorted)
 
-    writeTextFile(profile_path + "\\.info.json", JSON.stringify(profiles_data)).then(r => {
+    writeTextFile(profile_path + fileTerminator + ".info.json", JSON.stringify(profiles_data)).then(_ => {
     });
 }
 
@@ -2044,10 +1493,10 @@ async function get_concurrent_game_data(path) {
     for (const file of await readDir(path)) {
         if (file.isDirectory) {
             console.log(path, file.name)
-            data[file.name] = await get_concurrent_game_data(path + "\\" + file.name)
+            data[file.name] = await get_concurrent_game_data(path + fileTerminator + file.name)
             console.log(data[file.name])
         } else {
-            data[file.name] = Base64.fromUint8Array(await readFile(path + "\\" + file.name));
+            data[file.name] = Base64.fromUint8Array(await readFile(path + fileTerminator + file.name));
         }
     }
     return data;
@@ -2066,7 +1515,7 @@ function get_formatted_date() {
 
 async function load_concurrent_profile_data(reload, reset_data) {
     if (reset_data !== true) {
-        let profiles_data = JSON.parse(await readTextFile(profile_path + "\\.info.json"));
+        let profiles_data = JSON.parse(await readTextFile(profile_path + fileTerminator + ".info.json"));
         selected_name = profiles_data.selected == null ? "profile-Default" : "profile-" + profiles_data.selected;
         current_profile = profiles_data.current == null ? "Default" : profiles_data.current;
         original_profile = current_profile;
@@ -2090,19 +1539,19 @@ async function load_data(self_data, upstream) {
         const file = self_data[f]
         console.log(typeof file)
         if (typeof file === "object") {
-            await mkdir(upstream + "\\" + f);
-            await load_data(file, upstream + "\\" + f)
+            await mkdir(upstream + fileTerminator + f);
+            await load_data(file, upstream + fileTerminator + f)
             continue;
         }
-        let n = f.replaceAll("\\", "/");
+        let n = f.replaceAll(fileTerminator, "/");
         if (n.includes("/")) {
             for (const dir of n.split("/")) {
                 if (dir === n.split("/").pop()) continue;
-                await mkdir(upstream + "\\" + dir, {recursive: true});
+                await mkdir(upstream + fileTerminator + dir, {recursive: true});
             }
         }
         try {
-            await writeFile(upstream + "\\" + f,
+            await writeFile(upstream + fileTerminator + f,
                 Base64.toUint8Array(file));
         } catch (e) {
             console.log(f + " is not encoded in base64!")
@@ -2118,9 +1567,9 @@ async function delete_dir(path) {
     for (const file of await readDir(path)) {
         console.log(path, file.name)
         if (file.isDirectory) {
-            await delete_dir(path + "\\" + file.name)
+            await delete_dir(path + fileTerminator + file.name)
         }
-        await remove(path + "\\" + file.name);
+        await remove(path + fileTerminator + file.name);
     }
 }
 
@@ -2180,7 +1629,7 @@ function create_profile(profile, position) {
         background.classList.add("profile-button-active")
     }
 
-    b_select.addEventListener("click", (e) => {
+    b_select.addEventListener("click", (_) => {
         if (profile === "Default") {
             confirm(translation["error-profile_setname"])
             return;
@@ -2194,7 +1643,7 @@ function create_profile(profile, position) {
 
     background.addEventListener("mousedown", onClick)
 
-    b_drag.addEventListener("mousedown", async (e) => {
+    b_drag.addEventListener("mousedown", async (_) => {
         if (selected_button !== null) return;
         selected_name = background.id;
         selected_button = document.createElement("div");
@@ -2211,12 +1660,12 @@ function create_profile(profile, position) {
         document.getElementById("profile-blur").appendChild(selected_button);
     })
 
-    b_delete.addEventListener("mousedown", async (e) => {
+    b_delete.addEventListener("mousedown", async (_) => {
         if (profile === "Default") {
             confirm(translation["error-profile_delete"])
             return;
         }
-        await remove(profile_path + "\\" + background.id.replace("profile-", "") + ".ddmm.profile.json");
+        await remove(profile_path + fileTerminator + background.id.replace("profile-", "") + ".ddmm.profile.json");
 
         current_profile = "Default"
         selected_name = "profile-Default"
@@ -2248,7 +1697,7 @@ function create_profile(profile, position) {
         console.log(profile, r)
         if (!r) {
             console.log("Creating Profile")
-            writeTextFile(get_profile_path(profile), JSON.stringify(concurrent_profile_data[profile])).then(r => {
+            writeTextFile(get_profile_path(profile), JSON.stringify(concurrent_profile_data[profile])).then(_ => {
             });
         }
     })
@@ -2304,7 +1753,7 @@ async function save_profile_name() {
                 return;
             }
         }
-        if (name.includes("-_at-") || name.includes("/") || name.includes("\\")) {
+        if (name.includes("-_at-") || name.includes("/") || name.includes(fileTerminator)) {
             await confirm("The Name '" + name + "' is invalid!")
             return;
         }
@@ -2355,12 +1804,12 @@ async function onLoad() {
         }
         const value = event.payload.text;
         await globLog(value)
-        if (launchers[value]) {
-            await launchers[value].leftClick();
+        if (getLauncher(value)) {
+            await getLauncher(value).functions().leftClick();
         }
     })
 
-    document.getElementById("save-profile").addEventListener("click", async (e) => {
+    document.getElementById("save-profile").addEventListener("click", async () => {
         document.getElementById("profile-bg").classList.add("hide")
         await save_profile();
         document.getElementById("profile-blur").classList.add("hide")
@@ -2383,12 +1832,12 @@ async function onLoad() {
         document.getElementById("profile-bg").classList.add("hide")
         await save_profile();
         document.getElementById("profile-blur").classList.add("hide")
-        if (!await isDir(local_path + "\\store\\backup")) {
-            await mkdir(local_path + "\\store\\backup");
+        if (!await isDir(local_path + fileTerminator + terminatePath("store\\backup"))) {
+            await mkdir(local_path + fileTerminator + terminatePath("store\\backup"));
         }
-        await writeTextFile(local_path + "\\store\\backup\\" + profile_path.replaceAll("\\\\", "/").replaceAll("\\", "/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
+        await writeTextFile(local_path + fileTerminator + terminatePath("store\\backup") + fileTerminator + profile_path.replaceAll("\\\\", "").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
         await invoke("open_path", {
-            path: local_path + "\\store\\backup"
+            path: local_path + fileTerminator + terminatePath("store\\backup")
         })
     })
 
@@ -2402,18 +1851,18 @@ async function onLoad() {
                 extensions: ['json']
             }],
             title: 'Select Backup File',
-            defaultPath: local_path + "\\store\\backup\\"
+            defaultPath: local_path + fileTerminator + terminatePath("store\\backup") + fileTerminator
         });
         document.getElementById("profile-bg").classList.add("hide")
         await save_profile();
         if (backup_select !== null && backup_select !== undefined) {
-            if (!await isDir(local_path + "\\store\\backup")) {
-                await mkdir(local_path + "\\store\\backup");
+            if (!await isDir(local_path + fileTerminator + terminatePath("store\\backup"))) {
+                await mkdir(local_path + fileTerminator + terminatePath("store\\backup"));
             }
-            if (!await isDir(local_path + "\\store\\backup\\autosave")) {
-                await mkdir(local_path + "\\store\\backup\\autosave");
+            if (!await isDir(local_path + fileTerminator + terminatePath("store\\backup\\autosave"))) {
+                await mkdir(local_path + fileTerminator + terminatePath("store\\backup\\autosave"));
             }
-            await writeTextFile(local_path + "\\store\\backup\\autosave\\" + profile_path.replaceAll("\\\\", "/").replaceAll("\\", "/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
+            await writeTextFile(local_path + fileTerminator + terminatePath("store\\backup\\autosave") + fileTerminator + profile_path.replaceAll("\\\\", "\\").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path)));
             await delete_dir(profile_path);
             await load_data(JSON.parse(await readTextFile(backup_select)), profile_path);
             console.log(current_game_data_path)
@@ -2583,7 +2032,7 @@ async function onLoad() {
 
     listen("import_done", async (event) => {
         console.log(alert_path)
-        if (alert_path.includes("\\Downloads\\")) {
+        if (alert_path.includes(fileTerminator + "Downloads" + fileTerminator)) {
             await remove(alert_path);
         }
         document.getElementById("loadingsub").textContent = "Mod Imported | Loading GUI"
@@ -2599,8 +2048,8 @@ async function onLoad() {
         await add_mod(goal)
         document.getElementById("loader").classList.add("hide")
         document.getElementById("main").classList.remove("hide")
-        if (launchers[goal]) {
-            launchers[goal].leftClick();
+        if (getLauncher(goal)) {
+            getLauncher(goal).functions().leftClick();
         } else {
             globWarn(goal + " Not Found!")
         }
@@ -2686,7 +2135,7 @@ async function onLoad() {
             document.getElementById("alert").classList.add("hide")
             await invoke('tracker', {
                 event: 'auto_download',
-                props: {name: alert_path.split("\\").pop()}
+                props: {name: alert_path.split(fileTerminator).pop()}
             });
             await import_mod(alert_path)
         }
@@ -2714,8 +2163,8 @@ async function onLoad() {
                 });
                 await import_mod(path)
             } else {
-                let dir = await readDir(local_path + "\\store\\images\\")
-                await writeFile(local_path + "\\store\\images\\z_image-" + (dir.length + 1) + dir.length + "." + path.split("\\").pop().split(".").pop(), await readFile(path))
+                let dir = await readDir(local_path + fileTerminator + terminatePath("store\\images") + fileTerminator)
+                await writeFile(local_path + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
 
             }
         }
@@ -2746,7 +2195,7 @@ async function onLoad() {
             await globLog("Start Loading Pt. 2 (" + (Date.now() - start) + "ms).")
 
             let payloadPath = event.payload.path;
-            let newest_version = await getVersion();
+            let newest_version = await getLatest();
             await loadConfig(event.payload.local_path)
             reset = true;
 
@@ -2764,7 +2213,7 @@ async function onLoad() {
                     //     "Nova atualização disponível! (Pressione 'Ok' para atualizar)\n" +
                     //     ")\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
 
-                    await loadTranslation(translation_lan, true)
+                    loadTranslation(translation_lan, true)
 
                     document.getElementById("changelog").classList.remove("hide")
                     document.getElementById("changelog-title").textContent = "New Update! | " + newest_version.split("\n")[0]
@@ -2784,7 +2233,7 @@ async function onLoad() {
                     document.getElementById("changelog").classList.add("hide")
 
                     if (response) {
-                        await update_client()
+                        await updateClient()
 
                         return;
                     }
@@ -2802,7 +2251,7 @@ async function onLoad() {
                     document.getElementById("changelog-ignore").classList.add("hide")
                     document.getElementById("changelog-update").textContent = translation.ignore
                     document.getElementById("changelog-ignore").style.left = "calc(3rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
-                    let response = await new Promise(resolve => {
+                    await new Promise(resolve => {
                         document.getElementById("changelog-update").addEventListener("mouseup", async () => {
                             resolve(true)
                         })
@@ -2833,7 +2282,7 @@ async function onLoad() {
                 document.getElementById("language-list").classList.add("language-list-hide")
                 document.getElementById("language-list").classList.remove("language-list-force")
             } else {
-                await loadTranslation(translation_lan, true)
+                loadTranslation(translation_lan, true)
             }
 
             await globLog("DDLC Check (" + (Date.now() - start) + "ms).")
@@ -2877,7 +2326,7 @@ async function onLoad() {
                                 document.getElementById("alert").classList.remove("hide")
                                 showContainers(false)
                                 alert_path = path
-                                const split = path.split("\\");
+                                const split = path.split(fileTerminator);
                                 const data = await metadata(path);
 
                                 document.getElementById("alert-size").innerText = Math.floor(data.size / 1048600).toString() + "mb";
@@ -2896,14 +2345,14 @@ async function onLoad() {
                                     part_file_size = (await metadata(path)).size
 
                                     let mbs = (part_file_size - old_size) / (dT * 1000);
-                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split("\\").pop().split(".").reverse().pop() + " at " + (Math.round(mbs * 100) / 100) + "mb/s"
+                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split(fileTerminator).pop().split(".").reverse().pop() + " at " + (Math.round(mbs * 100) / 100) + "mb/s"
                                     console.log("New Download Frame! " + path)
                                     console.log(part_file_size + " at " + mbs)
                                 } else {
                                     part_file = path;
                                     last_change = Date.now();
                                     part_file_size = (await metadata(path)).size
-                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split("\\").pop().split(".").reverse().pop()
+                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split(fileTerminator).pop().split(".").reverse().pop()
                                     document.getElementById("install-info").classList.remove("hide")
                                     console.log("New Download! " + path)
                                     console.log(part_file_size)
@@ -2929,7 +2378,7 @@ async function onLoad() {
     listen('closed', async (event) => {
         if (event.payload.id !== "") {
 
-            await launchers[event.payload.id].close();
+            await getLauncher(event.payload.id).functions().close();
         }
     });
 
@@ -2952,7 +2401,7 @@ async function onLoad() {
 
     document.getElementById("play").addEventListener("mouseup", async () => {
         if (currentEntry !== "" && document.getElementById("delete-prompt").classList.contains("hide")) {
-            await launchers[currentEntry].open();
+            await getLauncher(currentEntry).functions().open();
         }
     })
 
@@ -2978,20 +2427,20 @@ async function onLoad() {
 
     document.getElementById("cove").addEventListener("mouseup", async () => {
         if (currentEntry !== "" && !mouse_cover_available) {
-            await launchers[currentEntry].oncove()
+            await getLauncher(currentEntry).functions().onFavorite()
         }
     })
 
     document.getElementById("delete").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
-            let confirmed = await confirm("Are you sure you want to delete '" + launchers[currentEntry].location + "' and its data?")
+            let confirmed = await confirm("Are you sure you want to delete '" + getLauncher(currentEntry).functions().location + "' and its data?")
             if (confirmed) {
                 showContainers(false)
                 await invoke("delete_path", {
-                    path: launchers[currentEntry].location
+                    path: getLauncher(currentEntry).functions().location
                 });
-                launchers[currentEntry].item.remove();
-                delete launchers[currentEntry];
+                getLauncher(currentEntry).functions().item.remove();
+                delete getLauncher(currentEntry).functions();
                 showContainers(true)
                 await home_main()
 
@@ -3001,23 +2450,23 @@ async function onLoad() {
 
     document.getElementById("path").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
-            await launchers[currentEntry].path();
+            await getLauncher(currentEntry).functions().path();
         }
     })
 
     document.getElementById("pill-files").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
-            await launchers[currentEntry].path();
+            await getLauncher(currentEntry).functions().path();
         }
     })
 
     document.getElementById("reset-save").addEventListener("mouseup", async () => {
 
         if (currentEntry !== "") {
-            let final = launchers[currentEntry].absolute_location;
-            let path = final + "\\game\\scripts.rpa";
+            let final = getLauncher(currentEntry).functions().absolute_location;
+            let path = final + fileTerminator + terminatePath(terminatePath("game\\scripts.rpa"));
             if (!await isExist(path)) {
-                path = final + "\\game\\options.rpyc";
+                path = final + fileTerminator + terminatePath(terminatePath("game\\options.rpyc"));
                 if (!await isExist(path)) {
                     globWarn("No save found!")
                     confirm("No save found!")
@@ -3044,10 +2493,10 @@ async function onLoad() {
         if (currentEntry !== "") {
             document.getElementById("profile-blur").classList.remove("hide")
 
-            let final = launchers[currentEntry].absolute_location;
-            let path = final + "\\game\\scripts.rpa";
+            let final = getLauncher(currentEntry).functions().absolute_location;
+            let path = final + fileTerminator + terminatePath("game\\scripts.rpa");
             if (!await isExist(path)) {
-                path = final + "\\game\\options.rpyc";
+                path = final + fileTerminator + terminatePath("game\\options.rpyc");
                 if (!await isExist(path)) {
                     globWarn("No save found!")
                     confirm("No save found!")
@@ -3074,7 +2523,7 @@ async function onLoad() {
 
     document.getElementById("extract").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
-            let final = launchers[currentEntry].absolute_location + "\\game\\scripts.rpa";
+            let final = getLauncher(currentEntry).functions().absolute_location + fileTerminator + terminatePath("game\\scripts.rpa");
             console.log(final)
             document.getElementById("loadingsub").textContent = "Extracting (This will take 20-40s)"
             document.getElementById("loader").classList.remove("hide")
@@ -3082,10 +2531,10 @@ async function onLoad() {
             if (await isExist(final)) {
                 await invoke("extract_game_script", {
                     path: final,
-                    out: launchers[currentEntry].absolute_location + "\\deobf"
+                    out: getLauncher(currentEntry).functions().absolute_location + fileTerminator + "deobf"
                 })
                 await invoke("open_path", {
-                    path: launchers[currentEntry].absolute_location + "\\deobf"
+                    path: getLauncher(currentEntry).functions().absolute_location + fileTerminator + "deobf"
                 })
             } else {
                 confirm("No game script found!")
@@ -3093,7 +2542,7 @@ async function onLoad() {
             }
 
 
-            await launchers[currentEntry].leftClick()
+            await getLauncher(currentEntry).functions().leftClick()
             document.getElementById("loader").classList.add("hide")
             document.getElementById("main").classList.remove("hide")
         }
@@ -3159,7 +2608,7 @@ async function onLoad() {
     })
     document.getElementById("cover-last").addEventListener("mouseup", async (e) => {
         // if (currentEntry !== "" && e.button === 0) {
-        //     await launchers[currentEntry].lastCover();
+        //     await getLauncher(currentEntry).functions().lastCover();
         // } else if (e.button === 0) {
         //     background_cover--;
         //     if (background_cover < 0) {
@@ -3206,14 +2655,14 @@ async function onLoad() {
     document.getElementById("search").addEventListener("input", async (event) => {
 
         if (event.target.value === "") {
-            for (const index in launchers) {
-                const element = launchers[index];
+            for (const index in getLaunchers()) {
+                const element = getLauncher(index).functions();
                 element.item.classList.add("hide2");
                 element.item.style.order = element.item.classList.contains("favorite") ? "0" : "1";
             }
             setTimeout(() => {
-                for (const index in launchers) {
-                    const element = launchers[index];
+                for (const index in getLaunchers()) {
+                    const element = getLauncher(index).functions();
                     element.item.classList.remove("hide2");
                 }
             }, 0)
@@ -3223,8 +2672,8 @@ async function onLoad() {
         let lowerTarget = event.target.value.toLowerCase();
         const length = lowerTarget.length;
         const ignoreInvis = length > lastInputLength;
-        for (const index in launchers) {
-            const element = launchers[index];
+        for (const index in getLaunchers()) {
+            const element = getLauncher(index).functions();
 
             if (ignoreInvis && element.item.classList.contains("hide2")) {
                 continue;
@@ -3267,7 +2716,7 @@ async function onLoad() {
 
     document.getElementById("english").addEventListener("mouseup", async () => {
         let old = translation_lan;
-        await loadTranslation("en", (old === ""))
+        loadTranslation("en", (old === ""))
         if (old !== "") {
             saveConfig().then()
         }
@@ -3275,7 +2724,7 @@ async function onLoad() {
 
     document.getElementById("russian").addEventListener("mouseup", async () => {
         let old = translation_lan;
-        await loadTranslation("ru", (old === ""))
+        loadTranslation("ru", (old === ""))
         if (old !== "") {
             saveConfig().then()
         }
@@ -3283,7 +2732,7 @@ async function onLoad() {
 
     document.getElementById("pt").addEventListener("mouseup", async () => {
         let old = translation_lan;
-        await loadTranslation("pt", (old === ""))
+        loadTranslation("pt", (old === ""))
         if (old !== "") {
             saveConfig().then()
         }
@@ -3291,7 +2740,7 @@ async function onLoad() {
 
     document.getElementById("spanish").addEventListener("mouseup", async () => {
         let old = translation_lan;
-        await loadTranslation("es", (old === ""))
+        loadTranslation("es", (old === ""))
         if (old !== "") {
             saveConfig().then()
         }
@@ -3299,7 +2748,7 @@ async function onLoad() {
 
     document.getElementById("japan").addEventListener("mouseup", async () => {
         let old = translation_lan;
-        await loadTranslation("jp", (old === ""))
+        loadTranslation("jp", (old === ""))
         if (old !== "") {
             saveConfig().then()
         }
@@ -3307,7 +2756,7 @@ async function onLoad() {
 
     document.getElementById("french").addEventListener("mouseup", async () => {
         let old = translation_lan;
-        await loadTranslation("fr", (old === ""))
+        loadTranslation("fr", (old === ""))
         if (old !== "") {
             saveConfig().then()
         }
@@ -3315,7 +2764,7 @@ async function onLoad() {
 
     document.getElementById("cantonese").addEventListener("mouseup", async () => {
         let old = translation_lan;
-        await loadTranslation("zh-HK", (old === ""))
+        loadTranslation("zh-HK", (old === ""))
         if (old !== "") {
             saveConfig().then()
         }
@@ -3480,7 +2929,7 @@ async function onLoad() {
 
     document.getElementById("importimage").addEventListener("mouseup", async () => {
         await invoke("open_path", {
-            path: local_path + "\\store\\images"
+            path: local_path + fileTerminator + terminatePath("store\\images")
         })
     })
 
@@ -3527,14 +2976,8 @@ async function onLoad() {
     }, 2000)
 }
 
-async function should_update() {
-    let newest_version = await getVersion();
-
-    return newest_version.split("\n")[0] !== CLIENT_VERSION;
-}
-
-async function update_client() {
-    if (await should_update()) {
+async function updateClient() {
+    if (await shouldUpdate()) {
         await invoke('tracker', {
             event: 'update_launcher',
             props: {from: CLIENT_VERSION}
@@ -3589,10 +3032,10 @@ async function launch_desktop() {
 
 
     document.getElementById("desktop-update").addEventListener("mouseup", () => {
-        if (should_update()) {
+        if (shouldUpdate()) {
             previous_app.unmount()
             createApp(App).mount("#app")
-            update_client()
+            updateClient()
         }
 
     })
