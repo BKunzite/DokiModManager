@@ -1,4 +1,4 @@
-2.6.0-beta@2BmD23
+2.6.1-beta@1AjD1
 Recommended (More UI Updates & Bug Fixes)
 
 Thank you guys so much for the support recently!
