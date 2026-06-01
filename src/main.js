@@ -97,7 +97,7 @@ let part_file = null;
 
 // CONSTANTS
 
-const CLIENT_VERSION = "2.6.0-beta"
+const CLIENT_VERSION = "2.6.0-beta@2BmD23"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
@@ -1276,7 +1276,7 @@ async function requestDirectory(path) {
                     document.getElementById("main").classList.remove("hide")
                 }, 500)
             } else {
-                setLoadingBar((finished_mods/mods_to_complete)*100)
+                setLoadingBar((finished_mods / mods_to_complete) * 100)
                 document.getElementById("loadingsub").textContent = "Loaded " + finished_mods + "/" + mods_to_complete + " Mods -> " + finished.join(" | ")
                 finished = []
 
@@ -1853,7 +1853,7 @@ function setLoadingBar(percent = 0, isSlowMode = false) {
     }
 
     percent = Math.min(Math.max(percent, 0), 100)
-    let width = 125 * (percent/100)
+    let width = 125 * (percent / 100)
     document.getElementById("loading-bar-fill").style.width = width + "vh";
 }
 
@@ -1913,8 +1913,8 @@ async function rename_mod() {
             document.getElementById("loader").classList.remove("hide")
             document.getElementById("main").classList.add("hide")
             document.getElementById("loadingsub").textContent = "Renaming Mod"
-            setLoadingBar(0,false)
-            setLoadingBar(100,true)
+            setLoadingBar(0, false)
+            setLoadingBar(100, true)
             await invoke("rename_dir", {
                 path: oldName,
                 newName: newName,
@@ -2796,7 +2796,22 @@ async function onLoad() {
                 document.getElementById("version").textContent = `(${CLIENT_VERSION})`
                 if (localConfig.config.version !== CLIENT_VERSION) {
                     await saveConfig()
-                    confirm("Updated! (Wont Pop-Up Again Until Next Update)\n\n" + newest_version + "\n\nPress OK or CANCEL to continue.");
+                    document.getElementById("changelog").classList.remove("hide")
+                    document.getElementById("changelog-title").textContent = "Update Complete! | " + newest_version.split("\n")[0]
+                    document.getElementById("changelog-text").textContent = newest_version.split("\n").slice(1).join("\n")
+                    document.getElementById("changelog-ignore").classList.add("hide")
+                    document.getElementById("changelog-update").textContent = translation.ignore
+                    document.getElementById("changelog-ignore").style.left = "calc(3rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
+                    let response = await new Promise(resolve => {
+                        document.getElementById("changelog-update").addEventListener("mouseup", async () => {
+                            resolve(true)
+                        })
+                        document.getElementById("changelog-ignore").addEventListener("mouseup", async () => {
+                            resolve(false)
+                        })
+                    });
+
+                    document.getElementById("changelog").classList.add("hide")
                 }
             }
 
@@ -2881,7 +2896,7 @@ async function onLoad() {
                                     part_file_size = (await metadata(path)).size
 
                                     let mbs = (part_file_size - old_size) / (dT * 1000);
-                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split("\\").pop().split(".").reverse().pop() + " at " + (Math.round(mbs* 100)/100) + "mb/s"
+                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split("\\").pop().split(".").reverse().pop() + " at " + (Math.round(mbs * 100) / 100) + "mb/s"
                                     console.log("New Download Frame! " + path)
                                     console.log(part_file_size + " at " + mbs)
                                 } else {
@@ -3165,8 +3180,8 @@ async function onLoad() {
         document.getElementById("main").classList.add("hide")
         document.getElementById("loadinghead").textContent = "Closing..."
         document.getElementById("loadingsub").textContent = "Saving Data..."
-        setLoadingBar(0,false)
-        setLoadingBar(100,true)
+        setLoadingBar(0, false)
+        setLoadingBar(100, true)
 
         setTimeout(() => {
             invoke("close");
@@ -3483,7 +3498,7 @@ async function onLoad() {
 
     // setInterval(snowflake, 100)
     setInterval(update_concurrent_game, 1000)
-    setInterval(keepAlive, 600_000)
+    setInterval(keepAlive, 300_000)
 
     // getCurrentWindow().onFocusChanged(({
     //     payload: isfocused

@@ -3,7 +3,7 @@
 <a href="https://www.buymeacoffee.com/bkunzite" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 [![Written by Human, Not by AI](https://img.shields.io/badge/Written%20by%20Human-Not%20by%20AI-5B20B3?labelColor=FFF&style=for-the-badge)](https://notbyai.fyi)
 
-Any Donations Appeciated ^ <3
+Any Donations Appreciated ^ <3
 
 Doki Doki Mod Manager is a modern, easy-to-use mod manager for Doki Doki Literature Club using Rust + Vue 3.
 Doki Doki Mod Manager allows you to directly download from reddit and other sources directly from within the mod manager.
@@ -14,7 +14,7 @@ DDLC Game Zip - [Here](https://teamsalvato.itch.io/ddlc)
 
 # People Getting Into Modding After Playing The Original Game
 
-Just download the installer and install the mod manager, select the DDLC game zip file! Everything should be set up for you.
+Download the installer and install the mod manager, select the DDLC game zip file! Everything should be set up for you.
 
 # People That Already Have Mods
 
@@ -25,10 +25,10 @@ and I will try to fix it.
 
 # Features
 
-#### -- Discord RPC
-#### -- Playtime Tracker
-#### -- Works With Existing Mod Folders
-#### -- UnRPYC Support
+#### Discord RPC
+#### Playtime Tracker
+#### Works With Existing Mod Folders
+#### UnRPYC Support
 
 ## Custom Backgrounds & Themes
 
@@ -38,16 +38,16 @@ You can set custom mod covers by using the arrows on the cover image near the bo
 
 ## Drag & Drop
 
-You can easily drag and drop zipped mods and/or background images anywhere in the mod manager.
+You can drag and drop zipped mods and/or background images anywhere in the mod manager.
 Doki Doki Mod Manager, whilst open, will constantly scan downloads for newly downloaded zip files to import as mods.
 
 # Linux And Mac Support
 
-There are now plans for mac support durring this next summer. It will likely come out some time in June 2026.
+There are now plans for Mac support during this next summer. It will likely come out some time in July 2026.
 
-There are no plans to support Linux. If you are on any linux-based operating system, please use the original Doki Doki Mod Manager.
+There are no plans to support Linux. If you are on any Linux-based operating system, please use the original Doki Doki Mod Manager.
 No hate towards the original mod manager. I made this because I had a few things that I wanted that were not in the original mod manager.
-Plus, I wanted to do a project that allowfed me to get into rust.
+Plus, I wanted to do a project that allowed me to get into rust.
 
 # Credits
 

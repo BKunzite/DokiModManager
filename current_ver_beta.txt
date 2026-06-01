@@ -1,19 +1,31 @@
-2.6.0-beta
-Minor (More UI Updates & Bug Fixes)
+2.6.0-beta@2BmD23
+Recommended (More UI Updates & Bug Fixes)
 
 Thank you guys so much for the support recently!
-There have been around 100 new downloads and
+There have been around 100 new downloads (1000+ total) and
 20-30 more daily users on average,
-So many in fact that I have to now pay
-for analytics, but its worth it!
+So many in fact that I now have to pay
+for analytics, but it's worth it!
 
-Mac support will be comming this summer as
-I plan to get a macbook soon.
+⚠️ THERE HAS BEEN 3 REPORTS OF COMPLETE MOD DATA LOSS.
+WHILST THIS IS NOT A LOT (< 0.1% of users), IT MIGHT STILL BE AN ISSUE!
+THIS ISSUE HAS NOT BEEN TRACED OR REPRODUCED.
+PLEASE MAKE SURE YOU BACKUP YOUR DATA FOR NOW! ️
+IF YOU HAVE HAD THIS HAPPEN TO YOU, PLEASE MAKE A GITHUB ISSUE
+AS THE CURRENT REPORT SYSTEM DOES NOT ALLOW ME TO COMMUNICATE
+DUE TO DDMM HAVING GDPR COMPLIANCE WITH ANONYMOUS DATA. ⚠️
 
-FOR REPORT A ISSUE!
+Summer break is here! Expect some more updates!
+
+Mac support will be coming this summer as
+I plan to get a macbook soon, allowing me to make
+apps for Mac.
+
+FOR REPORT AN ISSUE!
 PLEASE make sure that you report an issue
-only when mods dont launch, but will work
-when the mod is installed manually
+only when mods don't launch or something that has to
+do with the mod launcher, not issues about
+the mods themselves.
 
 Files For Mods
 Reminder - You can see files for each mod by clicking the
