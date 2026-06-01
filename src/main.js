@@ -26,7 +26,6 @@ import Desktop from "./Desktop.vue";
 
 // Utils
 import {getImage} from "./core/ImageUtils";
-import ImageLoader from "./workers/ImageLoader.js?worker";
 import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
 import {TRANSLATION_TABLE} from "./core/Translation.js"
 import {Base64} from 'js-base64';
@@ -298,15 +297,24 @@ async function sync_covers() {
 
 }
 
+/**
+ * Replaces \\\\ with operating-system specific terminator.
+ * @param {string} path
+ * @returns {string}
+ */
+
 function terminatePath(path) {
     return path.replace(/\\/g, "/");
 }
 
-// Loads local config which includes background cover id
-// and the total amount of time you have played mods
-//
-// Also includes whether it has warned you to
-// save downloads to the user's download folder
+/**
+ * Loads local config which includes background cover id
+ * and the total amount of time you have played mods
+ *
+ * Also includes whether it has warned you to
+ * save downloads to the user's download folder
+ * @param path Path To Config File
+ */
 
 async function loadConfig(path) {
     let hasConfig = false;
@@ -397,7 +405,13 @@ async function loadConfig(path) {
     }
 }
 
-// Resets and updates the list of cover images
+/**
+ * Removes all cover images, then creates all new cover images with
+ * their respective aspect ratio.
+ *
+ * @param {boolean} first_time Scroll To The Left
+ * @returns {Promise<void>}
+ */
 
 async function update_cover_images(first_time) {
     await sync_covers()
@@ -480,7 +494,6 @@ async function update_cover_images(first_time) {
             cover_text.addEventListener("mouseup", () => {
                 remove(covers[i]);
                 covers.splice(i, 1);
-                console.log(covers)
                 setTimeout(async () => {
                     let scroll = images.scrollLeft;
                     await update_cover_images()
@@ -502,7 +515,10 @@ async function update_cover_images(first_time) {
     }
 }
 
-// Saves config to file (./client-config.json)
+/**
+ * Saves Current Config (./client-config.json)
+ * @returns {Promise<void>}
+ */
 
 async function saveConfig() {
     // console.log("Saving Config @ " + Date.now())
@@ -525,7 +541,11 @@ function play(song) {
     })
 }
 
-// Import Requested Mod Or Prompts User To Select Mod
+/**
+ * Imports A Mod Async
+ * @param path Location Of The Mod
+ * @returns {Promise<void>}
+ */
 
 async function import_mod(path) {
     let selectedPath = path
@@ -561,7 +581,11 @@ async function import_mod(path) {
     }
 }
 
-// Sets Cover Images/Background Image
+/**
+ * Sets The Current Cover/Background
+ * @param id Index of the cover
+ * @returns {Promise<void>}
+ */
 
 async function setCover(id) {
     if (id > covers.length - 1) {
@@ -590,7 +614,12 @@ async function setCover(id) {
     }
 }
 
-// Sets Client Theme Color
+/**
+ * Sets current theme
+ * @param {string} name ENUM for current theme
+ * @param {boolean} first First Time Setting Theme?
+ * @returns {Promise<void>}
+ */
 
 async function setTheme(name, first) {
     if (!(name in CLIENT_THEMES)) {
@@ -607,7 +636,18 @@ async function setTheme(name, first) {
     }
 }
 
-// Gets An Image Locally/In Project
+/**
+ * Creates A Screenshot Div With
+ * Lazy Image Loading and
+ * Viewable
+ *
+ * @param {string} src Image Source/URL
+ * @param {string} entryName Launcher Name
+ * @param {string} dir Directory Of Image
+ * @param {string} image Image Name
+ * @param {string} entry Launcher Name 2
+ * @returns {HTMLDivElement} Created Div
+ */
 
 function createScreenshotDiv(src, entryName, dir, image, entry) {
     const newScreenshot = document.createElement("img")
@@ -645,7 +685,13 @@ function createScreenshotDiv(src, entryName, dir, image, entry) {
     return cover_bg
 }
 
-// Requests DDLC Directory and Updates Mods
+/**
+ * Set Install Location Directory
+ * OR Loads Mods
+ *
+ * @param {string} path Location Of Mods To Load
+ * @returns {Promise<unknown>}
+ */
 
 async function requestDirectory(path) {
     let ppath = undefined;
@@ -733,6 +779,12 @@ async function requestDirectory(path) {
     }
 
 }
+
+/**
+ * Add Mods to List
+ * @param {string} name Name Of Mod To Add
+ * @returns {Promise<void>}
+ */
 
 async function add_mod(name) {
     if (!await isExist(selectedPath + fileTerminator + name)) {
@@ -844,6 +896,7 @@ async function add_mod(name) {
             for (const localEntry of await readDir(dir)) {
                 if (localEntry.name.includes("screenshot")) {
                     getLauncher(name).functions().preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name, []), name, dir, localEntry.name, name);
+                    getLauncher(name).functions().preload[localEntry.name].classList.add("preload-image")
                     images++
 
                     if (images >= 2) {
@@ -977,8 +1030,14 @@ async function add_mod(name) {
             let screenshots = false;
             let images = []
 
-            while (document.getElementById("screenshots").firstChild) {
-                document.getElementById("screenshots").firstChild.remove();
+            while (document.getElementById("screenshots").children.length > 0) {
+                const child = document.getElementById("screenshots").children.item(document.getElementById("screenshots").children.length - 1);
+                if (!child.classList.contains("preload-image")) {
+                    URL.revokeObjectURL(child.getElementsByClassName("screenshots-image")[0].src);
+                    child.getElementsByClassName("screenshots-image")[0].src = ""
+                    child.children[Symbol.iterator]().forEach(child => child.remove())
+                }
+                child.remove()
             }
 
             for (const localEntry of screenshotWanderer) {
@@ -1006,17 +1065,17 @@ async function add_mod(name) {
             const min = Math.floor(configData.time / 60000);
 
             if (configData.size === 0) {
-                updateDisplayinfo(name, configData.author, "Reading...", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
+                updateDisplayInfo(name, configData.author, "Reading...", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then(() => {})
                 setTimeout(async () => {
-                    const data = await metadata(selectedPath + fileTerminator + name);
+                    let data = await metadata(selectedPath + fileTerminator + name);
                     configData.size = data.size;
                     if (currentEntry === name) {
-                        updateDisplayinfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
-
+                        updateDisplayInfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then(() => {})
                     }
+                    data = null
                 }, 0)
             } else {
-                updateDisplayinfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then()
+                updateDisplayInfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then(() => {})
             }
 
             if (!screenshots) {
@@ -1027,25 +1086,22 @@ async function add_mod(name) {
                 document.getElementById("setinfo-header").style.left = "16rem";
             } else {
                 document.getElementById("screenshots").scrollLeft = 0;
-                let accepted = false
-                const image_loader = images.map(async (image) => {
-                    const worker = new ImageLoader();
-
-                    worker.onmessage = (e) => {
-                        if (currentEntry !== name) return;
-                        document.getElementById("screenshots").appendChild(
-                            createScreenshotDiv(e.data, name, dir, image, name)
-                        );
-                    }
-                    worker.postMessage({
-                        image: await readFile(dir + fileTerminator + image)
-                    })
-                })
 
                 document.getElementById("screenshots").onscroll = async () => {
-                    if (!accepted) {
-                        accepted = true;
-                        await Promise.all(image_loader);
+                    document.getElementById("screenshots").onscroll = null
+                    // await Promise.all(image_loader)
+                    for (const image_url of images) {
+                        let imageS = createScreenshotDiv(await getImage(dir + fileTerminator + image_url,[]), name, dir, image_url, name)
+                        document.getElementById("screenshots").appendChild(
+                            imageS
+                        );
+                        imageS.getElementsByClassName("screenshots-image")[0].decode().then(() => {
+                            URL.revokeObjectURL(imageS.getElementsByClassName("screenshots-image")[0].src);
+                            caches.delete(imageS.getElementsByClassName("screenshots-image")[0].src);
+                        }).catch(err => {
+                            console.warn("Failed To Load Image: " + dir + fileTerminator + image_url + " Error: " + err)
+                        })
+
                     }
                 }
                 document.getElementById("screenshots-header").classList.remove("hide")
@@ -1054,6 +1110,8 @@ async function add_mod(name) {
                 document.getElementById("info").classList.add("info")
                 document.getElementById("setinfo-header").style.left = "30rem";
             }
+
+            renpy = null
         }
     })
     addLauncher(name, launcher)
@@ -1068,11 +1126,36 @@ async function add_mod(name) {
     document.getElementById("modlist").appendChild(sidetext)
 }
 
+/**
+ * Escapes HTML To Prevent Potential XSS Attacks
+ * @param {string} text HTML To Escape
+ * @returns {string} Escaped HTML Text
+ */
+
 function htmlEscape(text) {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-// Gets RenPy Version
+/**
+ * Gets Ren'Py Version
+ *
+ * Different Cases
+ *
+ * init.py -> version_tuple = VersionTuple(x, y, z)
+ *
+ * init.py -> version_tuple = (x, y, z, vc_version)
+ *
+ * vc_version.py -> version_tuple = u'x.y.z'
+ *
+ * @example ```javascript
+ * let renpy_version_string = await getRenpy("C:\\Path\\To\\The\\Mod");
+ *
+ * console.log(renpy_version_string) // 8.0.1
+ * ```
+ *
+ * @param {string} dir Directory Of Ren'Py Mod
+ * @returns {Promise<string>}
+ */
 
 async function getRenpy(dir) {
     let renpy;
@@ -1106,7 +1189,10 @@ async function getRenpy(dir) {
     return renpy
 }
 
-// Hide/Show Container
+/**
+ * Hide/Show Container (Main UI)
+ * @param {boolean} show Should Show Containers
+ */
 
 function showContainers(show) {
     if (show) {
@@ -1140,6 +1226,13 @@ function showContainers(show) {
     }
 }
 
+/**
+ * Get Text Width
+ * @param {string} text Text To Get Width Of
+ * @param {string} font Font Name
+ * @returns {number} Width Of Text
+ */
+
 function getTextWidth(text, font) {
     const canvas = getTextWidth.canvas || (getTextWidth.canvas = document.createElement("canvas"));
     const context = canvas.getContext("2d");
@@ -1148,11 +1241,27 @@ function getTextWidth(text, font) {
     return metrics.width;
 }
 
-// Updates Information On Main Window
+/**
+ * Updates Current UI Displayed Info
+ * @example ```javascript
+ * let mod_name = "Hello World";
+ * let author = "BKunzite";
+ * let storage_size = "100 MB";
+ * let time_played = "0h 100m";
+ * let description = mod_name + "<br>Ren'Py 8.1";
+ *
+ * await updateDisplayInfo(mod_name, author, storage_size, time_played, description);
+ * ```
+ * @param {string} mod Mod Name
+ * @param {string} author Author Name
+ * @param {string} space Storage Space Taken
+ * @param {string} time Time Played
+ * @param {string} renpy Ren'PY Version/Description
+ * @returns {Promise<void>}
+ */
 
-async function updateDisplayinfo(mod, author, space, time, renpy) {
+async function updateDisplayInfo(mod, author, space, time, renpy) {
     document.getElementById("modtitle").value = mod.replace("ddlc-", "").replace("ddlc", "").replace("-", " ")
-
     document.getElementById("modtitle").classList.remove("hide");
     document.getElementById("modinfo").classList.remove("hide");
     document.getElementById("cove").classList.remove("hide");
@@ -1217,28 +1326,27 @@ async function updateDisplayinfo(mod, author, space, time, renpy) {
     }
 }
 
-// Sets Home Screen To Main
+/**
+ * Returns To Home Screen
+ * @returns {Promise<void>}
+ */
 
 async function home_main() {
-    // await updateDisplayinfo("Hi " + (await invoke("whois", {})) + "!", "", "", "") -- This could leak the user's full name; deprecated
+    // await updateDisplayInfo("Hi " + (await invoke("whois", {})) + "!", "", "", "") -- This could leak the user's full name; deprecated
     document.getElementById("covertext").innerHTML = ""
-    let username = ""
-    const home_path = await homeDir();
-    if (home_path.includes(":\\Users\\")) {
-        username = home_path.replace("C:\\Users\\", "")
-    } else {
-        username = "Monika"
-    }
-    await updateDisplayinfo(translation.greet + " " + username + "!", "", "", "")
+    let username = await invoke("get_host_name", {})
+    await updateDisplayInfo(translation.greet + " " + username + "!", "", "", "")
 }
 
-// Sets Author Of Mod And Saves To File
+/**
+ * Sets Current Author From Input (id: authinput)
+ * @returns {Promise<void>}
+ */
 
 async function setAuthor() {
     if (currentEntry === "") return;
     document.getElementById("authinput").blur()
     let value = document.getElementById("authinput").value.trimEnd();
-    console.log(value)
     if (value === "") {
         const author = (await getLauncher(currentEntry).functions().getData()).author;
         document.getElementById("authinput").value = author;
@@ -1251,7 +1359,10 @@ async function setAuthor() {
     }
 }
 
-// Keep Alive
+/**
+ * Sends Keep Alive
+ * @returns {Promise<void>}
+ */
 
 async function keepAlive() {
     await invoke('tracker', {
@@ -1260,7 +1371,10 @@ async function keepAlive() {
     });
 }
 
-// Updates Screen With Game Open
+/**
+ * Interval: Update Concurrent Game Info
+ * @returns {Promise<void>}
+ */
 
 async function update_concurrent_game() {
     if (goal_slow_bar > 0) {
@@ -1296,7 +1410,11 @@ async function update_concurrent_game() {
     document.getElementById("pill-time").textContent = time
 }
 
-// Set Loading Bar
+/**
+ * Sets Current Loading Bar Percent
+ * @param {number} percent Percent Of The Bar From 0 to 100
+ * @param {boolean} isSlowMode Should Slowly Lerp To Value
+ */
 
 function setLoadingBar(percent = 0, isSlowMode = false) {
     if (isSlowMode && percent !== 0) {
@@ -1315,7 +1433,10 @@ function setLoadingBar(percent = 0, isSlowMode = false) {
     document.getElementById("loading-bar-fill").style.width = width + "vh";
 }
 
-// Snowflake Animation
+/**
+ * Christmas Snowflake Animation
+ * @returns {Promise<void>}
+ */
 
 async function snowflake() {
     if (!focused) return;
@@ -1345,7 +1466,10 @@ async function snowflake() {
     }, 250 + (speed * 1100))
 }
 
-// Renames Mod
+/**
+ * Rename Mod
+ * @returns {Promise<void>}
+ */
 
 async function rename_mod() {
     if (currentEntry === "") return;
@@ -1381,6 +1505,12 @@ async function rename_mod() {
 
     }
 }
+
+/**
+ * Update Profiles
+ * @param {string} path Path of profiles
+ * @returns {Promise<void>}
+ */
 
 async function update_profiles(path) {
     /*
@@ -1785,7 +1915,13 @@ async function save_profile_name() {
 
 }
 
-// Waits For Webpage To Load
+/**
+ * Called Upon DOM On-Load
+ * @example ```javascript
+ * document.addEventListener('DOMContentLoaded', onLoad);
+ * ```
+ * @returns {Promise<void>}
+ */
 
 async function onLoad() {
     let start = Date.now();
@@ -2607,16 +2743,7 @@ async function onLoad() {
         document.getElementById("report-bg").classList.add("hide")
     })
     document.getElementById("cover-last").addEventListener("mouseup", async (e) => {
-        // if (currentEntry !== "" && e.button === 0) {
-        //     await getLauncher(currentEntry).functions().lastCover();
-        // } else if (e.button === 0) {
-        //     background_cover--;
-        //     if (background_cover < 0) {
-        //         background_cover = covers.length - 1;
-        //     }
-        //     await setCover(background_cover)
-        // }
-        await play(sound_beep)
+        play(sound_beep)
         document.getElementById("image-picker-cancel").textContent = translation.cancel;
         document.getElementById("profile-blur").classList.remove("hide")
         console.log(e.button)

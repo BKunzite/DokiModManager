@@ -1059,6 +1059,10 @@ async fn set_ddlc_zip(path: &str) -> Result<(), bool> {
     Ok(())
 }
 #[tauri::command]
+fn get_host_name() -> String {
+    gethostname::gethostname().into_string().unwrap_or_else(|_| "Monika".to_string())
+}
+#[tauri::command]
 async fn update_exe() {
     println!("Updating Using {}", LATEST_ARTIFACT);
     let resp = get(LATEST_ARTIFACT)
@@ -1239,7 +1243,8 @@ pub async fn run() {
             update_exe,
             tracker,
             rpa_data,
-            extract_game_script
+            extract_game_script,
+            get_host_name
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

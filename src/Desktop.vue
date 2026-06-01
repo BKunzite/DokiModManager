@@ -27,12 +27,14 @@
     </div>
   </div>
   <div class="updates">
-    <div class="update-version" id="desktop-version">Version 1.5.0-release</div>
+    <div class="update-version" id="desktop-version">Version 1.6.0-release</div>
     <div class="update-heaader">Bug Fixes & UI</div>
     <div class="update-text">Polished UI</div>
-    <div class="update-text">Performance Improvements</div>
-    <div class="update-text">Exit Music Redux Fix</div>
-
+    <div class="update-text">Added Cards</div>
+    <div class="update-text">Added Download Indicator</div>
+    <div class="update-update-heaader">Performance Improvements</div>
+    <div class="update-text">Memory Optimization</div>
+    <div class="update-text">Memory Leak Fix</div>
   </div>
   </body>
 </template>

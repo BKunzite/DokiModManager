@@ -1,4 +1,4 @@
-2.6.1-beta@1AjD1
+2.6.0-beta@1B66jD2
 Recommended (More UI Updates & Bug Fixes)
 
 Thank you guys so much for the support recently!
@@ -42,6 +42,8 @@ you don't have to reinstall.
 + File Download Indicator
 + Loading Bar
 + Game Cards
++ Major Memory Optimization
+    Removed A Memory Leak
 / Renaming Mod To An Invalid Name Causing A Crash Fixed
 / Minor UI Errors
 / Code Cleanup

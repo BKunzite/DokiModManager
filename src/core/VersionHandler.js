@@ -1,10 +1,16 @@
-import {createApp} from "vue";
-import Desktop from "../Desktop.vue";
-
-export const CLIENT_VERSION = "2.6.1-beta@1AjD1"
+export const CLIENT_VERSION = "2.6.0-beta@1B66jD2"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/current_ver_beta.txt"
 
 // Gets The Current Client Version From GitHub
+
+/**
+ * Get Latest Version From GitHub
+ * @example ```javascript
+ * let latest_version = await getLatest();
+ * console.log(latest_version); // 1.6.0-release along with release notes
+ * ```
+ * @returns {Promise<string>}
+ */
 
 export async function getLatest() {
     try {
@@ -23,8 +29,21 @@ export async function getLatest() {
     return CLIENT_VERSION;
 }
 
+/**
+ * Returns Whether There Is A Newer Version Available
+ * @example ```javascript
+ * let should_update = await shouldUpdate();
+ * let latest_version_id = (await getLatest()).split("\n")[0];
+ * let should_update_lambda = () => latest_version_id !== CLIENT_VERSION;
+ *
+ * assert(should_update_manic() === should_update);
+ *
+ * console.log(should_update);
+ * ```
+ * @returns {Promise<boolean>}
+ */
+
 export async function shouldUpdate() {
     let newest_version = await getLatest();
-
     return newest_version.split("\n")[0] !== CLIENT_VERSION;
 }
