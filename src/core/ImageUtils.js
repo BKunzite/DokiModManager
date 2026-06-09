@@ -16,7 +16,7 @@ function createURL(contents, fileName) {
  * @example ```javascript
  * let covers = ["cover.png", "cover2.png"];
  * let image = document.createElement("img");
- * let src_url = await getImage(0, covers);
+ * let src_url = await getImage(0, covers); // blob url for "cover.png"
  *
  * image.src = src_url; // Sets Image
  * ```
@@ -32,20 +32,18 @@ export async function getImage(id, covers = []) {
         const contents = await readFile(cover);
         return createURL(contents, cover)
     } else if (typeof (id) === "object") {
-            const base64String = Base64.fromUint8Array(id);
-
-            return `data:image/png;base64,${base64String}`
+        const base64String = Base64.fromUint8Array(id);
+        return `data:image/png;base64,${base64String}`
     } else if (typeof (id) === "string" && id.includes(":")) {
         const contents = await readFile(id);
         return createURL(contents, id)
-
     } else {
         const images = import.meta.glob('../assets/*.{png,jpg,jpeg,svg,json,webp}', {eager: true, as: 'url'});
-            if (cover !== undefined) {
-                return images["../assets/" + cover]
-            } else {
-                return images["../assets/" + id]
-            }
+        if (cover !== undefined) {
+            return images["../assets/" + cover]
+        } else {
+            return images["../assets/" + id]
+        }
     }
     // if (cover !== undefined && cover.includes(":")) {
     //     const contents = await readFile(cover);

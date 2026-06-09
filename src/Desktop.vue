@@ -6,15 +6,15 @@
   </div>
   <div class="icons">
     <div class="icon-holder" id="desktop-launch">
-      <img src="./assets/icon.png" class="icon-image" >
+      <img src="./assets/icon.png" class="icon-image">
       <header class="icon-text">Launch</header>
     </div>
     <div class="icon-holder" id="desktop-update">
-      <img src="./assets/wired-outline-213-arrow-2-rounded-loop-cycle.gif" class="icon-image" >
+      <img src="./assets/wired-outline-213-arrow-2-rounded-loop-cycle.gif" class="icon-image">
       <header class="icon-text">Update</header>
     </div>
     <div class="icon-holder" id="desktop-close2">
-      <img src="./assets/wired-outline-63-home-loop-3d-roll.gif" class="icon-image" >
+      <img src="./assets/wired-outline-63-home-loop-3d-roll.gif" class="icon-image">
       <header class="icon-text">Exit</header>
     </div>
     <div class="console-bg">
@@ -32,9 +32,11 @@
     <div class="update-text">Polished UI</div>
     <div class="update-text">Added Cards</div>
     <div class="update-text">Added Download Indicator</div>
-    <div class="update-update-heaader">Performance Improvements</div>
+    <div class="update-heaader">Performance</div>
     <div class="update-text">Memory Optimization</div>
     <div class="update-text">Memory Leak Fix</div>
+    <div class="update-heaader">Codebase</div>
+    <div class="update-text">Several Cleanups/Refactors</div>
   </div>
   </body>
 </template>

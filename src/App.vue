@@ -21,7 +21,8 @@
     <header class="title"><span class="title-colored">Doki Doki</span> Mod Manager</header>
     <div class="container-a smooth-hide" id="modlist">
       <header class="sidetext sticky"><span id="main-text">Main</span> <span
-          style="font-weight: normal; font-size: 0.75rem; cursor: grab;" id="version">(v1.0.0-release)</span></header>
+          style="font-weight: normal; font-size: 0.75rem; cursor: grab; color: rgb(220,220,220)" id="version">(v1.0.0-release)</span>
+      </header>
       <button class="sidebutton sidebutton2 sticky" id="options"><span
           style="font-family: Icon,serif; padding-right: 10px;">&#61669;</span> <span id="home-text">Home</span>
       </button>
@@ -39,7 +40,7 @@
           id="update-text">Updates (Desktop)</span></button>
 
       <header class="sidetext sticky" id="modcount"><span id="mods-text">Mods</span> <span
-          style="font-weight: normal; font-size: 0.75rem;" id="nummods">0</span></header>
+          style="font-weight: normal; font-size: 0.75rem; color: rgb(220,220,220)" id="nummods">0</span></header>
     </div>
 
     <div class="container-a-border smooth-hide" id="container-boarder"></div>
@@ -68,16 +69,14 @@
       <button class="reset-save hide" id="reset-save" title="Reset Current Profile Data">&#62786;</button>
 
       <button class="delete hide" id="delete" title="Delete Mod">&#60450;</button>
-      <header class="rename-header hide" style="left: 3.5rem;" id="screenshots-header"><span style="font-family: Icon;">&#60996;</span>
-        <span id="screenshot-text">Screenshots</span></header>
+      <header class="rename-header hide" style="left: 3.5rem;" id="screenshots-header"><span style="font-family: Icon;">&#60996;</span> <span id="screenshot-text">Screenshots</span></header>
       <div class="screenshots hide" id="screenshots-parent">
         <div class="subscreenshots" id="screenshots">
 
         </div>
       </div>
 
-      <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62551;</span>
-        <span id="description-text">Description</span></header>
+      <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62551;</span> <span id="description-text">Description</span></header>
       <div class="info hide" id="info"></div>
 
       <div id="optionsmenu" class="hide">
@@ -216,6 +215,7 @@
     <button class="changelog-ignore changelog-button" id="changelog-ignore">Ignore</button>
     <button class="changelog-update changelog-button" id="changelog-update">Update</button>
     <textarea class="changelog-text" id="changelog-text" spellcheck="false" readonly="readonly"></textarea>
+    <div class="changelog-text-gradient"></div>
   </div>
   <div id="pill-contains" class="pill-contains smooth-hide hide">
     <div class="pill-profile" id="pill-profile">

@@ -1,41 +1,63 @@
-2.6.0-beta@1B66jD2
+1.6.0-release
 Recommended (More UI Updates & Bug Fixes)
+PLEASE read the changelog (THIS). There are a lot of changes
+and some tips.
 
 Thank you guys so much for the support recently!
-There have been around 100 new downloads (1000+ total) and
-20-30 more daily users on average,
+There have been around 100 new downloads (1300+ total) and
+30-40 more daily users on average,
 So many in fact that I now have to pay
 for analytics, but it's worth it!
 
-⚠️ THERE HAS BEEN 3 REPORTS OF COMPLETE MOD DATA LOSS.
-WHILST THIS IS NOT A LOT (< 0.1% of users), IT MIGHT STILL BE AN ISSUE!
-THIS ISSUE HAS NOT BEEN TRACED OR REPRODUCED.
-PLEASE MAKE SURE YOU BACKUP YOUR DATA FOR NOW! ️
-IF YOU HAVE HAD THIS HAPPEN TO YOU, PLEASE MAKE A GITHUB ISSUE
-AS THE CURRENT REPORT SYSTEM DOES NOT ALLOW ME TO COMMUNICATE BACK ⚠️
-
+- Notes
+I might make a discord soon, and if I do, I will announce it here.
 Summer break is here! Expect some more updates!
+Mac support might be coming this summer.
 
-Mac support will be coming this summer as
-I plan to get a macbook soon, allowing me to make
-apps for Mac.
+This update might feel a bit slower at first launch after updating,
+but this is due to data being cached. After the first launch,
+it should be significantly faster than before.
 
-FOR REPORT AN ISSUE!
+I've been postponing this update for a while,
+but I wanted to make sure that it was ready for release.
+This fixes many of the issues that were created over the releases.
+
+- FOR REPORT AN ISSUE!
 PLEASE make sure that you report an issue
 only when mods don't launch or something that has to
 do with the mod launcher, not issues about
-the mods themselves.
+the mods themselves. (And please, please be descriptive)
 
-Files For Mods
-Reminder - You can see files for each mod by clicking the
-folder icon next to the play button.
-There is now a button to view files once you launch
-the mod.
+- There have been a lot of changes in the code
+with this update, so if you have any issues,
+please report it!
 
-Also, if you have an issue to report, please
-include a lot of details instead of vague info.
+- Username
+You might notice that with this update,
+the name on the home screen is different from
+what it was before. This change was done
+to support the shift to macOS cleaner whenever
+I get the chance to add it.
+It now uses the name of the computer instead
+of the name of your user folder.
+If you do not like it, you can now click on
+the name to change it.
 
-New Update Screen
+- Files For Mods
+There are two ways to view files for mods:
+
+1. Before you launch the mod:
+    You can click on the file icon to the right of the
+    play button to view the files
+    of the mod in Explorer.
+
+2. After you launch the mod:
+    Focus back onto the mod manager, there
+    should be a pill-shaped button that says "Files".
+    Click on it to view the files of the mod in Explorer.
+
+
+- New Update Screen
 Yes, pressing update will automatically update the manager;
 you don't have to reinstall.
 
@@ -44,6 +66,7 @@ you don't have to reinstall.
 + Game Cards
 + Major Memory Optimization
     Removed A Memory Leak
++ Rename Home Screen Name
 / Renaming Mod To An Invalid Name Causing A Crash Fixed
 / Minor UI Errors
-/ Code Cleanup
+/ Code Refactor

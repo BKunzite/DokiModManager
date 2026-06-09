@@ -37,7 +37,7 @@ mod simple_logger;
 static SCRIPTSRPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
-static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT_BETA/dokimodmanager.exe";
+static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/dokimodmanager.exe";
 static UNRPYC: &str =
     "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
 static UNRPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
@@ -962,7 +962,9 @@ fn rename_dir(app: AppHandle, path: &str, new_name: &str, id: &str) {
         fs::rename(path, new_name).unwrap_or_else(|_| {
             create_dir_all(new_name).unwrap();
             copy_dir_recursive(&dir, &PathBuf::from(new_name)).unwrap();
-            remove_dir_all(dir).unwrap();
+            remove_dir_all(dir).unwrap_or_else(|_| {
+                println!("Failed to remove dir Fully");
+            });
         });
     }
     app.emit(
@@ -1006,6 +1008,7 @@ pub fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
     let mut files: Vec<(PathBuf, PathBuf)> = Vec::new();
 
     for entry in WalkDir::new(src)
+        .skip_hidden(false)
         .parallelism(jwalk::Parallelism::RayonExistingPool {
             pool: std::sync::Arc::new(ThreadPoolBuilder::new().num_threads(8).build().unwrap()),
             busy_timeout: None,

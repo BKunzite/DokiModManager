@@ -1,27 +1,72 @@
-1.5.0-release
-Minor (Fixes & Major Performance Improvements)
+1.6.0-release
+Recommended (More UI Updates & Bug Fixes)
+PLEASE read the changelog (THIS). There are a lot of changes
+and some tips.
 
-* MOD FIX *
-Exit Music Redux 1.1
+Thank you guys so much for the support recently!
+There have been around 100 new downloads (1300+ total) and
+30-40 more daily users on average,
+So many in fact that I now have to pay
+for analytics, but it's worth it!
 
-Better Search
-Background Clamp instead of Scroll
-Readability for Snow Theme
-Major Performance Improvements
-    Clicking on a mod is based on mouse_down not mouse_up
-    Cover Image Picker is now significantly faster
+- Notes
+I might make a discord soon, and if I do, I will announce it here.
+Summer break is here! Expect some more updates!
+Mac support might be coming this summer.
 
-    Mod loading is now parallel and significantly faster
-    Rust backend was rewritten to be faster
+This update might feel a bit slower at first launch after updating,
+but this is due to data being cached. After the first launch,
+it should be significantly faster than before.
 
-Remember, if you have bugs, issues, or questions,
-create a git issue or put a comment under
-the original post!
+I've been postponing this update for a while,
+but I wanted to make sure that it was ready for release.
+This fixes many of the issues that were created over the releases.
 
-Translation errors might exist.
-Pueden existir errores de traducción.
-Des erreurs de traduction peuvent exister.
-可能存在翻譯錯誤。
-翻訳に誤りがある可能性があります。
-Podem existir erros de tradução.
-Возможны ошибки перевода.
+- FOR REPORT AN ISSUE!
+PLEASE make sure that you report an issue
+only when mods don't launch or something that has to
+do with the mod launcher, not issues about
+the mods themselves. (And please, please be descriptive)
+
+- There have been a lot of changes in the code
+with this update, so if you have any issues,
+please report it!
+
+- Username
+You might notice that with this update,
+the name on the home screen is different from
+what it was before. This change was done
+to support the shift to macOS cleaner whenever
+I get the chance to add it.
+It now uses the name of the computer instead
+of the name of your user folder.
+If you do not like it, you can now click on
+the name to change it.
+
+- Files For Mods
+There are two ways to view files for mods:
+
+1. Before you launch the mod:
+    You can click on the file icon to the right of the
+    play button to view the files
+    of the mod in Explorer.
+
+2. After you launch the mod:
+    Focus back onto the mod manager, there
+    should be a pill-shaped button that says "Files".
+    Click on it to view the files of the mod in Explorer.
+
+
+- New Update Screen
+Yes, pressing update will automatically update the manager;
+you don't have to reinstall.
+
++ File Download Indicator
++ Loading Bar
++ Game Cards
++ Major Memory Optimization
+    Removed A Memory Leak
++ Rename Home Screen Name
+/ Renaming Mod To An Invalid Name Causing A Crash Fixed
+/ Minor UI Errors
+/ Code Refactor
