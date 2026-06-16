@@ -1,5 +1,5 @@
-export const CLIENT_VERSION = "1.6.0-release"
-const BRANCH = "current_ver.txt"
+export const CLIENT_VERSION = "4.7.0-beta"
+const BRANCH = "current_ver_beta.txt"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/" + BRANCH
 
 // Gets The Current Client Version From GitHub

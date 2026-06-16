@@ -89,7 +89,7 @@
             style="font-family: Icon,serif; font-size: 8vh">&#60802;</span><br><span
             id="import-image-text">Import Image</span></button>
         <button class="set-source" id="themeselect" style="left: 54.5vw"><img style="width: 4vw" id="chibi"
-                                                                              src="./assets/chibi_monika.png"><br><span
+                                                                              src="./assets/Chibi/chibi_monika.png"><br><span
             id="theme-text">Set Theme</span></button>
 
       </div>

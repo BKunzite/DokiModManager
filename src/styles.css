@@ -7,7 +7,7 @@
 @font-face {
     font-family: "Aller";
     font-weight: normal;
-    src: url("./assets/Aller_Rg.ttf") format("truetype");
+    src: url("assets/Fonts/Aller_Rg.ttf") format("truetype");
     font-style: normal;
     font-display: swap;
 }
@@ -15,14 +15,14 @@
 @font-face {
     font-family: "Aller";
     font-weight: bold;
-    src: url("./assets/Aller_Bd.ttf") format("truetype");
+    src: url("assets/Fonts/Aller_Bd.ttf") format("truetype");
     font-style: normal;
     font-display: swap;
 }
 
 @font-face {
     font-family: "Icon";
-    src: url("./assets/remixicon.ttf") format("truetype");
+    src: url("assets/Fonts/remixicon.ttf") format("truetype");
     font-style: normal;
     font-display: swap;
 }
@@ -1891,12 +1891,12 @@ body {
     overflow: hidden;
     position: absolute;
     display: inline-block;
-    width: calc(71.5vw - 15rem);
+    width: calc(71.5vw - 18rem);
     text-overflow: clip;
     text-align: left;
     text-wrap: nowrap;
     text-shadow: rgb(var(--primary-color)) 0 0 10px;
-    mask-image: linear-gradient(90deg, rgb(255, 255, 255) 390px, rgba(255, 255, 255, 0) 590px);
+    mask-image: linear-gradient(90deg, rgb(255, 255, 255) 390px, rgba(255, 255, 255, 0) 595px);
     line-height: 1;
 }
 
@@ -2288,7 +2288,7 @@ li:not(.sticky):not(.favorite) {
     width: 100px;
     height: 100px;
     top: -100px;
-    background: url("assets/snowflake.svg") center no-repeat;
+    background: url("assets/Other_Theme_Icons/snowflake.svg") center no-repeat;
     background-size: cover;
     transition: top 10s linear;
     pointer-events: none;

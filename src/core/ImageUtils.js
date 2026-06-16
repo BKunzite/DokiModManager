@@ -38,7 +38,7 @@ export async function getImage(id, covers = []) {
         const contents = await readFile(id);
         return createURL(contents, id)
     } else {
-        const images = import.meta.glob('../assets/*.{png,jpg,jpeg,svg,json,webp}', {eager: true, as: 'url'});
+        const images = import.meta.glob('../assets/**/*.{png,jpg,jpeg,svg,json,webp}', {eager: true, as: 'url'});
         if (cover !== undefined) {
             return images["../assets/" + cover]
         } else {

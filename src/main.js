@@ -106,49 +106,49 @@ const CLIENT_THEMES = {
     NATSUKI: {
         primary_color: [254, 179, 188],
         primary_color_saturated: [229, 127, 166],
-        image: "chibi_natsuki.png"
+        image: "Chibi/chibi_natsuki.png"
     },
     MONIKA: {
         primary_color: [128, 239, 128],
         primary_color_saturated: [118, 138, 118],
-        image: "chibi_monika.png"
+        image: "Chibi/chibi_monika.png"
     },
     YURI: {
         primary_color: [108, 69, 130],
         primary_color_saturated: [52, 24, 55],
-        image: "chibi_yuri.png"
+        image: "Chibi/chibi_yuri.png"
 
     },
     SAYORI: {
         primary_color: [227, 138, 131],
         primary_color_saturated: [192, 100, 107],
-        image: "chibi_sayori.webp"
+        image: "Chibi/chibi_sayori.webp"
 
     },
     WINTER: {
         primary_color: [220, 220, 220],
         primary_color_saturated: [120, 120, 120],
-        image: "snowflake.svg"
+        image: "Other_Theme_Icons/snowflake.svg"
     },
     NORD: {
         primary_color: [59, 66, 82],
         primary_color_saturated: [136, 192, 208],
-        image: "crown.png"
+        image: "Other_Theme_Icons/crown.png"
     },
     CREAM: {
         primary_color: [245, 245, 220],
         primary_color_saturated: [210, 105, 30],
-        image: "sour-cream.png"
+        image: "Other_Theme_Icons/sour-cream.png"
     },
     NEON: {
         primary_color: [240, 6, 153],
         primary_color_saturated: [0, 245, 255],
-        image: "neon-planet.png"
+        image: "Other_Theme_Icons/neon-planet.png"
     },
     HACKER: {
         primary_color: [0, 255, 0],
         primary_color_saturated: [0, 0, 0],
-        image: "hacker-svgrepo-com.svg"
+        image: "Other_Theme_Icons/hacker-svgrepo-com.svg"
     }
 }
 
@@ -656,7 +656,6 @@ async function setCover(id) {
 
         img.onload = () => {
             current_bg_max = img.naturalHeight * (1200 / img.naturalWidth);
-            console.log(1200 / img.naturalWidth, img.naturalWidth, img.naturalHeight)
             document.getElementById("bg").style.height = (current_bg_max) + "px";
             document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
             img.remove()
@@ -727,8 +726,8 @@ function createScreenshotDiv(src, entryName, dir, image, entry) {
     newScreenshot.loading = "lazy"
     newScreenshot.classList.add("screenshots-image")
     newScreenshot.src = src;
-    newScreenshot.addEventListener("mouseup", () => {
-        document.getElementById("view-image").src = src;
+    newScreenshot.addEventListener("mouseup", async () => {
+        document.getElementById("view-image").src = await getImage(dir + fileTerminator + image, []);
         document.getElementById("view-image").classList.add("zoom")
         document.getElementById("view-background").classList.remove("hide")
     })
@@ -822,7 +821,7 @@ async function requestDirectory(path) {
             if (finished_mods === mods_to_complete) {
                 setLoadingBar(100)
                 clearInterval(interval)
-                await globLog("finish")
+                await globLog("Finished Loading DDMM - Enjoy!")
                 document.getElementById("loadingsub").textContent = "Loaded Mods | Loading GUI"
 
                 setTimeout(() => {
@@ -2100,6 +2099,14 @@ async function onLoad() {
         document.getElementById("profile-blur").classList.add("hide")
     })
 
+    /**
+     * De-ref image viewer to prevent mem leak
+     */
+
+    document.getElementById("view-image").onload = () => {
+        URL.revokeObjectURL(document.getElementById("view-image").src);
+    }
+
     document.getElementById("cover-up").addEventListener("click", () => {
         if (currentEntry !== "") return;
         bg_offset += 5;
@@ -2798,6 +2805,7 @@ async function onLoad() {
     document.getElementById("modtitle").addEventListener("keydown", async (event) => {
         if (event.key === "Enter") {
             document.getElementById("modtitle").blur()
+            document.getElementById("modtitle").scroll(100)
         }
     })
 
