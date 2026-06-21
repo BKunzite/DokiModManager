@@ -2,6 +2,7 @@
 </script>
 
 <template>
+
   <div id="loader" class="smooth-hide">
 
     <div class="background"></div>
@@ -69,14 +70,16 @@
       <button class="reset-save hide" id="reset-save" title="Reset Current Profile Data">&#62786;</button>
 
       <button class="delete hide" id="delete" title="Delete Mod">&#60450;</button>
-      <header class="rename-header hide" style="left: 3.5rem;" id="screenshots-header"><span style="font-family: Icon;">&#60996;</span> <span id="screenshot-text">Screenshots</span></header>
+      <header class="rename-header hide" style="left: 3.5rem;" id="screenshots-header"><span style="font-family: Icon;">&#60996; </span>
+        <span id="screenshot-text">Screenshots</span></header>
       <div class="screenshots hide" id="screenshots-parent">
         <div class="subscreenshots" id="screenshots">
 
         </div>
       </div>
 
-      <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62551;</span> <span id="description-text">Description</span></header>
+      <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62551; </span>
+        <span id="description-text">Description</span></header>
       <div class="info hide" id="info"></div>
 
       <div id="optionsmenu" class="hide">
@@ -92,6 +95,14 @@
                                                                               src="./assets/Chibi/chibi_monika.png"><br><span
             id="theme-text">Set Theme</span></button>
 
+      </div>
+      <div class="pin-holder pin-active" id="pin-holder">
+        <div class="pin-pinned pin hide" id="pin-pinned">
+
+        </div>
+        <div class="pin-unpinned pin" id="pin-unpinned">
+
+        </div>
       </div>
 
     </div>
@@ -138,9 +149,9 @@
     <button class="minimize" id="min">&#61870;</button>
     <div class="alert smooth-hide hide" id="alert">
       <header class="alert-title">Download Watcher</header>
-      <header class="alert-subtitle">Allow this mod to be extracted and imported?</header>
-      <header class="alert-subtitle2"><span style="font-family: Icon;">&#60792;</span> <span id="alert-name"
-                                                                                             style="position: absolute; font-size: 1rem; padding-top: 10px; padding-left: 10px;">BrokenPoet.zip</span>
+      <header class="alert-subtitle" id="download-watcher">Allow this mod to be extracted and imported?</header>
+      <header class="alert-subtitle2"><span style="font-family: Icon;">&#60807;</span> <span id="alert-name"
+                                                                                             style="font-weight: bold; position: absolute; font-size: 1rem; padding-top: 10px; padding-left: 10px;">BrokenPoet.zip</span>
       </header>
       <header class="alert-subtitle3" id="sub3"><span style="font-family: Icon;">&#60766;</span> Size: <span
           id="alert-size" style="color: rgb(var(--primary-color))">800mb</span><br><span style="font-family: Icon;">&#60901;</span>
@@ -206,6 +217,7 @@
       <button class="report-close" id="report-close">Close</button>
 
     </div>
+
   </div>
   <div id="pill-files" class="pill-files hide">
     <span style="font-family: Icon; color: rgb(var(--primary-color))">&#60792;</span> Open Folder

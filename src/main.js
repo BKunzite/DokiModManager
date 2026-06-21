@@ -26,7 +26,7 @@ import Desktop from "./Desktop.vue";
 // Utils
 import {getImage} from "./core/ImageUtils";
 import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
-import {TRANSLATION_TABLE} from "./core/Translation.js"
+import {TRANSLATION_TABLE, Translation, TRANSLATION_ELEMENT_MAP} from "./core/Translation.js"
 import {Base64} from 'js-base64';
 import {addLauncher, LauncherAbstract, getLauncher, getLaunchers, clearLaunchers} from "./core/Launchers.js"
 
@@ -34,6 +34,7 @@ import {addLauncher, LauncherAbstract, getLauncher, getLaunchers, clearLaunchers
 import sound_beep from './assets/select.ogg';
 import sound_boop from './assets/hover.ogg';
 import sound_click from './assets/pageflip.ogg';
+import dart_sfx from './assets/dart_sfx.mp3';
 
 // Profile Data
 let selected_button = null;
@@ -97,6 +98,7 @@ let part_file = null;
 // --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
 
 // CONSTANTS
+const SHOULD_ESCAPE_HTML_PATTERN = /["&'<>]/;
 
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
@@ -155,9 +157,6 @@ const CLIENT_THEMES = {
 const HEART_EMPTY = "&#62920;";
 const HEART_FULL = "&#62919;";
 
-let translation_lan = ""
-let translation = TRANSLATION_TABLE["en"];
-
 /**
  * Initialize Translations
  *
@@ -167,63 +166,39 @@ let translation = TRANSLATION_TABLE["en"];
 
 function loadTranslation(lang, first) {
     if (TRANSLATION_TABLE[lang] === undefined) lang = "en";
-    if (translation_lan !== lang) {
+    if (Translation.getLanguage() !== lang) {
         invoke('tracker', {
             event: 'language',
             props: {name: lang}
         }).then();
     }
-    translation = TRANSLATION_TABLE[lang] || TRANSLATION_TABLE["en"];
-    translation_lan = lang;
 
-    const elementMap = [
-        {id: "main-text", key: "main", type: "textContent"},
-        {id: "search", key: "search", type: "placeholder"},
-        {id: "source-text", key: "install", type: "textContent"},
-        {id: "import-text", key: "import", type: "textContent"},
-        {id: "import-image-text", key: "import_image", type: "textContent"},
-        {id: "description-text", key: "description", type: "textContent"},
-        {id: "screenshot-text", key: "screenshot", type: "textContent"},
-        {id: "download", key: "yes", type: "textContent"},
-        {id: "mods-text", key: "mods", type: "textContent"},
-        {id: "cancel", key: "no", type: "textContent"},
-        {id: "theme-text", key: "theme", type: "textContent"},
-        {id: "update-text", key: "update-text", type: "textContent"},
-        {id: "play", key: "play", type: "textContent"},
-        {id: "home-text", key: "home", type: "textContent"},
-        {id: "delete", key: "delete-mod", type: "title"},
-        {id: "reset-save", key: "reset-data", type: "title"},
-        {id: "report-textc", key: "send-report", type: "placeholder"},
-        {id: "report-text", key: "send-report", type: "textContent"},
-        {id: "report-title", key: "send-report", type: "textContent"},
-        {id: "report-send", key: "send", type: "textContent"},
-        {id: "report-close", key: "cancel", type: "textContent"},
-    ];
+    Translation.setLanguage(lang);
 
     if (!tutorial_complete) {
-        document.getElementById("tutorial-title").textContent = tutorial_step === 0 ? translation["tutorial-text"] : translation.tutorial[tutorial_step].title;
-        document.getElementById("tutorial-context").textContent = tutorial_step === 0 ? translation["tutorial-context"] : translation.tutorial[tutorial_step].context;
+        document.getElementById("tutorial-title").textContent = tutorial_step === 0 ? Translation.of("tutorial-text") : Translation.sub("tutorial").of(tutorial_step).title;
+        document.getElementById("tutorial-context").textContent = tutorial_step === 0 ? Translation.of("tutorial-context") : Translation.sub("tutorial").of(tutorial_step).context;
         if (tutorial_pointer == null) {
             if (tutorial_step === 8) {
-                document.getElementById("tutorial-no").textContent = translation.end
+                document.getElementById("tutorial-no").textContent = Translation.of("end")
             } else {
-                document.getElementById("tutorial").textContent = translation.next
-                document.getElementById("tutorial-no").textContent = translation.cancel
+                document.getElementById("tutorial").textContent = Translation.of("next")
+                document.getElementById("tutorial-no").textContent = Translation.of("cancel")
             }
         } else {
-            document.getElementById("tutorial").textContent = translation.yes
-            document.getElementById("tutorial-no").textContent = translation.no
+            document.getElementById("tutorial").textContent = Translation.of("yes")
+            document.getElementById("tutorial-no").textContent = Translation.of("no")
         }
     }
 
-    for (let i = 0; i < elementMap.length; i++) {
-        const element = document.getElementById(elementMap[i].id);
+    for (let i = 0; i < TRANSLATION_ELEMENT_MAP.length; i++) {
+        const element = document.getElementById(TRANSLATION_ELEMENT_MAP[i].id);
         if (element) {
-            element[elementMap[i]["type"]] = translation[elementMap[i].key];
+            element[TRANSLATION_ELEMENT_MAP[i]["type"]] = Translation.of(TRANSLATION_ELEMENT_MAP[i].key);
         }
     }
 
-    getImage(translation["data"]["flag"], {}).then(url => {
+    getImage(Translation.sub("data").of("flag"), {}).then(url => {
         document.getElementById("language-flag").src = url
     });
     document.getElementById("language-text").textContent = lang;
@@ -249,8 +224,8 @@ function preloadImage(src) {
         const img = new Image();
         img.decoding = 'async';
         img.src = await getImage(src, covers);
-        img.onload = () => resolve(img);
         img.onerror = reject;
+        resolve(img);
     });
 }
 
@@ -286,6 +261,8 @@ document.oncontextmenu = document.body.oncontextmenu = function () {
  */
 
 async function sync_covers() {
+    const imageLocation = terminatePath("\\store\\images")
+
     covers = [
         "house.webp",
         "wallpapers.png",
@@ -294,11 +271,13 @@ async function sync_covers() {
         "sayori.jpg",
         "monika.png"
     ]
+
     preload_covers = {}
+
     for (const cover of covers) {
         preload_covers[cover] = await preloadImage(cover);
     }
-    const imageLocation = terminatePath("\\store\\images")
+
     if (await isDir(local_path + imageLocation)) {
         for (const image of await readDir(local_path + imageLocation)) {
             if (image.name.endsWith(".png") || image.name.endsWith(".jpg") || image.name.endsWith(".jpeg") || image.name.endsWith(".webp")) {
@@ -374,7 +353,7 @@ async function loadConfig(path) {
                     }
                     if (hasConfig2) {
                         let kconfigData = {
-                            author: "unknown",
+                            author: Translation.of("unknown"),
                             time: 0,
                             size: 0,
                             favorite: false,
@@ -401,8 +380,8 @@ async function loadConfig(path) {
             document.getElementById("changelog").classList.remove("hide")
             document.getElementById("changelog-title").textContent = "Critical Error | Cannot Load Config"
             document.getElementById("changelog-text").textContent = "File: " + configPath + "\n\n" + e + "\n\nData:\n" + (await readTextFile(configPath)).split("\n").map((line, index) => index + "|  " + line).join("\n")
-            document.getElementById("changelog-update").textContent = translation["update"]
-            document.getElementById("changelog-ignore").textContent = translation.end
+            document.getElementById("changelog-update").textContent = Translation.of("update")
+            document.getElementById("changelog-ignore").textContent = Translation.of("end")
             document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
 
             let response = await new Promise(resolve => {
@@ -446,9 +425,10 @@ async function loadConfig(path) {
     total_time = configData.totalTime;
     background_cover = configData.coverId;
     tutorial_complete = configData.tutorial;
-    translation_lan = configData.language;
     bg_offset = configData.bg_offset;
     user_name = configData.user_name;
+
+    Translation.setLanguage(configData.language);
 
     if (tutorial_complete) {
         document.getElementById("warn").remove()
@@ -466,22 +446,27 @@ async function loadConfig(path) {
 async function update_cover_images(first_time) {
     await sync_covers()
     const images = document.getElementById("images")
-    for (const child of document.querySelectorAll(".image-picker-cover")) {
-        child.remove()
+
+    if (!first_time) {
+        for (const child of document.querySelectorAll(".image-picker-cover")) {
+            child.remove()
+        }
     }
+
     for (const cover in preload_covers) {
         let cover_img = preload_covers[cover];
+        let x = 1;
+        let y = 1;
+        let aspect = cover_img.naturalWidth / cover_img.naturalHeight;
+
         const div = document.createElement("div");
         const img = cover_img.cloneNode(true);
+
         div.classList.add("image-picker-cover");
         img.alt = covers.indexOf(cover) + " | " + cover
         img.loading = "lazy";
         img.decoding = "async";
 
-        let x = 1;
-        let y = 1;
-
-        let aspect = cover_img.naturalWidth / cover_img.naturalHeight;
         if (aspect > 1.6) {
             x = 2;
             img.classList.add("image-picker-cover-img");
@@ -510,7 +495,6 @@ async function update_cover_images(first_time) {
             play(sound_beep)
             document.getElementById("profile-blur").classList.add("hide")
             document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
-
         })
 
         div.classList.add("image-" + x + "x" + y);
@@ -518,8 +502,10 @@ async function update_cover_images(first_time) {
         document.getElementById("image-picker-bg").appendChild(div);
     }
 
-    for (const cover of document.querySelectorAll(".covers-cover")) {
-        cover.remove()
+    if (!first_time) {
+        for (const cover of document.querySelectorAll(".covers-cover")) {
+            cover.remove()
+        }
     }
 
     for (let i = covers.length - 1; i >= 0; i--) {
@@ -540,7 +526,6 @@ async function update_cover_images(first_time) {
         })
 
         if (i > 5) {
-
             cover_text.addEventListener("mouseup", () => {
                 remove(covers[i]);
                 covers.splice(i, 1);
@@ -576,7 +561,7 @@ async function saveConfig() {
     localConfig.config.totalTime = total_time;
     localConfig.config.version = CLIENT_VERSION;
     localConfig.config.tutorial = tutorial_complete;
-    localConfig.config.language = translation_lan;
+    localConfig.config.language = Translation.getLanguage();
     localConfig.config.bg_offset = bg_offset;
     localConfig.config.user_name = user_name;
     await writeTextFile(localConfig.path, JSON.stringify(localConfig.config, null, "\t"))
@@ -802,7 +787,6 @@ async function requestDirectory(path) {
         let finished = []
 
         for (const entry of files) {
-            document.getElementById("loadingsub").textContent = translation.loading + " " + entry.name.replace("ddlc-", "").replace("ddlc", "").replace("-", "")
             if (entry.isDirectory) {
                 mods_to_complete++;
                 add_mod(entry.name)
@@ -893,15 +877,18 @@ async function add_mod(name) {
     let hasConfig = false;
     let configPath = selectedPath + fileTerminator + name + fileTerminator + ".ddmm.config.json";
     let configData = {
-        author: "unknown",
+        author: Translation.of("unknown"),
         time: 0,
         size: 0,
         favorite: false,
         coverId: 0,
-        renpy: "",
-        executable: "",
-        credits: ""
+        renpy: undefined,
+        executable: undefined,
+        credits: undefined,
+        pinned: false,
+        last_played: -1
     }
+
     let gameExePath;
     let modCredits;
     let saveModData = async () => {
@@ -919,7 +906,10 @@ async function add_mod(name) {
     if (hasConfig) {
         let contents = await readTextFile(configPath);
         try {
-            configData = JSON.parse(contents);
+            let c = JSON.parse(contents);
+            for (const key in c) {
+                configData[key] = c[key];
+            }
         } catch (e) {
             await globWarn("Failed To Parse Config File For Mod: " + configPath)
             hasConfig = false;
@@ -938,6 +928,7 @@ async function add_mod(name) {
             if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && gameExePath === undefined) {
                 gameExePath = localEntry.name;
             }
+
             if (localEntry.name.toLowerCase().includes("credit") && modCredits === undefined) {
                 modCredits = await readTextFile(dir + fileTerminator + localEntry.name);
             }
@@ -972,6 +963,7 @@ async function add_mod(name) {
     const sidetext = document.createElement("header");
     const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
     const favoriteText = "<span style=\"font-family: Icon,serif\">&#60938;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
+    const pinnedText = "<span style=\"font-family: Icon,serif\">&#61496;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
 
     let launch_time = Date.now();
     sidetext.classList.add("sidebutton");
@@ -979,9 +971,19 @@ async function add_mod(name) {
 
     if (configData.favorite) {
         sidetext.classList.add("favorite")
+    } else {
+        sidetext.classList.remove("favorite")
     }
 
-    if (configData.favorite) {
+    if (configData.pinned) {
+        sidetext.classList.add("pinned")
+    } else {
+        sidetext.classList.remove("pinned")
+    }
+
+    if (configData.pinned) {
+        sidetext.innerHTML = pinnedText
+    } else if (configData.favorite) {
         sidetext.innerHTML = favoriteText
     } else {
         sidetext.innerHTML = normalText
@@ -1024,6 +1026,36 @@ async function add_mod(name) {
         getName: async () => {
             return name
         },
+        setPinned: async (b) => {
+            if (b === undefined) {
+                if (configData.pinned === undefined || configData.pinned == null) {
+                    b = false
+                } else {
+                    b = !configData.pinned;
+                }
+            }
+
+            configData.pinned = b;
+            if (configData.pinned) {
+                sidetext.innerHTML = pinnedText
+            } else if (configData.favorite) {
+                sidetext.innerHTML = favoriteText
+            } else {
+                sidetext.innerHTML = normalText
+            }
+
+            if (configData.pinned) {
+                play(dart_sfx)
+            }
+
+            await set_pin(configData.pinned)
+            if (configData.pinned) {
+                sidetext.classList.add("pinned")
+            } else {
+                sidetext.classList.remove("pinned")
+            }
+            await saveModData();
+        },
         open: async () => {
             await invoke('tracker', {
                 event: 'game_launch',
@@ -1049,7 +1081,7 @@ async function add_mod(name) {
                     await invoke("launch", {
                         path: dir + fileTerminator + gameExePath,
                         id: name,
-                        renpy: configData.renpy || "Unknown"
+                        renpy: configData.renpy || Translation.of("unknown")
                     })
                 }
             }, 1000)
@@ -1072,7 +1104,9 @@ async function add_mod(name) {
         onFavorite: async () => {
             configData.favorite = !configData.favorite;
             sidetext.classList.toggle("favorite", configData.favorite)
-            if (configData.favorite) {
+            if (configData.pinned) {
+                sidetext.innerHTML = pinnedText
+            } else if (configData.favorite) {
                 sidetext.innerHTML = favoriteText
             } else {
                 sidetext.innerHTML = normalText
@@ -1091,13 +1125,14 @@ async function add_mod(name) {
                 event: 'game_close',
                 props: {
                     mod: name,
-                    length: Math.floor(playTime / 3600000) + "h " + (Math.floor(playTime / 60000) % 60) + "m " + (Math.floor(playTime / 1000) % 60) + "s"
+                    length: Math.floor(playTime / 3600000) + Translation.of("h") + " " + (Math.floor(playTime / 60000) % 60) + Translation.of("m") + " " + (Math.floor(playTime / 1000) % 60) + "s"
                 }
             });
             total_time += playTime;
             configData.time += playTime;
             const data = await metadata(selectedPath + fileTerminator + name);
             configData.size = data.size;
+            configData.last_played = Date.now();
             document.getElementById("pill").classList.add("hide")
             document.getElementById("pill-files").classList.add("hide")
             document.getElementById("pill-contains").classList.add("hide")
@@ -1109,6 +1144,13 @@ async function add_mod(name) {
         leftClick: async () => {
             currentEntry = name;
             await setCover(configData.coverId);
+            await set_pin(configData.pinned);
+
+            const pin_holder = document.getElementById("pin-holder");
+            if (pin_holder.style.top !== "") {
+                pin_holder.style.removeProperty("left")
+                pin_holder.style.removeProperty("top")
+            }
 
             const screenshotWanderer = await readDir(dir);
 
@@ -1145,7 +1187,7 @@ async function add_mod(name) {
             }
 
             if (renpy === undefined) {
-                renpy = "Unknown (Try Reinstalling; If its still broken, please create a git issue on this)";
+                renpy = Translation.of("unknown") + " (Try Reinstalling; If its still broken, please create a git issue on this)";
             }
 
             renpy = name + "<br>Renpy: " + htmlEscape(renpy) + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith("DDLC.exe")) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (modCredits !== undefined ? modCredits : "None Found!");
@@ -1153,20 +1195,37 @@ async function add_mod(name) {
             play(sound_boop)
             const min = Math.floor(configData.time / 60000);
 
+            const msSinceLastPlayed = Date.now() - configData.last_played;
+            let lastPlayed = Translation.of("never");
+
+            if (configData.last_played !== -1) {
+                let date = new Date(configData.last_played).toLocaleString();
+                if (msSinceLastPlayed < 6000) {
+                    lastPlayed = Translation.of("just-now");
+                } else if (msSinceLastPlayed < 86_400_000) {
+                    const is_prefix = Translation.getLanguage() === "es" || Translation.getLanguage() === "fr";
+                    lastPlayed = (is_prefix ? Translation.of("ago") + " " : "") + (msSinceLastPlayed >= 3_600_000 ? Math.floor(msSinceLastPlayed / 3_600_000) + Translation.of("h") + " " : "") + (Math.floor(msSinceLastPlayed / 60_000) % 60) + Translation.of("m") + " " + (!is_prefix ? Translation.of("ago") : "");
+                } else if (msSinceLastPlayed < 172_800_000) {
+                    lastPlayed = Translation.of("yesterday");
+                } else if (msSinceLastPlayed) {
+                    lastPlayed = date
+                }
+            }
+
             if (configData.size === 0) {
-                updateDisplayInfo(name, configData.author, "Reading...", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then(() => {
+                updateDisplayInfo(name, configData.author, "Reading...", Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), renpy, "Never").then(() => {
                 })
                 setTimeout(async () => {
                     let data = await metadata(selectedPath + fileTerminator + name);
                     configData.size = data.size;
                     if (currentEntry === name) {
-                        updateDisplayInfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then(() => {
+                        updateDisplayInfo(name, configData.author, (configData.size / 1048600) > 1000 ? (Math.floor(configData.size / 1_048_600_000) + " GB") : (Math.floor(configData.size / 1048600) + " MB"), Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), renpy, lastPlayed).then(() => {
                         })
                     }
                     data = null
                 }, 0)
             } else {
-                updateDisplayInfo(name, configData.author, Math.floor(configData.size / 1048600) + " MB", Math.floor(min / 60) + "h " + Math.floor(min % 60) + "m", renpy).then(() => {
+                updateDisplayInfo(name, configData.author, (configData.size / 1048600) > 1000 ? (Math.round(configData.size / 1_048_600_00) / 10 + " GB") : (Math.floor(configData.size / 1048600) + " MB"), Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), renpy, lastPlayed).then(() => {
                 })
             }
 
@@ -1178,10 +1237,9 @@ async function add_mod(name) {
                 document.getElementById("setinfo-header").style.left = "16rem";
             } else {
                 document.getElementById("screenshots").scrollLeft = 0;
-
                 document.getElementById("screenshots").onscroll = async () => {
                     document.getElementById("screenshots").onscroll = null
-                    // await Promise.all(image_loader)
+
                     for (const image_url of images) {
                         let imageS = createScreenshotDiv(await getImage(dir + fileTerminator + image_url, []), name, dir, image_url, name)
                         document.getElementById("screenshots").appendChild(
@@ -1196,6 +1254,7 @@ async function add_mod(name) {
 
                     }
                 }
+
                 document.getElementById("screenshots-header").classList.remove("hide")
                 document.getElementById("screenshots-parent").classList.remove("hide")
                 document.getElementById("info").classList.remove("expanded")
@@ -1226,7 +1285,34 @@ async function add_mod(name) {
  */
 
 function htmlEscape(text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    if (SHOULD_ESCAPE_HTML_PATTERN.exec(text) === null) {
+        return text;
+    }
+
+    let string = ""
+    for (const char of text) {
+        switch (char) {
+            case "&":
+                string += "&amp;";
+                break;
+            case "<":
+                string += "&lt;";
+                break;
+            case ">":
+                string += "&gt;";
+                break;
+            case "\"":
+                string += "&quot;";
+                break;
+            case "'":
+                string += "&#039;";
+                break;
+            default:
+                string += char;
+                break;
+        }
+    }
+    return string;
 }
 
 /**
@@ -1350,10 +1436,13 @@ function getTextWidth(text, font) {
  * @param {string} space Storage Space Taken
  * @param {string} time Time Played
  * @param {string} renpy Ren'PY Version/Description
+ * @param {string} lastTime Last Time Played
  * @returns {Promise<void>}
  */
 
-async function updateDisplayInfo(mod, author, space, time, renpy) {
+async function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
+    document.getElementById("pin-holder").classList.remove("hide")
+
     document.getElementById("modtitle").value = mod.replace("ddlc-", "").replace("ddlc", "").replace("-", " ")
     document.getElementById("modtitle").classList.remove("hide");
     document.getElementById("modinfo").classList.remove("hide");
@@ -1379,7 +1468,7 @@ async function updateDisplayInfo(mod, author, space, time, renpy) {
         document.getElementById("optionsmenu").classList.add("hide");
         document.getElementById("cover-up").classList.add("hide");
         document.getElementById("cover-down").classList.add("hide");
-        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60766;</span>" + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61973;</span> " + time;
+        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60755;</span> " + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61966;</span> " + time + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61974;</span> " + lastTime;
         document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
         if (space !== "Reading...") {
             document.getElementById("authinput").addEventListener("input", async (e) => {
@@ -1415,7 +1504,7 @@ async function updateDisplayInfo(mod, author, space, time, renpy) {
         document.getElementById("cover-up").classList.remove("hide");
         document.getElementById("cover-down").classList.remove("hide");
         document.getElementById("optionsmenu").classList.remove("hide");
-        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#60899;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61973;</span> " + Math.floor(min / 60) + "h " + (min % 60) + "m";
+        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61966;</span> " + Math.floor(min / 60) + Translation.of("h") + " " + (min % 60) + Translation.of("m");
     }
 }
 
@@ -1427,7 +1516,9 @@ async function updateDisplayInfo(mod, author, space, time, renpy) {
 async function home_main() {
     // await updateDisplayInfo("Hi " + (await invoke("whois", {})) + "!", "", "", "") -- This could leak the user's full name; deprecated
     document.getElementById("covertext").innerHTML = ""
-    await updateDisplayInfo(translation.greet + " " + user_name + "!", "", "", "", "")
+    await set_pin(false)
+    document.getElementById("pin-holder").classList.add("hide")
+    await updateDisplayInfo(Translation.of("greet") + " " + user_name + "!", "", "", "", "", "")
 }
 
 /**
@@ -1783,6 +1874,13 @@ async function load_data(self_data, upstream) {
     }
 }
 
+async function set_pin(pinned) {
+    document.getElementById("pin-holder").classList.toggle("pin-active", !pinned)
+    document.getElementById("pin-pinned").classList.toggle("hide", !pinned)
+    document.getElementById("pin-unpinned").classList.toggle("pin-unpinned-heart", !pinned)
+    document.getElementById("pin-unpinned").classList.toggle("hide", pinned)
+}
+
 async function delete_dir(path) {
     if (!await isExist(path)) {
         console.log("Path does not exist: " + path)
@@ -1855,7 +1953,7 @@ function create_profile(profile, position) {
 
     b_select.addEventListener("click", (_) => {
         if (profile === "Default") {
-            confirm(translation["error-profile_setname"])
+            confirm(Translation.of("error-profile_setname"))
             return;
         }
         rename_target = background.id.replace("profile-", "");
@@ -1886,7 +1984,7 @@ function create_profile(profile, position) {
 
     b_delete.addEventListener("mousedown", async (_) => {
         if (profile === "Default") {
-            confirm(translation["error-profile_delete"])
+            confirm(Translation.of("error-profile_delete"))
             return;
         }
         await remove(profile_path + fileTerminator + background.id.replace("profile-", "") + ".ddmm.profile.json");
@@ -2323,7 +2421,7 @@ async function onLoad() {
             title: 'Select DDLC Zip File'
         });
         try {
-            document.getElementById("loadingsub").textContent = translation.importing_zip
+            document.getElementById("loadingsub").textContent = Translation.of("importing_zip")
             document.getElementById("select-zip").classList.add("hide")
             await invoke("set_ddlc_zip", {
                 path: p
@@ -2331,7 +2429,7 @@ async function onLoad() {
 
         } catch (Exception) {
             document.getElementById("select-zip").classList.remove("hide")
-            document.getElementById("loadingsub").textContent = translation.select_zip
+            document.getElementById("loadingsub").textContent = Translation.of("select_zip")
         }
     })
 
@@ -2448,13 +2546,13 @@ async function onLoad() {
                     //     "Nova atualização disponível! (Pressione 'Ok' para atualizar)\n" +
                     //     ")\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
 
-                    loadTranslation(translation_lan, true)
+                    loadTranslation(Translation.getLanguage(), true)
 
                     document.getElementById("changelog").classList.remove("hide")
                     document.getElementById("changelog-title").textContent = "New Update! | " + newest_version.split("\n")[0]
                     document.getElementById("changelog-text").textContent = newest_version.split("\n").slice(1).join("\n")
-                    document.getElementById("changelog-update").textContent = translation.update
-                    document.getElementById("changelog-ignore").textContent = translation.ignore
+                    document.getElementById("changelog-update").textContent = Translation.of("update")
+                    document.getElementById("changelog-ignore").textContent = Translation.of("ignore")
                     document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
                     let response = await new Promise(resolve => {
                         document.getElementById("changelog-update").addEventListener("mouseup", async () => {
@@ -2484,7 +2582,7 @@ async function onLoad() {
                     document.getElementById("changelog-title").textContent = "Update Complete! | " + newest_version.split("\n")[0]
                     document.getElementById("changelog-text").textContent = newest_version.split("\n").slice(1).join("\n")
                     document.getElementById("changelog-ignore").classList.add("hide")
-                    document.getElementById("changelog-update").textContent = translation.ignore
+                    document.getElementById("changelog-update").textContent = Translation.of("ignore")
                     document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
                     await new Promise(resolve => {
                         document.getElementById("changelog-update").addEventListener("mouseup", async () => {
@@ -2501,13 +2599,13 @@ async function onLoad() {
 
             await globLog("Language (" + (Date.now() - start) + "ms).")
 
-            if (translation_lan === "") {
+            if (Translation.getLanguage() === "") {
                 document.getElementById("language-list").classList.remove("language-list-hide")
                 document.getElementById("language-list").classList.add("language-list-force")
                 document.getElementById("loader").appendChild(document.getElementById("language-list"))
                 let interval;
                 await new Promise(resolve => interval = setInterval(() => {
-                    if (translation_lan !== "") {
+                    if (Translation.getLanguage() !== "") {
                         resolve()
                         clearInterval(interval)
                     }
@@ -2517,13 +2615,13 @@ async function onLoad() {
                 document.getElementById("language-list").classList.add("language-list-hide")
                 document.getElementById("language-list").classList.remove("language-list-force")
             } else {
-                loadTranslation(translation_lan, true)
+                loadTranslation(Translation.getLanguage(), true)
             }
 
             await globLog("DDLC Check (" + (Date.now() - start) + "ms).")
 
             if (!await isDir("./store/ddlc")) {
-                document.getElementById("loadingsub").textContent = translation.select_zip
+                document.getElementById("loadingsub").textContent = Translation.of("select_zip")
                 document.getElementById("select-zip").classList.remove("hide")
                 let listener = async () => {
                     await openUrl("https://ddlc.moe")
@@ -2556,16 +2654,16 @@ async function onLoad() {
                             if ((path.endsWith(".zip") || path.endsWith(".rar") || path.endsWith(".rpa")) && await isExist(path)) {
                                 part_file_size = 0
                                 part_file = null
-                                document.getElementById("install-info").classList.add("hide")
 
+                                document.getElementById("install-info").classList.add("hide")
                                 document.getElementById("alert").classList.remove("hide")
+
                                 showContainers(false)
                                 alert_path = path
                                 const split = path.split(fileTerminator);
                                 const data = await metadata(path);
 
                                 document.getElementById("alert-size").innerText = Math.floor(data.size / 1048600).toString() + "mb";
-
                                 document.getElementById("alert-pth").innerText = payloadPath;
                                 document.getElementById("alert-name").textContent = split[split.length - 1].split(".")[0];
                             } else if ((path.includes(".zip") || path.includes(".rar") || path.includes(".rpa")) && path.endsWith(".crdownload") && await isExist(path)) {
@@ -2581,16 +2679,12 @@ async function onLoad() {
 
                                     let mbs = (part_file_size - old_size) / (dT * 1000);
                                     document.getElementById("install-info").textContent = "Downloading " + part_file.split(fileTerminator).pop().split(".").reverse().pop() + " at " + (Math.round(mbs * 100) / 100) + "mb/s"
-                                    console.log("New Download Frame! " + path)
-                                    console.log(part_file_size + " at " + mbs)
                                 } else {
                                     part_file = path;
                                     last_change = Date.now();
                                     part_file_size = (await metadata(path)).size
                                     document.getElementById("install-info").textContent = "Downloading " + part_file.split(fileTerminator).pop().split(".").reverse().pop()
                                     document.getElementById("install-info").classList.remove("hide")
-                                    console.log("New Download! " + path)
-                                    console.log(part_file_size)
                                 }
                             }
                         }, 1000)
@@ -2623,7 +2717,7 @@ async function onLoad() {
 
     listen('substring', async (event) => {
         if (event.payload.text.startsWith("Extracting")) {
-            document.getElementById("loadingsub").textContent = event.payload.text.replace("Extracting", translation.extracting)
+            document.getElementById("loadingsub").textContent = event.payload.text.replace("Extracting", Translation.of("extracting"))
         } else {
             document.getElementById("loadingsub").textContent = event.payload.text
         }
@@ -2815,7 +2909,7 @@ async function onLoad() {
             await rename_mod()
         } else {
             const name = document.getElementById("modtitle").value;
-            if (name.includes(translation["greet"]) || name === "") {
+            if (name.includes(Translation.of("greet")) || name === "") {
                 await home_main()
                 return;
             }
@@ -2859,11 +2953,9 @@ async function onLoad() {
     })
     document.getElementById("cover-last").addEventListener("mouseup", async (e) => {
         play(sound_beep)
-        document.getElementById("image-picker-cancel").textContent = translation.cancel;
+        document.getElementById("image-picker-cancel").textContent = Translation.of("cancel");
         document.getElementById("profile-blur").classList.remove("hide")
-        console.log(e.button)
         document.getElementById("image-picker-bg").classList.add("image-picker-visible")
-        console.log(document.getElementById("image-picker-bg").classList)
     })
 
     document.getElementById("close").addEventListener("mouseup", async () => {
@@ -2891,7 +2983,7 @@ async function onLoad() {
             for (const index in getLaunchers()) {
                 const element = getLauncher(index).functions();
                 element.item.classList.add("hide2");
-                element.item.style.order = element.item.classList.contains("favorite") ? "0" : "1";
+                element.item.style.removeProperty("order")
             }
             setTimeout(() => {
                 for (const index in getLaunchers()) {
@@ -2935,6 +3027,9 @@ async function onLoad() {
                 if (element.isFavorite) {
                     index--;
                 }
+                if (element.isPinned) {
+                    index--;
+                }
                 if (lowerName.includes(lowerTarget)) {
                     index -= lowerTarget.length;
                 }
@@ -2948,7 +3043,7 @@ async function onLoad() {
     })
 
     document.getElementById("english").addEventListener("mouseup", async () => {
-        let old = translation_lan;
+        let old = Translation.getLanguage();
         loadTranslation("en", (old === ""))
         if (old !== "") {
             saveConfig().then()
@@ -2956,7 +3051,7 @@ async function onLoad() {
     })
 
     document.getElementById("russian").addEventListener("mouseup", async () => {
-        let old = translation_lan;
+        let old = Translation.getLanguage();
         loadTranslation("ru", (old === ""))
         if (old !== "") {
             saveConfig().then()
@@ -2964,7 +3059,7 @@ async function onLoad() {
     })
 
     document.getElementById("pt").addEventListener("mouseup", async () => {
-        let old = translation_lan;
+        let old = Translation.getLanguage();
         loadTranslation("pt", (old === ""))
         if (old !== "") {
             saveConfig().then()
@@ -2972,7 +3067,7 @@ async function onLoad() {
     })
 
     document.getElementById("spanish").addEventListener("mouseup", async () => {
-        let old = translation_lan;
+        let old = Translation.getLanguage();
         loadTranslation("es", (old === ""))
         if (old !== "") {
             saveConfig().then()
@@ -2980,7 +3075,7 @@ async function onLoad() {
     })
 
     document.getElementById("japan").addEventListener("mouseup", async () => {
-        let old = translation_lan;
+        let old = Translation.getLanguage();
         loadTranslation("jp", (old === ""))
         if (old !== "") {
             saveConfig().then()
@@ -2988,7 +3083,7 @@ async function onLoad() {
     })
 
     document.getElementById("french").addEventListener("mouseup", async () => {
-        let old = translation_lan;
+        let old = Translation.getLanguage();
         loadTranslation("fr", (old === ""))
         if (old !== "") {
             saveConfig().then()
@@ -2996,7 +3091,7 @@ async function onLoad() {
     })
 
     document.getElementById("cantonese").addEventListener("mouseup", async () => {
-        let old = translation_lan;
+        let old = Translation.getLanguage();
         loadTranslation("zh-HK", (old === ""))
         if (old !== "") {
             saveConfig().then()
@@ -3019,8 +3114,8 @@ async function onLoad() {
 
     document.getElementById("tutorial").addEventListener("mouseup", async () => {
         document.getElementById("warn").classList.add("tutorial-active")
-        document.getElementById("tutorial").textContent = translation.next
-        document.getElementById("tutorial-no").textContent = translation.cancel
+        document.getElementById("tutorial").textContent = Translation.of("next")
+        document.getElementById("tutorial-no").textContent = Translation.of("cancel")
         if (tutorial_step >= 4 && currentEntry === "") {
             if (tutorial_pointer == null) {
                 tutorial_pointer = document.createElement("div")
@@ -3032,16 +3127,16 @@ async function onLoad() {
             tutorial_pointer.style.borderRadius = "10px"
             tutorial_pointer.style.top = (document.getElementById("modlist").getBoundingClientRect().y + (document.getElementById("modlist").getBoundingClientRect().height / 2)) + "px"
             tutorial_pointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width / 2)) + "px"
-            document.getElementById("tutorial-title").textContent = translation.tutorial[4].title;
-            document.getElementById("tutorial-context").textContent = translation.tutorial[4].context;
-            confirm(translation.tutorial.select)
+            document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(4).of("title");
+            document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(4).of("context");
+            confirm(Translation.sub("tutorial").of("select"))
             return
         }
         tutorial_step++;
         switch (tutorial_step) {
             case 1:
-                document.getElementById("tutorial-title").textContent = translation.tutorial[1].title;
-                document.getElementById("tutorial-context").textContent = translation.tutorial[1].context;
+                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(1).of("title");
+                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(1).of("context");
                 break;
             case 2:
                 if (tutorial_pointer == null) {
@@ -3052,8 +3147,8 @@ async function onLoad() {
 
                     document.getElementById("main").appendChild(tutorial_pointer)
                 }
-                document.getElementById("tutorial-title").textContent = translation.tutorial[2].title;
-                document.getElementById("tutorial-context").textContent = translation.tutorial[2].context;
+                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(2).of("title");
+                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(2).of("context");
                 break;
             case 3:
                 if (tutorial_pointer == null) {
@@ -3066,8 +3161,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("covers").getBoundingClientRect().y + (document.getElementById("covers").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("covers").getBoundingClientRect().x + (document.getElementById("covers").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = translation.tutorial[3].title;
-                document.getElementById("tutorial-context").textContent = translation.tutorial[3].context;
+                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(3).of("title");
+                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(3).of("context");
                 break;
             case 4:
                 if (tutorial_pointer == null) {
@@ -3080,8 +3175,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("reddit").getBoundingClientRect().y + (document.getElementById("reddit").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("reddit").getBoundingClientRect().x + (document.getElementById("reddit").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = translation.tutorial[4].title;
-                document.getElementById("tutorial-context").textContent = translation.tutorial[4].context;
+                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(4).of("title");
+                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(4).of("context");
                 break;
             case 5:
                 if (tutorial_pointer == null) {
@@ -3094,8 +3189,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("cove").getBoundingClientRect().y + (document.getElementById("cove").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("cove").getBoundingClientRect().x + (document.getElementById("cove").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = translation.tutorial[5].title;
-                document.getElementById("tutorial-context").textContent = translation.tutorial[5].context;
+                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(5).of("title");
+                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(5).of("context");
                 break;
             case 6:
                 if (tutorial_pointer == null) {
@@ -3108,8 +3203,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("modtitle").getBoundingClientRect().y + (document.getElementById("modtitle").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("modtitle").getBoundingClientRect().x + (document.getElementById("modtitle").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = translation.tutorial[6].title;
-                document.getElementById("tutorial-context").textContent = translation.tutorial[6].context;
+                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(6).of("title");
+                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(6).of("context");
                 break;
             case 7:
                 if (tutorial_pointer == null) {
@@ -3122,8 +3217,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("modinfo").getBoundingClientRect().y + (document.getElementById("modinfo").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("modinfo").getBoundingClientRect().x + (document.getElementById("modinfo").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = translation.tutorial[7].title;
-                document.getElementById("tutorial-context").textContent = translation.tutorial[7].context;
+                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(7).of("title");
+                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(7).of("context");
                 break;
             default:
                 if (tutorial_pointer != null) {
@@ -3132,9 +3227,9 @@ async function onLoad() {
                 }
                 document.getElementById("tutorial").remove()
                 document.getElementById("tutorial-no").style.width = "85%"
-                document.getElementById("tutorial-no").textContent = translation.end
-                document.getElementById("tutorial-title").textContent = translation.tutorial[8].title;
-                document.getElementById("tutorial-context").textContent = translation.tutorial[8].context;
+                document.getElementById("tutorial-no").textContent = Translation.of("end")
+                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(8).of("title");
+                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(8).of("context");
                 break;
         }
     })
@@ -3197,8 +3292,56 @@ async function onLoad() {
     // jingle_audio.loop = true;
     // jingle_audio.play()
 
+    // Setup SVG
+    let dragging = false;
+    let dragStart = 0;
+    document.getElementById("pin-holder").addEventListener("mousedown", async () => {
+        if (getLauncher(currentEntry)) {
+            dragging = true;
+            dragStart = Date.now();
+        }
+    })
+    document.getElementById("pin-holder").addEventListener("mousemove", async (x) => {
+        if (currentEntry !== "" && dragging) {
+            const absx = document.getElementById("container").getBoundingClientRect().x;
+            const absy = document.getElementById("container").getBoundingClientRect().y;
+            document.getElementById("pin-holder").style.left = x.clientX - absx + "px";
+            document.getElementById("pin-holder").style.top = x.clientY - absy + "px";
+            document.getElementById("pin-holder").classList.add("pin-holder-drag")
+            document.getElementById("pin-pinned").classList.add("hide")
+            document.getElementById("pin-unpinned").classList.add("pin-unpinned-heart")
+            document.getElementById("pin-unpinned").classList.remove("hide")
+        }
+    })
+    document.getElementById("pin-holder").addEventListener("mouseup", async (mouse) => {
+        dragging = false;
+        document.getElementById("pin-holder").classList.remove("pin-holder-drag")
+
+        if (getLauncher(currentEntry)) {
+            if (Date.now() - dragStart < 100) {
+                document.getElementById("pin-holder").style.removeProperty("left")
+                document.getElementById("pin-holder").style.removeProperty("top")
+                getLauncher(currentEntry).functions().setPinned()
+            } else {
+                const minX = document.getElementById("cove").getBoundingClientRect().x;
+                const minY = document.getElementById("cove").getBoundingClientRect().y;
+                const maxX = minX + document.getElementById("cove").getBoundingClientRect().width;
+                const maxY = minY + document.getElementById("cove").getBoundingClientRect().height;
+
+                if (mouse.clientX >= minX && mouse.clientX <= maxX && mouse.clientY >= minY && mouse.clientY <= maxY) {
+                    getLauncher(currentEntry).functions().setPinned(true)
+                } else {
+                    document.getElementById("pin-holder").style.removeProperty("left")
+                    document.getElementById("pin-holder").style.removeProperty("top")
+                    getLauncher(currentEntry).functions().setPinned(false)
+                }
+            }
+        }
+    })
+
     await globLog("Finished Loading PT. 1 (" + (Date.now() - start) + "ms).")
-    invoke("request_path")
+    await invoke("request_path")
+
     let loop = setInterval(async () => {
         if (!reset) {
             await invoke("request_path")
@@ -3215,7 +3358,7 @@ async function updateClient() {
             event: 'update_launcher',
             props: {from: CLIENT_VERSION}
         });
-        document.getElementById("loadingsub").textContent = translation.updating + " Doki Doki Mod Manager"
+        document.getElementById("loadingsub").textContent = Translation.of("updating") + " Doki Doki Mod Manager"
         await invoke("update_exe")
     } else {
         console.warn("Already Up To Date (" + CLIENT_VERSION + ")")

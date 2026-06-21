@@ -1,0 +1,583 @@
+{
+  "en": {
+    "data": {
+      "flag": "english.png"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "play": "Play",
+    "download-watcher": "Want to extract and import this mod?",
+    "main": "Main",
+    "mods": "Mods",
+    "search": "Search",
+    "import": "Import Mod",
+    "greet": "Hiya",
+    "install": "Set Install Location",
+    "select_zip": "Select the zip file containing DDLC. You can download this at [https://ddlc.moe](https://ddlc.moe). (Click to open)",
+    "select_zip_button": "Import Zip",
+    "importing_zip": "Importing DDLC",
+    "import_image": "Import Image",
+    "home": "Home",
+    "theme": "Set Theme",
+    "update-text": "Updates (Desktop)",
+    "loading": "Loading Mod",
+    "description": "Description",
+    "screenshot": "Screenshot",
+    "tutorial-text": "Tutorial",
+    "tutorial-context": "It seems like you have not done the tutorial yet, would you like to?",
+    "cancel": "Cancel",
+    "next": "Next",
+    "end": "End",
+    "updating": "Updating",
+    "update": "Update",
+    "ignore": "Ignore",
+    "error-profile_setname": "You cannot rename the default profile!",
+    "error-profile_delete": "You cannot delete the default profile!",
+    "yesterday": "Yesterday",
+    "just-now": "Just now",
+    "never": "Never",
+    "ago": "Ago",
+    "m": "m",
+    "h": "h",
+    "tutorial": {
+      "select": "Please select a mod, or download one before continuing!",
+      "1": {
+        "title": "Welcome!",
+        "context": "This will be a walkthrough of how to use Doki Doki Mod Manager. Press 'Next' to continue."
+      },
+      "2": {
+        "title": "Theme",
+        "context": "First of all, let's pick a theme. Click on the highlighted button until it is your favorite character."
+      },
+      "3": {
+        "title": "Background",
+        "context": "Next, click on a background you would like to use, or drag and drop an image to set as the background."
+      },
+      "4": {
+        "title": "Downloads",
+        "context": "Next, download a mod through Reddit. You can also drag and drop a zip here. Remember to save to your Downloads folder!"
+      },
+      "5": {
+        "title": "Covers",
+        "context": "Use the arrows at the bottom of the selected area to change the cover."
+      },
+      "6": {
+        "title": "Name",
+        "context": "Click on the mod title to rename it. Press enter to save."
+      },
+      "7": {
+        "title": "Author",
+        "context": "Click on the author (underlined text) to set it. Press enter to save."
+      },
+      "8": {
+        "title": "Finish",
+        "context": "And that is it! Press 'Play' To Start The Mod. Press 'End' To Finish The Tutorial."
+      }
+    },
+    "send-report": "Report issue",
+    "message": "Message",
+    "send": "Send",
+    "extracting": "[Extracting]",
+    "delete-mod": "Delete Mod",
+    "reset-data": "Reset Current Profile Data",
+    "unknown": "Unknown"
+  },
+  "ru": {
+    "data": {
+      "flag": "russia.svg"
+    },
+    "yes": "Да",
+    "no": "Нет",
+    "play": "Играть",
+    "download-watcher": "Хотите извлечь и импортировать этот мод?",
+    "main": "Главная",
+    "mods": "Моды",
+    "search": "Поиск",
+    "import": "Импорт мода",
+    "greet": "Приветик",
+    "install": "Папка установки",
+    "select_zip": "Выберите zip-файл с DDLC. Вы можете скачать его на [https://ddlc.moe](https://ddlc.moe). (Нажмите, чтобы открыть)",
+    "select_zip_button": "Импорт Zip",
+    "importing_zip": "Импорт DDLC",
+    "import_image": "Импорт изображения",
+    "home": "Домой",
+    "theme": "Тема",
+    "update-text": "Обновления (ПК)",
+    "loading": "Загрузка мода",
+    "description": "Описание",
+    "screenshot": "Скриншот",
+    "tutorial-text": "Обучение",
+    "tutorial-context": "Кажется, вы ещё не прошли обучение. Хотите пройти?",
+    "cancel": "Отмена",
+    "next": "Далее",
+    "end": "Конец",
+    "updating": "Обновление",
+    "update": "Обновить",
+    "ignore": "Игнорировать",
+    "error-profile_setname": "Нельзя переименовать профиль по умолчанию!",
+    "error-profile_delete": "Нельзя удалить профиль по умолчанию!",
+    "yesterday": "Вчера",
+    "just-now": "Только что",
+    "never": "Никогда",
+    "ago": "назад",
+    "m": "м",
+    "h": "ч",
+    "tutorial": {
+      "select": "Пожалуйста, выберите мод или скачайте его перед продолжением!",
+      "1": {
+        "title": "Добро пожаловать!",
+        "context": "Это краткий обзор того, как использовать Doki Doki Mod Manager. Нажмите 'Далее', чтобы продолжить."
+      },
+      "2": {
+        "title": "Тема",
+        "context": "Прежде всего, давайте выберем тему. Нажимайте на выделенную кнопку, пока не появится ваш любимый персонаж."
+      },
+      "3": {
+        "title": "Фон",
+        "context": "Затем выберите фон, который хотите использовать, или перетащите сюда изображение, чтобы установить его как фон."
+      },
+      "4": {
+        "title": "Загрузки",
+        "context": "Теперь скачайте мод через Reddit. Вы также можете перетащить zip-файл сюда. Не забудьте сохранить его в папку 'Загрузки'!"
+      },
+      "5": {
+        "title": "Обложки",
+        "context": "Используйте стрелки в нижней части выделенной области, чтобы изменить обложку."
+      },
+      "6": {
+        "title": "Название",
+        "context": "Нажмите на название мода, чтобы переименовать его. Нажмите Enter для сохранения."
+      },
+      "7": {
+        "title": "Автор",
+        "context": "Нажмите на имя автора (подчеркнутый текст), чтобы изменить его. Нажмите Enter для сохранения."
+      },
+      "8": {
+        "title": "Финиш",
+        "context": "Вот и всё! Нажмите 'Играть', чтобы запустить мод. Нажмите 'Конец', чтобы завершить обучение."
+      }
+    },
+    "send-report": "Сообщить о проблеме",
+    "message": "Сообщение",
+    "send": "Отправить",
+    "extracting": "[Извлечение]",
+    "delete-mod": "Удалить мод",
+    "reset-data": "Сбросить данные текущего профиля",
+    "unknown": "Неизвестно"
+  },
+  "pt": {
+    "data": {
+      "flag": "pt.png"
+    },
+    "yes": "Sim",
+    "no": "Não",
+    "play": "Jogar",
+    "download-watcher": "Deseja extrair e importar este mod?",
+    "main": "Principal",
+    "mods": "Mods",
+    "search": "Pesquisar",
+    "import": "Importar Mod",
+    "greet": "Opa",
+    "install": "Definir local de instalação",
+    "select_zip": "Selecione o arquivo zip que contém o DDLC. Você pode baixá-lo em [https://ddlc.moe](https://ddlc.moe). (Clique para abrir)",
+    "select_zip_button": "Importar Zip",
+    "importing_zip": "Importando DDLC",
+    "import_image": "Importar Imagem",
+    "home": "Início",
+    "theme": "Definir Tema",
+    "update-text": "Atualizações (Desktop)",
+    "loading": "Carregando Mod",
+    "description": "Descrição",
+    "screenshot": "Captura de Tela",
+    "tutorial-text": "Tutorial",
+    "tutorial-context": "Parece que você ainda não fez o tutorial, gostaria de fazer agora?",
+    "cancel": "Cancelar",
+    "next": "Próximo",
+    "end": "Finalizar",
+    "updating": "Atualizando",
+    "update": "Atualizar",
+    "ignore": "Ignorar",
+    "error-profile_setname": "Você não pode renomear o perfil padrão!",
+    "error-profile_delete": "Você não pode excluir o perfil padrão!",
+    "yesterday": "Ontem",
+    "just-now": "Agora mesmo",
+    "never": "Nunca",
+    "ago": "Atrás",
+    "m": "m",
+    "h": "h",
+    "tutorial": {
+      "select": "Por favor, selecione um mod ou baixe um antes de continuar!",
+      "1": {
+        "title": "Bem-vindo!",
+        "context": "Este será um passo a passo de como usar o Doki Doki Mod Manager. Pressione 'Próximo' para continuar."
+      },
+      "2": {
+        "title": "Tema",
+        "context": "Primeiro, vamos escolher um tema. Clique no botão destacado até encontrar sua personagem favorita."
+      },
+      "3": {
+        "title": "Fundo",
+        "context": "Depois, clique na imagem de fundo que você gostaria de usar, ou arraste e solte uma imagem aqui para defini-la como fundo."
+      },
+      "4": {
+        "title": "Downloads",
+        "context": "Agora, baixe um mod pelo Reddit. Você também pode arrastar e soltar um arquivo zip aqui. Lembre-se de salvar na sua pasta de Downloads!"
+      },
+      "5": {
+        "title": "Capas",
+        "context": "Use as setas na parte inferior da área selecionada para alterar a capa."
+      },
+      "6": {
+        "title": "Nome",
+        "context": "Clique no título do mod para renomeá-lo. Pressione Enter para salvar."
+      },
+      "7": {
+        "title": "Autor",
+        "context": "Clique no autor (texto sublinhado) para defini-lo. Pressione Enter para salvar."
+      },
+      "8": {
+        "title": "Concluir",
+        "context": "E é isso! Pressione 'Jogar' para iniciar o mod. Pressione 'Finalizar' para encerrar o tutorial."
+      }
+    },
+    "send-report": "Reportar problema",
+    "message": "Mensagem",
+    "send": "Enviar",
+    "extracting": "[Extraindo]",
+    "delete-mod": "Excluir Mod",
+    "reset-data": "Redefinir dados do perfil atual",
+    "unknown": "Desconhecido"
+  },
+  "es": {
+    "data": {
+      "flag": "spain.png"
+    },
+    "yes": "Sí",
+    "no": "No",
+    "play": "Jugar",
+    "download-watcher": "¿Deseas extraer e importar este mod?",
+    "main": "Principal",
+    "mods": "Mods",
+    "search": "Buscar",
+    "import": "Importar Mod",
+    "greet": "¡Hola!",
+    "install": "Establecer Ubicación de Instalación",
+    "select_zip": "Selecciona el archivo zip que contiene DDLC. Puedes descargarlo en [https://ddlc.moe](https://ddlc.moe). (Haz clic para abrir)",
+    "select_zip_button": "Importar Zip",
+    "importing_zip": "Importando DDLC",
+    "import_image": "Importar Imagen",
+    "home": "Inicio",
+    "theme": "Establecer Tema",
+    "update-text": "Actualizaciones (Escritorio)",
+    "loading": "Cargando Mod",
+    "description": "Descripción",
+    "screenshot": "Captura de Pantalla",
+    "tutorial-text": "Guía",
+    "tutorial-context": "Parece que aún no has completado el tutorial, ¿te gustaría hacerlo?",
+    "cancel": "Cancelar",
+    "next": "Siguiente",
+    "end": "Terminar",
+    "updating": "Actualizando",
+    "update": "Actualizar",
+    "ignore": "Ignorar",
+    "error-profile_setname": "¡No puedes cambiar el nombre del perfil predeterminado!",
+    "error-profile_delete": "¡No puedes eliminar el perfil predeterminado!",
+    "yesterday": "Ayer",
+    "just-now": "Ahora mismo",
+    "never": "Nunca",
+    "ago": "Hace",
+    "m": "m",
+    "h": "h",
+    "tutorial": {
+      "select": "¡Por favor, selecciona un mod o descarga uno antes de continuar!",
+      "1": {
+        "title": "¡Bienvenido!",
+        "context": "Esta será una guía sobre cómo usar Doki Doki Mod Manager. Presiona 'Siguiente' para continuar."
+      },
+      "2": {
+        "title": "Tema",
+        "context": "En primer lugar, elijamos un tema. Haz clic en el botón resaltado hasta que sea tu personaje favorito."
+      },
+      "3": {
+        "title": "Fundo",
+        "context": "A continuación, haz clic en el fondo que quieras usar, o arrastra y suelta una imagen para establecerla como fondo."
+      },
+      "4": {
+        "title": "Descargas",
+        "context": "Luego, descarga un mod a través de Reddit. También puedes arrastrar y soltar un archivo zip aquí. ¡Recuerda guardarlo en tu carpeta de Descargas!"
+      },
+      "5": {
+        "title": "Portadas",
+        "context": "Usa las flechas en la parte inferior del área seleccionada para cambiar la portada."
+      },
+      "6": {
+        "title": "Nombre",
+        "context": "Haz clic en el título del mod para cambiarle el nombre. Presiona Enter para guardar."
+      },
+      "7": {
+        "title": "Autor",
+        "context": "Haz clic en el autor (texto subrayado) para establecerlo. Presiona Enter para guardar."
+      },
+      "8": {
+        "title": "Finalizar",
+        "context": "¡Y eso es todo! Presiona 'Jugar' para iniciar el mod. Presiona 'Terminar' para finalizar el tutorial."
+      }
+    },
+    "send-report": "Reportar problema",
+    "message": "Mensaje",
+    "send": "Enviar",
+    "extracting": "[Extrayendo]",
+    "delete-mod": "Eliminar Mod",
+    "reset-data": "Restablecer datos del perfil actual",
+    "unknown": "Desconocido"
+  },
+  "fr": {
+    "data": {
+      "flag": "france.png"
+    },
+    "yes": "Oui",
+    "no": "Non",
+    "play": "Jouer",
+    "download-watcher": "Voulez-vous extraire et importer ce mod ?",
+    "main": "Principal",
+    "mods": "Mods",
+    "search": "Rechercher",
+    "import": "Importer Mod",
+    "greet": "Salut",
+    "install": "Définir l'emplacement d'installation",
+    "select_zip": "Sélectionnez le fichier zip contenant DDLC. Vous pouvez le télécharger sur [https://ddlc.moe](https://ddlc.moe). (Cliquez pour ouvrir)",
+    "select_zip_button": "Importer le Zip",
+    "importing_zip": "Importation de DDLC",
+    "import_image": "Importer Image",
+    "home": "Accueil",
+    "theme": "Définir Thème",
+    "update-text": "Mises à jour (Bureau)",
+    "loading": "Chargement du Mod",
+    "description": "Description",
+    "screenshot": "Capture d'écran",
+    "tutorial-text": "Tutoriel",
+    "tutorial-context": "Il semble que vous n'ayez pas encore fait le tutoriel, souhaitez-vous le faire ?",
+    "cancel": "Annuler",
+    "next": "Suivant",
+    "end": "Terminer",
+    "updating": "Mise à jour",
+    "update": "Mettre à jour",
+    "ignore": "Ignorer",
+    "error-profile_setname": "Vous ne pouvez pas renommer le profil par défaut !",
+    "error-profile_delete": "Vous ne pouvez pas supprimer le profil par défaut !",
+    "yesterday": "Hier",
+    "just-now": "À l'instant",
+    "never": "Jamais",
+    "ago": "Il y a",
+    "m": "min",
+    "h": "h",
+    "tutorial": {
+      "select": "Veuillez sélectionner un mod, ou en télécharger un avant de continuer !",
+      "1": {
+        "title": "Bienvenue !",
+        "context": "Voici un guide sur la façon d'utiliser Doki Doki Mod Manager. Appuyez sur 'Suivant' pour continuer."
+      },
+      "2": {
+        "title": "Thème",
+        "context": "Tout d'abord, choisissons un thème. Cliquez sur le bouton mis en surbrillance jusqu'à ce qu'il s'agisse de votre personnage préféré."
+      },
+      "3": {
+        "title": "Fond d'écran",
+        "context": "Ensuite, cliquez sur un fond d'écran que vous souhaitez utiliser, ou faites glisser-déposer une image pour l'utiliser comme fond d'écran."
+      },
+      "4": {
+        "title": "Téléchargements",
+        "context": "Ensuite, téléchargez un mod via Reddit. Vous pouvez également faire glisser-déposer un fichier zip ici. N'oubliez pas de l'enregistrer dans votre dossier Téléchargements !"
+      },
+      "5": {
+        "title": "Couvertures",
+        "context": "Utilisez les flèches en bas de la zone sélectionnée pour changer la couverture."
+      },
+      "6": {
+        "title": "Nom",
+        "context": "Cliquez sur le titre du mod pour le renommer. Appuyez sur Entrée pour enregistrer."
+      },
+      "7": {
+        "title": "Auteur",
+        "context": "Cliquez sur l'auteur (texte souligné) pour le définir. Appuyez sur Entrée pour enregistrer."
+      },
+      "8": {
+        "title": "Terminé",
+        "context": "Et c'est tout ! Appuyez sur 'Jouer' pour démarrer le mod. Appuyez sur 'Terminer' pour finir le tutoriel."
+      }
+    },
+    "send-report": "Signaler un problème",
+    "message": "Message",
+    "send": "Envoyer",
+    "extracting": "[Extraction]",
+    "delete-mod": "Supprimer le Mod",
+    "reset-data": "Réinitialiser les données du profil",
+    "unknown": "Inconnu"
+  },
+  "zh-HK": {
+    "data": {
+      "flag": "hong-kong.png"
+    },
+    "yes": "係",
+    "no": "唔係",
+    "play": "玩",
+    "download-watcher": "你想提取同導入呢個模組嗎?",
+    "main": "主頁",
+    "mods": "模組",
+    "search": "搜尋",
+    "import": "導入模組",
+    "greet": "你好",
+    "install": "設定安裝位置",
+    "select_zip": "請選擇包含 DDLC 嘅 zip 檔案。你可以喺 [https://ddlc.moe](https://ddlc.moe) 下載。(撳吓即刻打開)",
+    "select_zip_button": "匯入 Zip",
+    "importing_zip": "正在匯入 DDLC",
+    "import_image": "導入圖片",
+    "home": "主頁",
+    "theme": "設定主題",
+    "update-text": "更新 (桌面)",
+    "loading": "載入模組",
+    "description": "描述",
+    "screenshot": "截圖",
+    "tutorial-text": "教學",
+    "tutorial-context": "好似你仲未做過教學，你想唔想做?",
+    "cancel": "取消",
+    "next": "下一頁",
+    "end": "結束",
+    "updating": "更新緊",
+    "update": "更新",
+    "ignore": "忽略",
+    "error-profile_setname": "你唔可以重新命名預設設定檔！",
+    "error-profile_delete": "你唔可以刪除預設設定檔！",
+    "yesterday": "尋日",
+    "just-now": "啱啱",
+    "never": "從未",
+    "ago": "前",
+    "m": "分",
+    "h": "時",
+    "tutorial": {
+      "select": "請選擇一個模組，或者先下載一個再繼續!",
+      "1": {
+        "title": "歡迎!",
+        "context": "呢個會係 Doki Doki Mod Manager 嘅使用教學。按「下一頁」繼續。"
+      },
+      "2": {
+        "title": "主題",
+        "context": "首先，揀個主題。點擊高亮嘅按鈕，直到係你鍾意嘅角色。"
+      },
+      "3": {
+        "title": "背景",
+        "context": "然後，點擊你想用嘅背景，或者拖放圖片設為背景。"
+      },
+      "4": {
+        "title": "下載",
+        "context": "然後，透過 Reddit 下載模組。你亦可以拖放 zip 檔案到呢度。記住要儲存到你嘅下載資料夾!"
+      },
+      "5": {
+        "title": "封面",
+        "context": "用選定區域底部嘅箭頭嚟改變封面。"
+      },
+      "6": {
+        "title": "名稱",
+        "context": "點擊模組標題嚟改名。按 Enter 儲存。"
+      },
+      "7": {
+        "title": "作者",
+        "context": "點擊作者 (底線文字) 設定。按 Enter 儲存。"
+      },
+      "8": {
+        "title": "完成",
+        "context": "就係咁多! 按「玩」開始模組。按「結束」完成教學。"
+      }
+    },
+    "send-report": "報告問題",
+    "message": "訊息",
+    "send": "發送",
+    "extracting": "[解壓中]",
+    "delete-mod": "刪除模組",
+    "reset-data": "重置當前設定檔數據",
+    "unknown": "未知"
+  },
+  "jp": {
+    "data": {
+      "flag": "japan.png"
+    },
+    "yes": "はい",
+    "no": "いいえ",
+    "play": "プレイ",
+    "download-watcher": "このModを解凍してインポートしますか？",
+    "main": "メイン",
+    "mods": "モッド",
+    "search": "検索",
+    "import": "Modをインポート",
+    "greet": "こんにちは",
+    "install": "インストール先を設定",
+    "select_zip": "DDLCが含まれているzipファイルを選択してください。https://ddlc.moe からダウンロードできます。(クリックして開く)",
+    "select_zip_button": "Zipをインポート",
+    "importing_zip": "DDLCをインポート中",
+    "import_image": "画像をインポート",
+    "home": "ホーム",
+    "theme": "テーマを設定",
+    "update-text": "アップデート (デスクトップ)",
+    "loading": "Modを読み込み中",
+    "description": "説明",
+    "screenshot": "スクリーンショット",
+    "tutorial-text": "チュートリアル",
+    "tutorial-context": "まだチュートリアルを完了していないようです。開始しますか？",
+    "cancel": "キャンセル",
+    "next": "次へ",
+    "end": "終了",
+    "updating": "更新中",
+    "update": "アップデート",
+    "ignore": "無視",
+    "error-profile_setname": "デフォルトのプロファイル名は変更できません！",
+    "error-profile_delete": "デフォルトのプロファイルは削除できません！",
+    "yesterday": "昨日",
+    "just-now": "たった今",
+    "never": "なし",
+    "ago": "前",
+    "m": "分",
+    "h": "時",
+    "tutorial": {
+      "select": "続行する前に、Modを選択するかダウンロードしてください！",
+      "1": {
+        "title": "ようこそ！",
+        "context": "Doki Doki Mod Managerの使い方をご案内します。「次へ」を押して進んでください。"
+      },
+      "2": {
+        "title": "テーマ",
+        "context": "まず最初に、テーマを選びましょう。ハイライトされたボタンをクリックして、お気に入りのキャラクターを選んでください。"
+      },
+      "3": {
+        "title": "背景",
+        "context": "次に、使用したい背景をクリックするか、画像をドラッグ＆ドロップして背景に設定してください。"
+      },
+      "4": {
+        "title": "ダウンロード",
+        "context": "次に、RedditからModをダウンロードしてください。ここにZIPファイルをドラッグ＆ドロップすることもできます。ダウンロードフォルダに保存するのを忘れないでください！"
+      },
+      "5": {
+        "title": "カバー",
+        "context": "選択範囲の下部にある矢印を使用して、カバーを変更します。"
+      },
+      "6": {
+        "title": "名前",
+        "context": "Modのタイトルをクリックして名前を変更できます。Enterキーを押して保存します。"
+      },
+      "7": {
+        "title": "作者",
+        "context": "下線付きのテキスト（作者名）をクリックして設定します。Enterキーを押して保存します。"
+      },
+      "8": {
+        "title": "完了",
+        "context": "以上です！「プレイ」を押してModを開始しましょう。「終了」を押すとチュートリアルを閉じます。"
+      }
+    },
+    "send-report": "問題を報告",
+    "message": "メッセージ",
+    "send": "送信",
+    "extracting": "[解凍中]",
+    "delete-mod": "Modを削除",
+    "reset-data": "現在のプロファイルデータをリセット",
+    "unknown": "不明"
+  }
+}

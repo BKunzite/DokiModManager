@@ -1,12 +1,35 @@
-4.7.0-beta
+3.7.0-beta
 
 Discord - {PLACEHOLDER}
 
 Screenshot Preview Of Images Not Loading Fixed
  - Extreme Cache-Culling caused images
- to be de-referenced before they were loaded.
+ to be dereferenced before they were loaded.
 
-When Renaming A Mod, The Title Will Scroll To The Right
+When Renaming A Mod, The Title Will Scroll To The Right,
 Allowing You To See What You Are Typing.
+
+Again, send issues or suggestions through report an issue.
+
+Pins!
+- Pins now allow you to pin mods to the top of the list
+and play them later (they are above favorites).
+- This is in order for you to make a mod that you want to play,
+but do not feel like marking it as a favorite.
+
+How To Pin A Mod:
+- To pin a mod, click the heart icon to the right of
+the mod's cover or to the left of the mod's name.
+- To unpin, click on the pin.
+- You may also drag the pin into the cover to pin it,
+or, drag the pin out of the cover to unpin it.
+
+More complete translation support.
+Added last played date.
+Changed a few icons.
+Faster HTML escaping.
+Improved loading speeds (caching covers now
+    takes significantly less time).
+Underlying code rewrite pt. 2.
 
 More Stuff To Come! This Is Just A Minor Bug Fix.

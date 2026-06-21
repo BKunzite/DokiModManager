@@ -37,7 +37,7 @@ It incorporates UnRPYC to support these advanced features.
 + Playtime Tracker
 + Works With Existing Mod Folders
 + UnRPYC Integration
-+ Easy Imports That Work With Mods Made With Ren'py 6–8
++ Easy Imports That Work With Mods Made With Ren'Py 6–8.x.x
 + Extensive Customization Options
 + Drag & Drop
 + Profiles
@@ -56,7 +56,7 @@ Doki Doki Mod Manager, whilst open, will constantly scan downloads for newly dow
 # Support For Other Operating Systems
 
 ### macOS
-There are now plans for Mac support this summer. It will likely come out sometime in July 2026.
+There are now plans for Mac support this summer. It will likely come out sometime in August 2026.
 
 ### Linux-Based Operating Systems
 There are currently no plans to support Linux. If you are on any Linux-based operating system, please use the original Doki Doki Mod Manager.
