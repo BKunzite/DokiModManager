@@ -1,6 +1,20 @@
-3.7.0-beta
+2.7.0-beta
+Mandatory (Improper CSP Settings)
 
 Discord - {PLACEHOLDER}
+
+Sorry for the long wait with this update,
+I wanted to push it out faster but
+my SSD literally died on me whilst I was working on
+this.
+
+Please report issues only through the UI and/or the new discord!
+(or if you really want, GitHub)
+
+I have now updated tauri to the latest version,
+if you experience issues, that is probably where
+they are coming from. I still decided to do this
+in order to prevent potential vulnerabilities.
 
 Screenshot Preview Of Images Not Loading Fixed
  - Extreme Cache-Culling caused images
@@ -31,5 +45,6 @@ Faster HTML escaping.
 Improved loading speeds (caching covers now
     takes significantly less time).
 Underlying code rewrite pt. 2.
+Dependency updates.
 
 More Stuff To Come! This Is Just A Minor Bug Fix.

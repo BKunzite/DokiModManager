@@ -3,6 +3,8 @@ import {
     readFile
 } from '@tauri-apps/plugin-fs';
 
+let cache = {}
+
 function createURL(contents, fileName) {
     let blob = new Blob([contents], {type: 'image/' + fileName.split('.').pop()});
     const url = URL.createObjectURL(blob);
@@ -46,3 +48,37 @@ export async function getImage(id, covers = []) {
         }
     }
 }
+
+// CACHE
+// export async function getImage(id, covers = []) {
+//     const cover = covers[id];
+//     if (cache[id]) {
+//         return cache[id]
+//     }
+//     if (cover !== undefined && cover.includes(":")) {
+//         const contents = await readFile(cover);
+//         cache[id] = createURL(contents, cover)
+//         return cache[id]
+//     } else if (typeof (id) === "object") {
+//         if (cache[id] === undefined) {
+//             const base64String = Base64.fromUint8Array(id);
+//             cache[id] = `data:image/png;base64,${base64String}`
+//         }
+//
+//         return cache[id]
+//     } else if (typeof (id) === "string" && id.includes(":")) {
+//         if (cache[id] === undefined) {
+//             const contents = await readFile(id);
+//             cache[id] = createURL(contents, id)
+//         }
+//
+//         return cache[id]
+//     } else {
+//         if (cache[id] === undefined) {
+//             const images = import.meta.glob('../assets/**/*.{png,jpg,jpeg,svg,json,webp}', {eager: true, as: 'url'});
+//             cache[id] = cover === undefined ? cache[id] = images["../assets/" + id] : cache[id] = images["../assets/" + cover]
+//         }
+//
+//         return cache[id]
+//     }
+// }

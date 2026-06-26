@@ -29,6 +29,7 @@ import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
 import {TRANSLATION_TABLE, Translation, TRANSLATION_ELEMENT_MAP} from "./core/Translation.js"
 import {Base64} from 'js-base64';
 import {addLauncher, LauncherAbstract, getLauncher, getLaunchers, clearLaunchers} from "./core/Launchers.js"
+import {openWebview} from "./core/WebviewWindowHelper";
 
 // Assets
 import sound_beep from './assets/select.ogg';
@@ -83,6 +84,7 @@ let focused = true;
 let previous_app = null
 let preload_covers = {}
 let fileTerminator = "\\"
+let tracked_downloads = []
 
 // Loading Bar
 let goal_slow_bar = -1
@@ -170,7 +172,8 @@ function loadTranslation(lang, first) {
         invoke('tracker', {
             event: 'language',
             props: {name: lang}
-        }).then();
+        }).then(_ => {
+        });
     }
 
     Translation.setLanguage(lang);
@@ -198,17 +201,19 @@ function loadTranslation(lang, first) {
         }
     }
 
-    getImage(Translation.sub("data").of("flag"), {}).then(url => {
+    getImage(Translation.sub("data").of("flag"), []).then(url => {
         document.getElementById("language-flag").src = url
     });
     document.getElementById("language-text").textContent = lang;
 
     if (currentEntry === "") {
         if (!first) {
-            home_main().then()
+            home_main().then(_ => {
+            })
         }
     } else {
-        getLauncher(currentEntry).functions().leftClick().then();
+        getLauncher(currentEntry).functions().leftClick().then(_ => {
+        });
     }
 }
 
@@ -896,6 +901,34 @@ async function add_mod(name) {
         await writeTextFile(configPath, contents);
     };
 
+    let searchGame = async () => {
+        for (const localEntry of await readDir(dir)) {
+            if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && gameExePath === undefined) {
+                gameExePath = localEntry.name;
+            }
+
+            if (localEntry.name.toLowerCase().includes("credit") && modCredits === undefined) {
+                modCredits = await readTextFile(dir + fileTerminator + localEntry.name);
+            }
+        }
+
+        if (gameExePath === undefined) {
+            gameExePath = "DDLC.exe"
+            if (!await isExist(dir + fileTerminator + gameExePath)) {
+                await globWarn("No functional executable found in " + dir)
+                throw new Error("No executable found!\nPath: " + dir + "\nExecutable: " + gameExePath + "\nFiles: " + localFiles.map(v => v.name).join(", "))
+            }
+        }
+
+        configData.executable = gameExePath;
+        configData.credits = modCredits;
+
+        if (modCredits !== undefined) {
+            modCredits = htmlEscape(modCredits).replaceAll("\n", "<br>")
+        }
+        await saveModData();
+    }
+
     for (const localEntry of localFiles) {
         if (localEntry.name === ".ddmm.config.json") {
             hasConfig = true;
@@ -924,32 +957,7 @@ async function add_mod(name) {
     }
 
     if (configData.executable === undefined || configData.credits === undefined || configData.executable.length === 0 || !await isExist(dir + fileTerminator + configData.executable)) {
-        for (const localEntry of await readDir(dir)) {
-            if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && gameExePath === undefined) {
-                gameExePath = localEntry.name;
-            }
-
-            if (localEntry.name.toLowerCase().includes("credit") && modCredits === undefined) {
-                modCredits = await readTextFile(dir + fileTerminator + localEntry.name);
-            }
-        }
-
-        if (gameExePath === undefined) {
-            gameExePath = "DDLC.exe"
-            if (!await isExist(dir + fileTerminator + gameExePath)) {
-                await globWarn("No functional executable found in " + dir)
-                throw new Error("No executable found!\nPath: " + dir + "\nExecutable: " + gameExePath + "\nFiles: " + localFiles.map(v => v.name).join(", "))
-            }
-        }
-
-        configData.executable = gameExePath;
-        configData.credits = modCredits;
-
-        if (modCredits !== undefined) {
-            modCredits = htmlEscape(modCredits).replaceAll("\n", "<br>")
-        }
-
-        await saveModData();
+        await searchGame();
     } else {
         gameExePath = configData.executable;
         modCredits = configData.credits !== undefined ? htmlEscape(configData.credits).replaceAll("\n", "<br>") : undefined;
@@ -1070,20 +1078,20 @@ async function add_mod(name) {
             setTimeout(async () => {
                 play(sound_beep)
                 launch_time = Date.now();
-                const dirFiles = await readDir(dir);
-
                 if (configData.renpy === "" || configData.renpy === undefined) {
                     configData.renpy = await getRenpy(dir);
                     await saveModData();
                 }
 
-                if (gameExePath !== "") {
-                    await invoke("launch", {
-                        path: dir + fileTerminator + gameExePath,
-                        id: name,
-                        renpy: configData.renpy || Translation.of("unknown")
-                    })
+                if (gameExePath === "" || !await isExist(gameExePath)) {
+                    await searchGame()
                 }
+
+                await invoke("launch", {
+                    path: dir + fileTerminator + gameExePath,
+                    id: name,
+                    renpy: configData.renpy || Translation.of("unknown")
+                })
             }, 1000)
 
 
@@ -1168,7 +1176,6 @@ async function add_mod(name) {
                 if (!child.classList.contains("preload-image")) {
                     URL.revokeObjectURL(child.getElementsByClassName("screenshots-image")[0].src);
                     child.getElementsByClassName("screenshots-image")[0].src = ""
-                    child.children[Symbol.iterator]().forEach(child => child.remove())
                 }
                 child.remove()
             }
@@ -1563,6 +1570,20 @@ async function update_concurrent_game() {
     if (goal_slow_bar > 0) {
         setLoadingBar(0, true)
     }
+    if (tracked_downloads.length > 0) {
+        let old_size = part_file_size;
+        let dT = Date.now() - last_change;
+        let path = tracked_downloads[0]
+        if (dT < 10) {
+            return
+        }
+        last_change = Date.now()
+        part_file = path;
+        part_file_size = (await metadata(path)).size
+
+        let mbs = (part_file_size - old_size) / (dT * 1000);
+        document.getElementById("install-info").textContent = "Downloading " + part_file.split(fileTerminator).pop().split(".").reverse().pop() + " at " + (Math.round(mbs * 100) / 100) + "mb/s"
+    }
     if (!document.getElementById("loader").classList.contains("hide")) return;
     if (!document.getElementById("modlist").classList.contains("hide") || alert_path !== undefined) {
         if (!document.getElementById("pill").classList.contains("hide")) {
@@ -1832,9 +1853,9 @@ async function load_concurrent_profile_data(reload, reset_data) {
     if (reset_data !== true) {
         let profiles_data = JSON.parse(await readTextFile(profile_path + fileTerminator + ".info.json"));
         selected_name = profiles_data.selected == null ? "profile-Default" : "profile-" + profiles_data.selected;
-        current_profile = profiles_data.current == null ? "Default" : profiles_data.current;
+        current_profile = profiles_data.current ?? "Default";
         original_profile = current_profile;
-        current_profile_data = profiles_data.profiles == null ? {"0": "Default"} : profiles_data.profiles;
+        current_profile_data = profiles_data.profiles ?? {"0": "Default"};
         current_profile_data = Object.fromEntries(Object.entries(current_profile_data).sort((a, b) => parseInt(a[0]) - parseInt(b[0])));
         concurrent_profile_data = {}
     }
@@ -2121,9 +2142,46 @@ async function onLoad() {
     await globLog("[MARKER] Debugger Attached.")
     await globLog("Loading Observers...")
 
+    await listen("download_start", async (e) => {
+        await globLog(e.payload.text)
+        let components = e.payload.text.split(" | ");
+        tracked_downloads.push(components[1])
+        await globLog(tracked_downloads)
+        document.getElementById("install-info").classList.remove("hide")
+        let should = confirm("Go Back To Mod Manager?");
+        if (should) {
+            await invoke("goto_main")
+        }
+    })
+
+    await listen("download_end", async (e) => {
+        await globLog(e.payload.text)
+        let components = e.payload.text.split(" | ");
+        let path = components[1]
+        if (tracked_downloads.includes(path)) {
+            tracked_downloads.splice(tracked_downloads.indexOf(path), 1)
+        }
+        if (tracked_downloads.length === 0) {
+            document.getElementById("install-info").classList.remove("add")
+            part_file_size = 0
+            part_file = null
+        }
+        document.getElementById("alert").classList.remove("hide")
+
+        showContainers(false)
+        await globLog(path)
+        alert_path = path
+        const split = path.split(fileTerminator);
+        const data = await metadata(path);
+
+        document.getElementById("alert-size").innerText = Math.floor(data.size / 1048600).toString() + "mb";
+        document.getElementById("alert-pth").innerText = path;
+        document.getElementById("alert-name").textContent = split[split.length - 1].split(".")[0];
+    })
+
     // Listens For Rename Finishing
 
-    listen("rename_done", async (event) => {
+    await listen("rename_done", async (event) => {
         await requestDirectory(selectedPath);
         while (document.getElementById("loader").classList.contains("hide")) {
         }
@@ -2363,7 +2421,7 @@ async function onLoad() {
         }
     })
 
-    listen("import_done", async (event) => {
+    await listen("import_done", async (event) => {
         console.log(alert_path)
         if (alert_path.includes(fileTerminator + "Downloads" + fileTerminator)) {
             await remove(alert_path);
@@ -2394,20 +2452,15 @@ async function onLoad() {
     // Opens Up A Spreadsheet Full Of DDLC Mods
 
     document.getElementById("spreadsheet").addEventListener("mouseup", async () => {
-
-
         play(sound_beep)
-
-        window.open("https://docs.google.com/spreadsheets/d/1lgQD8o7qhdWmrwdJjbRv3u_bwdrXmpOzaixWFzLR8r4/edit?usp=sharing", 'reddit', 'width=1200,height=600')
+        openWebview("Doki Doki Mods Spreadsheet", "https://docs.google.com/spreadsheets/d/1lgQD8o7qhdWmrwdJjbRv3u_bwdrXmpOzaixWFzLR8r4/htmlembed?widget=false&headers=false#")
     })
 
     // Opens Up DDLCMods Subreddit
 
     document.getElementById("reddit").addEventListener("mouseup", async () => {
-
         play(sound_beep)
-
-        window.open("https://www.reddit.com/r/DDLCMods/", 'reddit', 'width=1200,height=600')
+        openWebview("Doki Doki Mods Subreddit", "https://www.reddit.com/r/DDLCMods/")
     })
 
     document.getElementById("select-zip").addEventListener("mouseup", async () => {
@@ -2436,10 +2489,8 @@ async function onLoad() {
     // Opens up DokiMods
 
     document.getElementById("dokimods").addEventListener("mouseup", async () => {
-
         play(sound_beep)
-
-        window.open("https://dokimods.me/", 'dokimods', 'width=1200,height=600')
+        openWebview("DokiMods", "https://dokimods.me/")
     })
 
     // Cancels Mod Install
@@ -2486,7 +2537,7 @@ async function onLoad() {
     // Drag Drop Handling
     // This is for dragging and dropping images and mods
 
-    listen('tauri://drag-drop', async (event) => {
+    await listen('tauri://drag-drop', async (event) => {
         let paths = event.payload.paths;
         for (const path of paths) {
             if (path.endsWith(".zip") || path.endsWith(".rar") || path.endsWith(".rpa")) {
@@ -2508,7 +2559,7 @@ async function onLoad() {
 
     // Listener for Loading Bar Percent
 
-    listen("set_bar", (event) => {
+    await listen("set_bar", (event) => {
         let goal = event.payload.number_goal;
         setLoadingBar(event.payload.number, false)
         console.log(event.payload)
@@ -2523,7 +2574,7 @@ async function onLoad() {
     globLog("Finished Loading Defaults (" + (Date.now() - start) + "ms).")
     globLog("Loading Observers2")
 
-    listen("pathRespond", async (event) => {
+    await listen("pathRespond", async (event) => {
         if (!reset) {
             await globLog("Start Loading Pt. 2 (" + (Date.now() - start) + "ms).")
 
@@ -2538,14 +2589,6 @@ async function onLoad() {
                 await globWarn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
                 if (navigator.onLine) {
-                    // let response = await confirm("AUTO UPDATE\nNew Update Available! (Press 'Ok' to update)\n" +
-                    //     "¡Nueva actualización disponible! (Presiona 'Ok' para actualizar)\n" +
-                    //     "Nouvelle mise à jour disponible ! (Appuyez sur 'Ok' pour mettre à jour)\n" +
-                    //     "有新版本呀！(撳「好」開始更新)\n" +
-                    //     "新しいアップデートがあります！(「Ok」を押して更新してください)\n" +
-                    //     "Nova atualização disponível! (Pressione 'Ok' para atualizar)\n" +
-                    //     ")\n\n" + newest_version + "\n\nUpdate Now (5-10s)?\nPress Cancel To Update Later.");
-
                     loadTranslation(Translation.getLanguage(), true)
 
                     document.getElementById("changelog").classList.remove("hide")
@@ -2704,18 +2747,18 @@ async function onLoad() {
 
     })
 
-    listen('closed', async (event) => {
+    await listen('closed', async (event) => {
         if (event.payload.id !== "") {
 
             await getLauncher(event.payload.id).functions().close();
         }
     });
 
-    listen('popup', async (event) => {
+    await listen('popup', async (event) => {
         await confirm(event.payload.text)
     });
 
-    listen('substring', async (event) => {
+    await listen('substring', async (event) => {
         if (event.payload.text.startsWith("Extracting")) {
             document.getElementById("loadingsub").textContent = event.payload.text.replace("Extracting", Translation.of("extracting"))
         } else {
@@ -2735,9 +2778,6 @@ async function onLoad() {
     })
 
     document.getElementById("version").addEventListener("mouseup", async _ => {
-        // await invoke("update", {
-        //     close: false
-        // })
         launch_desktop()
     })
 
@@ -3046,7 +3086,8 @@ async function onLoad() {
         let old = Translation.getLanguage();
         loadTranslation("en", (old === ""))
         if (old !== "") {
-            saveConfig().then()
+            saveConfig().then(_ => {
+            })
         }
     })
 
@@ -3054,7 +3095,8 @@ async function onLoad() {
         let old = Translation.getLanguage();
         loadTranslation("ru", (old === ""))
         if (old !== "") {
-            saveConfig().then()
+            saveConfig().then(_ => {
+            })
         }
     })
 
@@ -3062,7 +3104,8 @@ async function onLoad() {
         let old = Translation.getLanguage();
         loadTranslation("pt", (old === ""))
         if (old !== "") {
-            saveConfig().then()
+            saveConfig().then(_ => {
+            })
         }
     })
 
@@ -3070,7 +3113,8 @@ async function onLoad() {
         let old = Translation.getLanguage();
         loadTranslation("es", (old === ""))
         if (old !== "") {
-            saveConfig().then()
+            saveConfig().then(_ => {
+            })
         }
     })
 
@@ -3078,7 +3122,8 @@ async function onLoad() {
         let old = Translation.getLanguage();
         loadTranslation("jp", (old === ""))
         if (old !== "") {
-            saveConfig().then()
+            saveConfig().then(_ => {
+            })
         }
     })
 
@@ -3086,7 +3131,8 @@ async function onLoad() {
         let old = Translation.getLanguage();
         loadTranslation("fr", (old === ""))
         if (old !== "") {
-            saveConfig().then()
+            saveConfig().then(_ => {
+            })
         }
     })
 
@@ -3094,7 +3140,8 @@ async function onLoad() {
         let old = Translation.getLanguage();
         loadTranslation("zh-HK", (old === ""))
         if (old !== "") {
-            saveConfig().then()
+            saveConfig().then(_ => {
+            })
         }
     })
 
@@ -3394,7 +3441,6 @@ async function launch_desktop() {
     }
 
     document.getElementById("console").scrollTo(0, document.getElementById("console").scrollHeight)
-
     document.getElementById("desktop-version").textContent = "Doki Doki Mod Manager " + CLIENT_VERSION
     document.getElementById("desktop-launch").addEventListener("mouseup", () => {
         window.location.reload(true)
@@ -3407,7 +3453,6 @@ async function launch_desktop() {
     document.getElementById("desktop-close").addEventListener("mouseup", () => {
         invoke("close");
     })
-
 
     document.getElementById("desktop-update").addEventListener("mouseup", () => {
         if (shouldUpdate()) {

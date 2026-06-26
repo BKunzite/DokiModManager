@@ -4,26 +4,25 @@ use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use regex::Regex;
-use reqwest::get;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::env::home_dir;
 use std::fs::{create_dir_all, exists, remove_dir_all, remove_file, File};
-use std::io::Read;
-use std::io::Write;
-use std::os::windows::fs::MetadataExt;
-use std::os::windows::process::CommandExt;
+#[allow(unused_imports)]
+use std::io::{Read, Write};
+use std::os::windows::{fs::MetadataExt, process::CommandExt};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 use sysinfo::{ProcessesToUpdate, System};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::webview::{DownloadEvent, NewWindowResponse};
+use tauri::{AppHandle, Emitter, Listener, Manager, Url, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_aptabase::EventTracker;
 use tauri_plugin_fs_pro::{is_dir, is_file};
 use tokio::fs::File as TokioFile;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::task;
 use unrar::Archive;
 use window_vibrancy::apply_acrylic;
 use zip::ZipArchive;
@@ -34,26 +33,29 @@ mod extractor;
 mod hash;
 mod simple_logger;
 
-static SCRIPTSRPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
-static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
 static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT_BETA/dokimodmanager.exe";
-static UNRPYC: &str =
-    "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
-static UNRPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
+static UN_RPYC: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
+
+static UN_RPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
+static SCRIPTS_RPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
+static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 
 #[tauri::command]
 fn close(window: tauri::Window) {
     let _ = window.close();
 }
+
 #[tauri::command]
 fn minimize(window: tauri::Window) {
     let _ = window.minimize();
 }
+
 #[derive(Serialize, Deserialize)]
 struct ConfigData {
     directory: String,
 }
+
 #[derive(Clone, Serialize)]
 struct ReturnData<'a> {
     id: &'a str,
@@ -62,6 +64,12 @@ struct ReturnData<'a> {
 #[derive(Clone, Serialize)]
 struct StringData<'a> {
     text: &'a str,
+}
+
+#[derive(serde::Deserialize)]
+struct WebviewOpen<'a> {
+    url: &'a str,
+    name: &'a str,
 }
 
 #[derive(Clone, Serialize)]
@@ -136,7 +144,11 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
             local_path: &*env::current_dir()
                 .expect("Current dir is unreachable!")
                 .to_string_lossy(),
-            path: home_dir().unwrap().join("Downloads").to_str().unwrap(),
+            path: dirs::home_dir()
+                .unwrap()
+                .join("Downloads")
+                .to_str()
+                .unwrap(),
             reinstall: false,
         },
     )
@@ -163,6 +175,7 @@ fn delete_path(app_handle: AppHandle, path: &str) {
         }
     }
 }
+
 fn is_process_running(search_name: &str) -> bool {
     let mut system = System::new_all();
     system.refresh_processes(ProcessesToUpdate::All, true);
@@ -181,7 +194,7 @@ async fn default_rpa(scripts: &PathBuf) -> bool {
         return false;
     }
     let hash = get_file_hash(scriptsrpa.to_str().unwrap()).unwrap();
-    hash == SCRIPTSRPA_HASH
+    hash == SCRIPTS_RPA_HASH
 }
 
 async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
@@ -524,7 +537,6 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     println!("Time: {}", launch_time.elapsed().as_secs());
     if launch_time.elapsed().as_secs() <= 10 {
         tokio::time::sleep(Duration::from_millis(1000)).await;
-        // println!("{}", is_process_running(file_name));
         if is_process_running(file_name) {
             println!("File Launched Child Process!");
             loop {
@@ -587,7 +599,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     app.get_window("main")
         .unwrap()
         .set_focus()
-        .expect("Failed to lose focus");
+        .expect("Failed to focus");
 
     Ok(())
 }
@@ -920,8 +932,6 @@ fn import_game_rar(archive_path: &PathBuf) -> bool {
         .unwrap();
     while let Some(header) = archive.read_header().unwrap() {
         archive = if header.entry().is_directory() {
-            // println!("New File {}", header.entry().filename.to_str().unwrap());
-
             if header
                 .entry()
                 .filename
@@ -934,7 +944,6 @@ fn import_game_rar(archive_path: &PathBuf) -> bool {
             }
             header.skip().expect("Failed to skip header")
         } else if header.entry().is_file() {
-            // println!("New File {}", header.entry().filename.to_str().unwrap());
             if is_game_folder(header.entry().filename.to_str().unwrap())
                 && !header.entry().filename.to_str().unwrap().contains("\\")
             {
@@ -942,13 +951,88 @@ fn import_game_rar(archive_path: &PathBuf) -> bool {
                 break;
             }
             header.skip().expect("Failed to skip header")
-            // header.extract_to(add_path(&format!("{}\\{}", target_dir.to_str().unwrap(), entry)))?
         } else {
-            // println!("Skipping");
             header.skip().expect("Failed to skip header")
         };
     }
     found
+}
+
+#[tauri::command]
+fn goto_main(app: AppHandle) {
+    for (label, webview) in app.webviews() {
+        if label != "main" {
+            let _ = webview.close();
+        }
+    }
+
+    app.get_window("main")
+        .unwrap()
+        .set_focus()
+        .expect("Failed to focus");
+}
+
+#[tauri::command]
+async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), String> {
+    let script = fs::read_to_string("resources/link_open_redirector.js").unwrap();
+    let downloads_dir = env::current_dir()
+        .unwrap()
+        .join("store")
+        .join("downloads")
+        .display()
+        .to_string();
+
+    let cache_dir = env::current_dir().unwrap().join("store").join("cache");
+
+    create_dir_all(&downloads_dir).expect("FS Error: Failed To Create Store/Mods");
+
+    create_dir_all(&cache_dir).expect("FS Error: Failed To Create Cache/Mods");
+
+    let _window =
+        WebviewWindowBuilder::new(&app.clone(), format!("external-{}_{}",name, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs().to_string()), WebviewUrl::External(Url::parse(url).unwrap()))
+            .inner_size(1200f64, 600f64)
+            .title(name.split("_").collect::<Vec<&str>>().join(" "))
+            .initialization_script(script)
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36")
+            .on_navigation(move |_| {
+                true
+            })
+            .data_directory(
+                cache_dir.clone()
+            )
+            .on_new_window(move |e, _| {
+                if e.domain().unwrap().eq("econventa.com") {
+                    return NewWindowResponse::Deny;
+                }
+                NewWindowResponse::Allow
+            })
+            .on_download(move |_webview, event| {
+                match event {
+                    DownloadEvent::Requested { url, destination } => {
+                        let og_dest = destination.clone();
+                        *destination = PathBuf::from(downloads_dir.clone()).join(og_dest.file_name().unwrap());
+                        println!("{} | {} | {}", downloads_dir, og_dest.display(), destination.display());
+                        app.emit("download_start",
+                                 StringData {
+                                     text: &format!("{} | {}", url, destination.display()),
+                                 }).unwrap();
+                    }
+                    DownloadEvent::Finished { url, path, success } => {
+                        if path.is_some() {
+                            app.emit("download_end",
+                                     StringData {
+                                         text: &format!("{} | {:?} | {}", url, path.unwrap().display(), success),
+                                     }).unwrap();
+                        }
+
+                    }
+                    _ => (),
+                }
+                true
+            })
+            .build()
+            .expect("Failed to build webview");
+    Ok(())
 }
 
 fn is_game_folder(name: &str) -> bool {
@@ -1063,12 +1147,14 @@ async fn set_ddlc_zip(path: &str) -> Result<(), bool> {
 }
 #[tauri::command]
 fn get_host_name() -> String {
-    gethostname::gethostname().into_string().unwrap_or_else(|_| "Monika".to_string())
+    gethostname::gethostname()
+        .into_string()
+        .unwrap_or_else(|_| "Monika".to_string())
 }
 #[tauri::command]
 async fn update_exe() {
     println!("Updating Using {}", LATEST_ARTIFACT);
-    let resp = get(LATEST_ARTIFACT)
+    let resp = reqwest::get(LATEST_ARTIFACT)
         .await
         .expect("Failed to download latest");
     let mut out = File::create("./dokimodmanager-new.exe").expect("Failed to create file");
@@ -1169,7 +1255,9 @@ async fn make_config() {
 }
 
 async fn update_unrpyc() {
-    let resp = get(UNRPYC).await.expect("Failed to download latest");
+    let resp = reqwest::get(UN_RPYC)
+        .await
+        .expect("Failed to download latest");
     let mut out = File::create("./unrpyc.exe").expect("Failed to create file");
     out.write_all(&mut resp.bytes().await.expect("Failed to write bytes"))
         .unwrap();
@@ -1196,7 +1284,7 @@ pub async fn run() {
 
     if !exists("./unrpyc.exe").unwrap() {
         update_unrpyc().await;
-    } else if get_file_hash("./unrpyc.exe").expect("Unable to get hash on UNRPYC") != UNRPYC_HASH {
+    } else if get_file_hash("./unrpyc.exe").expect("Unable to get hash on UNRPYC") != UN_RPYC_HASH {
         update_unrpyc().await;
     }
 
@@ -1213,12 +1301,16 @@ pub async fn run() {
         .plugin(tauri_plugin_aptabase::Builder::new("A-US-9509641067".into()).build())
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
+            let app_handle = app.handle().clone();
+            let clone_handle = app.handle().clone();
+            let downloads_dir = env::current_dir().unwrap().join("store").join("downloads");
+            let _ = app.track_event("app_started", None).unwrap();
+
             #[cfg(target_os = "windows")]
             apply_acrylic(&window, Some((0, 0, 0, 10)))
                 .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
-            let result = app.track_event("app_started", None).unwrap();
-            let app_handle = app.handle().clone();
-            println!("{:?}", &result);
+
+            // Track App Closed
             app.get_webview_window("main")
                 .unwrap()
                 .on_window_event(move |event| {
@@ -1229,6 +1321,28 @@ pub async fn run() {
                         std::thread::sleep(Duration::from_millis(100));
                     }
                 });
+
+            // Track Webview Open
+            app.listen("open_webview", move |event| {
+                let payload = event.payload().to_string();
+                let value = clone_handle.clone();
+
+                task::spawn(async move {
+                    let command: WebviewOpen = serde_json::from_str(&payload).expect("Failed");
+
+                    let _ = open_webview(
+                        value,
+                        &command.url,
+                        &command.name.replace(" ", "_").to_lowercase(),
+                    )
+                    .await;
+                });
+            });
+
+            // Clear Downloads On Start
+            if downloads_dir.exists() {
+                let _ = remove_dir_all(downloads_dir);
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1247,7 +1361,9 @@ pub async fn run() {
             tracker,
             rpa_data,
             extract_game_script,
-            get_host_name
+            get_host_name,
+            open_webview,
+            goto_main
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

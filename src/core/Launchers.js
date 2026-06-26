@@ -22,4 +22,6 @@ export function getLauncher(name) {
     return launchers_list[name]
 }
 
-export function clearLaunchers() {launchers_list = {}}
+export function clearLaunchers() {
+    launchers_list = {}
+}

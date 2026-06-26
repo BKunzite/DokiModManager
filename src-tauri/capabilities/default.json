@@ -5,6 +5,9 @@
   "windows": [
     "main"
   ],
+  "remote": {
+    "urls": ["https://*"]
+  },
   "permissions": [
     "core:default",
     "opener:default",
@@ -26,6 +29,8 @@
     "fs-pro:default",
     "fs:allow-copy-file",
     "core:webview:allow-create-webview-window",
+    "dialog:allow-open",
+    "dialog:allow-save",
     {
       "identifier": "fs:scope",
       "allow": ["**/*"]

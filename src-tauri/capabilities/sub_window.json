@@ -1,0 +1,21 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "other",
+  "description": "Capability for the other windows",
+  "windows": [
+    "external-*"
+  ],
+  "remote": {
+    "urls": [
+      "https://*"
+    ]
+  },
+  "local": false,
+  "permissions": [
+    "core:webview:allow-create-webview-window",
+    {
+      "identifier": "core:event:allow-emit",
+      "allow": ["open_webview"]
+    }
+  ]
+}
