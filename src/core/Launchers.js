@@ -2,11 +2,11 @@ let launchers_list = {}
 
 export class LauncherAbstract {
     constructor(list) {
-        this.list = list;
+	this.list = list;
     }
 
     functions() {
-        return this.list;
+	return this.list;
     }
 }
 

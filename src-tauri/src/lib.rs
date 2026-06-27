@@ -1,6 +1,7 @@
 use crate::hash::get_file_hash;
+use include_dir::{include_dir, Dir};
 use jwalk::WalkDir;
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use rayon::prelude::*;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use regex::Regex;
@@ -26,6 +27,7 @@ use tokio::task;
 use unrar::Archive;
 use window_vibrancy::apply_acrylic;
 use zip::ZipArchive;
+use futures_util::TryStreamExt;
 
 mod discord_rpc;
 mod downloader;
@@ -40,6 +42,8 @@ static UN_RPYC: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/head
 static UN_RPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
 static SCRIPTS_RPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
+
+static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
 
 #[tauri::command]
 fn close(window: tauri::Window) {
@@ -117,7 +121,7 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
     };
     let mut contents = String::new();
 
-    if !fs::metadata("DNNconfig.json").is_ok() {
+    if fs::metadata("DNNconfig.json").is_err() {
         let json_data =
             serde_json::to_string_pretty(&default_config_data).map_err(|e| e.to_string())?;
         let mut file = TokioFile::create("DNNconfig.json")
@@ -141,7 +145,7 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
         "pathRespond",
         ReturnPath {
             final_data: &final_data.directory,
-            local_path: &*env::current_dir()
+            local_path: &env::current_dir()
                 .expect("Current dir is unreachable!")
                 .to_string_lossy(),
             path: dirs::home_dir()
@@ -168,7 +172,7 @@ fn delete_path(app_handle: AppHandle, path: &str) {
                 .emit(
                     "popup",
                     StringData {
-                        text: format!("Failed to delete: {}", e.to_string()).as_str(),
+                        text: format!("Failed to delete: {}", e).as_str(),
                     },
                 )
                 .expect("Popup Error");
@@ -216,7 +220,7 @@ async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
         return;
     }
     let versionint = version.unwrap();
-    let equal = default_rpa(&scripts).await;
+    let equal = default_rpa(scripts).await;
     println!("Version: {} ({}f32); Equal: {};", renpy, versionint, equal);
     if versionint >= 8.0 && equal {
         remove_file(PathBuf::from(&scripts).join("scripts.rpa")).unwrap();
@@ -260,7 +264,7 @@ fn rpa_data(app: AppHandle, path: &str, out: &str) -> String {
                     .unwrap()
                     .as_str(),
             )
-            .unwrap_or_else(|| String::new());
+            .unwrap_or_default();
         }
 
         return String::new();
@@ -272,9 +276,9 @@ fn rpa_data(app: AppHandle, path: &str, out: &str) -> String {
         println!("Found Options File!");
 
         return parse_source(
-            &mut fs::read_to_string(path_out.join("ddmm-temp-options\\options.rpy")).unwrap(),
+            &fs::read_to_string(path_out.join("ddmm-temp-options\\options.rpy")).unwrap(),
         )
-        .unwrap_or_else(|| String::new());
+        .unwrap_or_default();
     }
     for (output, content) in rpa_archive.content.iter() {
         if output.as_path().to_str().unwrap().contains("option") {
@@ -311,7 +315,7 @@ fn rpa_data(app: AppHandle, path: &str, out: &str) -> String {
     String::new()
 }
 
-fn rpa_archive_option(path_out: &PathBuf, cmain: &str) -> String {
+fn rpa_archive_option(path_out: &Path, cmain: &str) -> String {
     let mut exchild = Command::new(
         env::current_exe()
             .unwrap()
@@ -348,8 +352,8 @@ fn rpa_archive_option(path_out: &PathBuf, cmain: &str) -> String {
         println!("{:?}", output_src);
         if output_src.exists() {
             println!("Found RPY File! Extracting Data");
-            let mut src_text = fs::read_to_string(output_src.as_path().to_str().unwrap()).unwrap();
-            return parse_source(&mut src_text).unwrap_or_else(|| String::new());
+            let src_text = fs::read_to_string(output_src.as_path().to_str().unwrap()).unwrap();
+            return parse_source(&src_text).unwrap_or_default();
         } else {
             eprintln!("Failed to find RPY File!");
         }
@@ -369,10 +373,8 @@ fn parse_source(source: &str) -> Option<String> {
             continue;
         }
         let mut contents = line.split('"');
-        if contents.next().is_none() {
-            return None;
-        };
-        let content = contents.next().unwrap_or_else(|| "");
+        contents.next()?;
+        let content = contents.next().unwrap_or("");
         println!("{}", line);
         let data = dirs::config_dir().unwrap().join("RenPy").join(content);
         if data.exists() {
@@ -410,7 +412,7 @@ fn extract_rpa(app: &AppHandle, path: &str, out: &str) {
         let mut file = File::create(&output).unwrap();
         content.copy_to(&mut rpa_archive.reader, &mut file).unwrap();
     }
-    decrypt_rpa_dir(app, &path_out.as_path());
+    decrypt_rpa_dir(app, path_out.as_path());
 }
 
 fn extract_rpyc(app: &AppHandle, path: &str, out: &str) {
@@ -418,10 +420,7 @@ fn extract_rpyc(app: &AppHandle, path: &str, out: &str) {
     let path_out = PathBuf::from(out);
 
     create_dir_all(path_out.as_path()).unwrap();
-    let file_path = path_out.join(format!(
-        "{}",
-        binding.file_name().unwrap().to_str().unwrap()
-    ));
+    let file_path = path_out.join(binding.file_name().unwrap().to_str().unwrap());
     let mut file = File::create(&file_path).unwrap();
     file.write_all(&fs::read(&binding).unwrap()).unwrap();
     println!(
@@ -429,7 +428,7 @@ fn extract_rpyc(app: &AppHandle, path: &str, out: &str) {
         &file_path.to_str().unwrap(),
         &binding.to_str().unwrap()
     );
-    decrypt_rpa_dir(app, &path_out.as_path());
+    decrypt_rpa_dir(app, path_out.as_path());
 }
 
 fn decrypt_rpa_dir(app: &AppHandle, root_path: &Path) {
@@ -443,7 +442,7 @@ fn decrypt_rpa_dir(app: &AppHandle, root_path: &Path) {
     let files: Vec<_> = WalkDir::new(root_path)
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "rpyc"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "rpyc"))
         .map(|e| e.path().to_owned())
         .collect();
 
@@ -480,7 +479,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     let dir = PathBuf::from(&path).parent().unwrap().display().to_string();
 
     println!("{}", path);
-    fix_renpy_8(&renpy, &scripts).await;
+    fix_renpy_8(renpy, &scripts).await;
     set_playing(id);
 
     let mut launch_result = Command::new(path)
@@ -548,8 +547,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         }
     }
 
-    if error.is_some() {
-        let msg = error.unwrap();
+    if let Some(msg) = error {
         let success = msg.eq("exit code: 0");
         if !success {
             app.track_event(
@@ -645,7 +643,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     let source_file = PathBuf::from(&path);
     let raw_rpa = path.ends_with(".rpa");
     let source_name = if raw_rpa {
-        &format!("Unknown_{}", thread_rng().gen_range(0..99999).to_string())
+        &format!("Unknown_{}", rng().random_range(0..99999))
     } else {
         source_file
             .file_name()
@@ -662,7 +660,18 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
             .trim_end_matches(|c: char| c.is_ascii_whitespace()),
     );
 
-    let mut target_dir = PathBuf::from(&config_data.directory).join(source_name_no_ext);
+    let target_dir_parent = PathBuf::from(&config_data.directory);
+    let mut target_dir = target_dir_parent.join(source_name_no_ext);
+
+    if target_dir.exists() {
+        let mut extention = 0;
+        while target_dir_parent.join(format!("{} {}",source_name_no_ext,extention)).exists() {
+            extention+=1;
+        }
+        target_dir = target_dir_parent.join(format!("{} {}",source_name_no_ext,extention));
+    }
+
+    let initial_target_dir = target_dir.clone();
 
     let mut file = File::open(&source_file).map_err(|e| e.to_string())?;
 
@@ -693,8 +702,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     )
     .unwrap();
 
-    let _ = copy_dir_recursive(&PathBuf::from("./store/ddlc"), &target_dir)
-        .expect("Failed to copy ddlc!");
+    copy_dir_recursive(&PathBuf::from("./store/ddlc"), &target_dir).expect("Failed to copy ddlc!");
 
     logger.log(String::from("I/O Copy DDLC Files Finished"));
 
@@ -717,7 +725,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     } else if path.ends_with(".rpa") {
         let file_content = fs::read(&source_file).unwrap();
         fs::write(
-            &target_dir.join(format!(
+            target_dir.join(format!(
                 "game/{}",
                 &source_file.file_name().unwrap().to_str().unwrap()
             )),
@@ -732,19 +740,18 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         }
 
         if !target_dir.to_str().unwrap().ends_with("game") && nest_check.clone().is_some() {
-            if import_game_zip(&mut archive, &*nest_check.clone().unwrap()) {
+            if import_game_zip(&mut archive, &nest_check.clone().unwrap()) {
                 target_dir = target_dir.join("game");
             }
             println!("Extract A");
-            let _ = extractor::extract_zip_archive_without_toplevel(
+            extractor::extract_zip_archive_without_toplevel(
                 &mut ZipArchive::new(&mut file).unwrap(),
                 &target_dir,
                 &nest_check.unwrap().replace("/", ""),
             )
             .map_err(|e| e.to_string())?;
         } else {
-            let _ = extractor::extract_zip_archive(&mut archive, &target_dir)
-                .map_err(|e| e.to_string())?;
+            extractor::extract_zip_archive(&mut archive, &target_dir).map_err(|e| e.to_string())?;
         }
 
         zip_archive_opt = Some(archive);
@@ -765,7 +772,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         let mut is_game = false;
         let nested = &detect_nest(
             source_name_no_ext,
-            &target_dir.to_str().unwrap(),
+            target_dir.to_str().unwrap(),
             zip_archive_opt.as_mut(),
         )
         .await;
@@ -792,17 +799,18 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
                 }
             }
             if is_game {
-                let _ =
-                    copy_dir_recursive(&PathBuf::from(nested), &target_dir.join("game")).unwrap();
+                copy_dir_recursive(&PathBuf::from(nested), &target_dir.join("game")).unwrap();
             } else {
-                let _ = copy_dir_recursive(&PathBuf::from(nested), &target_dir).unwrap();
+                copy_dir_recursive(&PathBuf::from(nested), &target_dir).unwrap();
             }
             remove_dir_all(nested).unwrap();
         }
     }
-    if is_file(PathBuf::from(&target_dir).join("game/firstrun")).await {
-        remove_file(PathBuf::from(&target_dir).join("game/firstrun")).unwrap();
+
+    if !target_dir.ends_with("game") && is_file(PathBuf::from(&target_dir).join("game").join("firstrun")).await {
+        remove_file(PathBuf::from(&target_dir).join("firstrun")).unwrap();
     }
+
     app.emit(
         "set_bar",
         IntData {
@@ -814,7 +822,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     app.emit(
         "import_done",
         StringData {
-            text: &format!("{}", source_name_no_ext),
+            text: PathBuf::from(&initial_target_dir).file_name().expect("Could not get file name").to_str().unwrap(),
         },
     )
     .unwrap();
@@ -850,7 +858,7 @@ fn detect_nest_1(zip_archive: Option<&mut ZipArchive<File>>) -> Option<String> {
                 ""
             };
             let zero = name.split("/").next().unwrap();
-            if format!("{}", zero) == format!("{}", newest) || newest_found.is_none() {
+            if zero == newest || newest_found.is_none() {
                 newest_found = Some(zero.to_string());
             } else {
                 newest_found = None;
@@ -870,18 +878,16 @@ async fn detect_nest(
 ) -> String {
     let paths = [
         string,
-        &"-Renpy7Mod".to_string(),
-        &"-Renpy8Mod".to_string(),
+        "-Renpy7Mod",
+        "-Renpy8Mod",
         &format!("{}V3", string),
-        &"-1.0-pc".to_string(),
+        "-1.0-pc",
         "CupcakeDelivery-1.0.1-pc",
     ];
 
     if zip_archive.is_some() {
         let newest_found: Option<String> = detect_nest_1(zip_archive);
-
-        if newest_found.is_some() {
-            let newest = newest_found.unwrap();
+        if let Some(newest) = newest_found {
             if newest == "game" {
                 println!("Invalid Newest: {}", newest)
             } else {
@@ -895,37 +901,36 @@ async fn detect_nest(
         }
     }
 
-    for dir in PathBuf::from(target_dir)
+    for entry in PathBuf::from(target_dir)
         .read_dir()
         .expect("Failed to read dir")
+        .flatten()
     {
-        if let Ok(entry) = dir {
-            let path = entry.path();
-            if !path.is_dir() {
-                continue;
-            }
-            let file_name = path.file_name().unwrap().to_str().unwrap();
-            for selected in paths {
-                println!(
-                    "Checking: '{}' against '{}' with result '{}'",
-                    file_name,
-                    selected,
-                    file_name.contains(selected)
-                );
-                if file_name.contains(selected) {
-                    return path.to_str().unwrap().to_string();
-                }
-            }
-            if file_name.contains(" -") && string == file_name.replace(" -", "") {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let file_name = path.file_name().unwrap().to_str().unwrap();
+        for selected in paths {
+            println!(
+                "Checking: '{}' against '{}' with result '{}'",
+                file_name,
+                selected,
+                file_name.contains(selected)
+            );
+            if file_name.contains(selected) {
                 return path.to_str().unwrap().to_string();
             }
+        }
+        if file_name.contains(" -") && string == file_name.replace(" -", "") {
+            return path.to_str().unwrap().to_string();
         }
     }
 
     String::from("None")
 }
 
-fn import_game_rar(archive_path: &PathBuf) -> bool {
+fn import_game_rar(archive_path: &Path) -> bool {
     let mut found = false;
     let mut archive = Archive::new(archive_path.to_str().unwrap())
         .open_for_processing()
@@ -960,9 +965,9 @@ fn import_game_rar(archive_path: &PathBuf) -> bool {
 
 #[tauri::command]
 fn goto_main(app: AppHandle) {
-    for (label, webview) in app.webviews() {
+    for (label, webview) in app.windows() {
         if label != "main" {
-            let _ = webview.close();
+            let _ = webview.destroy();
         }
     }
 
@@ -972,24 +977,53 @@ fn goto_main(app: AppHandle) {
         .expect("Failed to focus");
 }
 
+async fn download_file(app: &AppHandle, url: String, save_path: String) -> Result<(), String> {
+    let response = reqwest::get(url).await.unwrap();
+    let total = response.content_length().unwrap_or(0);
+    let mut file = tokio::fs::File::create(save_path).await.unwrap();
+    let mut stream = response.bytes_stream();
+    let mut start = Instant::now();
+
+    let mut downloaded = 0u64;
+    let mut last_downloaded = 0u64;
+
+    while let Some(chunk) = stream.try_next().await.unwrap() {
+        file.write_all(&chunk).await.unwrap();
+        downloaded += chunk.len() as u64;
+
+        if start.elapsed().as_secs() >= 1 {
+            app.emit("download_percent",
+                     StringData {
+                         text: &format!("{:.1}% ({:.1} MB/s)", (downloaded as f64 / total as f64) * 100f64, (downloaded - last_downloaded) as f64 / start.elapsed().as_millis().max(1) as f64 / 1024f64),
+                     }).unwrap();
+            start = Instant::now();
+            last_downloaded = downloaded.clone();
+        }
+    }
+
+    file.flush().await.unwrap();
+    Ok(())
+}
+
 #[tauri::command]
 async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), String> {
-    let script = fs::read_to_string("resources/link_open_redirector.js").unwrap();
+    let script_path = RESOURCES
+        .get_file("link_open_redirector.js")
+        .expect("Failed to get script path");
+    let script = script_path.contents_utf8().unwrap();
     let downloads_dir = env::current_dir()
         .unwrap()
         .join("store")
         .join("downloads")
         .display()
         .to_string();
-
     let cache_dir = env::current_dir().unwrap().join("store").join("cache");
 
     create_dir_all(&downloads_dir).expect("FS Error: Failed To Create Store/Mods");
-
-    create_dir_all(&cache_dir).expect("FS Error: Failed To Create Cache/Mods");
+    create_dir_all(&cache_dir).expect("FS Error: Failed To Create Store/Cache");
 
     let _window =
-        WebviewWindowBuilder::new(&app.clone(), format!("external-{}_{}",name, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs().to_string()), WebviewUrl::External(Url::parse(url).unwrap()))
+        WebviewWindowBuilder::new(&app.clone(), format!("external-{}_{}",name, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()), WebviewUrl::External(Url::parse(url).unwrap()))
             .inner_size(1200f64, 600f64)
             .title(name.split("_").collect::<Vec<&str>>().join(" "))
             .initialization_script(script)
@@ -1006,29 +1040,48 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
                 }
                 NewWindowResponse::Allow
             })
-            .on_download(move |_webview, event| {
+            .on_download(move |webview, event| {
                 match event {
                     DownloadEvent::Requested { url, destination } => {
-                        let og_dest = destination.clone();
-                        *destination = PathBuf::from(downloads_dir.clone()).join(og_dest.file_name().unwrap());
-                        println!("{} | {} | {}", downloads_dir, og_dest.display(), destination.display());
-                        app.emit("download_start",
-                                 StringData {
-                                     text: &format!("{} | {}", url, destination.display()),
-                                 }).unwrap();
-                    }
-                    DownloadEvent::Finished { url, path, success } => {
-                        if path.is_some() {
-                            app.emit("download_end",
-                                     StringData {
-                                         text: &format!("{} | {:?} | {}", url, path.unwrap().display(), success),
-                                     }).unwrap();
-                        }
+                        let url = url.to_string();
+                        let path = PathBuf::from(downloads_dir.clone()).join(destination.file_name().unwrap());
+                        let app = webview.app_handle().clone();
 
+                        tauri::async_runtime::spawn(async move {
+                            app.emit("download_start",
+                                     StringData {
+                                              text: &format!("{} | {}", url, path.to_str().expect("Failed to get path")),
+                                          }).unwrap();
+                            let _ = download_file(&app, url.clone(), path.to_str().expect("Failed to get path").to_string()).await.unwrap();
+                            app.emit("download_end",
+                                             StringData {
+                                                 text: &format!("{} | {} | {}", url, path.to_str().expect("Failed to get path"), true),
+                                             }).unwrap();
+                        });
+
+                        false
                     }
-                    _ => (),
+                    DownloadEvent::Finished { .. } => {
+                        true
+                    }
+                    // DownloadEvent::Requested { url, destination } => {
+                    //     let og_dest = destination.clone();
+                    //     *destination = PathBuf::from(downloads_dir.clone()).join(og_dest.file_name().unwrap());
+                    //     println!("{} | {} | {}", downloads_dir, og_dest.display(), destination.display());
+                    //     app.emit("download_start",
+                    //              StringData {
+                    //                  text: &format!("{} | {}", url, destination.display()),
+                    //              }).unwrap();
+                    // }
+                    // DownloadEvent::Finished { url, path, success }
+                    //     if path.is_some() => {
+                    //         app.emit("download_end",
+                    //                  StringData {
+                    //                      text: &format!("{} | {:?} | {}", url, path.unwrap().display(), success),
+                    //                  }).unwrap();
+                    //     }
+                    _ => false,
                 }
-                true
             })
             .build()
             .expect("Failed to build webview");
@@ -1036,7 +1089,7 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
 }
 
 fn is_game_folder(name: &str) -> bool {
-    name.ends_with(".rpyc") || name.ends_with(".rpa") || name.starts_with("mod_assets")
+    name.ends_with(".rpyc") || name.ends_with(".rpa") || name.starts_with("mod_assets") || name.ends_with(".rpy")
 }
 
 #[tauri::command]
@@ -1051,13 +1104,7 @@ fn rename_dir(app: AppHandle, path: &str, new_name: &str, id: &str) {
             });
         });
     }
-    app.emit(
-        "rename_done",
-        StringData {
-            text: &format!("{}", id),
-        },
-    )
-    .unwrap();
+    app.emit("rename_done", StringData { text: id }).unwrap();
 }
 
 fn import_game_zip(archive: &mut ZipArchive<File>, toppath: &str) -> bool {
@@ -1158,7 +1205,7 @@ async fn update_exe() {
         .await
         .expect("Failed to download latest");
     let mut out = File::create("./dokimodmanager-new.exe").expect("Failed to create file");
-    out.write_all(&mut resp.bytes().await.expect("Failed to write bytes"))
+    out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
         .unwrap();
     let update_script = r#"$Host.UI.RawUI.WindowTitle = 'Doki Doki Mod Manager Updater';
 $art = @'
@@ -1219,7 +1266,7 @@ if (Test-Path 'dokimodmanager.exe') {
 
     Command::new("powershell")
         .current_dir(env::current_dir().unwrap())
-        .args(["-NoProfile", "-Command", &update_script])
+        .args(["-NoProfile", "-Command", update_script])
         .spawn()
         .expect("failed to launch cmd");
     std::process::exit(0);
@@ -1231,7 +1278,8 @@ fn open_path(path: &str) {
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
-        .expect("failed to launch cmd");
+        .expect("failed to launch cmd")
+        .wait();
 }
 #[tauri::command]
 fn tracker(app: AppHandle, event: String, props: Option<serde_json::Value>) {
@@ -1248,7 +1296,7 @@ async fn make_config() {
     };
 
     let json_data = serde_json::to_string_pretty(&default_config_data).unwrap();
-    if !fs::metadata("DNNconfig.json").is_ok() {
+    if fs::metadata("DNNconfig.json").is_err() {
         let file = File::create("DNNconfig.json");
         let _ = file.expect("write failure").write_all(json_data.as_bytes());
     }
@@ -1259,7 +1307,7 @@ async fn update_unrpyc() {
         .await
         .expect("Failed to download latest");
     let mut out = File::create("./unrpyc.exe").expect("Failed to create file");
-    out.write_all(&mut resp.bytes().await.expect("Failed to write bytes"))
+    out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
         .unwrap();
 }
 
@@ -1282,9 +1330,9 @@ pub async fn run() {
     )
     .expect("FS Error: Failed To Create Store/Mods");
 
-    if !exists("./unrpyc.exe").unwrap() {
-        update_unrpyc().await;
-    } else if get_file_hash("./unrpyc.exe").expect("Unable to get hash on UNRPYC") != UN_RPYC_HASH {
+    if !exists("./unrpyc.exe").unwrap()
+        || get_file_hash("./unrpyc.exe").expect("Unable to get hash on UNRPYC") != UN_RPYC_HASH
+    {
         update_unrpyc().await;
     }
 
@@ -1298,13 +1346,13 @@ pub async fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_fs_pro::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_aptabase::Builder::new("A-US-9509641067".into()).build())
+        .plugin(tauri_plugin_aptabase::Builder::new("A-US-9509641067").build())
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
             let app_handle = app.handle().clone();
             let clone_handle = app.handle().clone();
             let downloads_dir = env::current_dir().unwrap().join("store").join("downloads");
-            let _ = app.track_event("app_started", None).unwrap();
+            app.track_event("app_started", None).unwrap();
 
             #[cfg(target_os = "windows")]
             apply_acrylic(&window, Some((0, 0, 0, 10)))
@@ -1332,7 +1380,7 @@ pub async fn run() {
 
                     let _ = open_webview(
                         value,
-                        &command.url,
+                        command.url,
                         &command.name.replace(" ", "_").to_lowercase(),
                     )
                     .await;

@@ -1,0 +1,6 @@
+[build]
+rustc-wrapper = "sccache"
+rustflags = ["-C", "target-cpu=native"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]

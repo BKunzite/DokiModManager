@@ -1,4 +1,4 @@
-export const CLIENT_VERSION = "3.7.0-beta"
+export const CLIENT_VERSION = "2.7.0-beta@1a"
 const BRANCH = "current_ver_beta.txt"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/" + BRANCH
 
@@ -8,7 +8,7 @@ const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/r
  * Get Latest Version From GitHub
  * @example ```javascript
  * let latest_version = await getLatest();
- * console.log(latest_version); // 1.6.0-release along with release notes
+ * console.log(latest_version); // 1.6.0-release (split('\n')[0]) | update log (split('\n')[1])
  * ```
  * @returns {Promise<string>}
  */

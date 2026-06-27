@@ -24,14 +24,14 @@ export const Translation = {
      * @param {string} lang (ex. en, fr)
      */
     setLanguage: (lang) => {
-        language = lang;
+	language = lang;
     },
     /**
      * Gets Current Language
      * @returns {string} (ex. en, fr)
      */
     getLanguage: () => {
-        return language;
+	return language;
     },
     /**
      * Translate text using global table
@@ -40,49 +40,49 @@ export const Translation = {
      * @returns {*}
      */
     of: (text) => {
-        if (TRANSLATION_TABLE[language] === undefined) throw new NoTranslationError("Language '" + language + "' not found in translation table!")
-        if (TRANSLATION_TABLE[language][text] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' not found in language '" + language + "'!")
-        return TRANSLATION_TABLE[language][text]
+	if (TRANSLATION_TABLE[language] === undefined) throw new NoTranslationError("Language '" + language + "' not found in translation table!")
+	if (TRANSLATION_TABLE[language][text] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' not found in language '" + language + "'!")
+	return TRANSLATION_TABLE[language][text]
     },
     sub: (text) => {
-        if (TRANSLATION_TABLE[language] === undefined) throw new NoTranslationError("Language '" + language + "' not found in translation table!")
-        if (TRANSLATION_TABLE[language][text] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' not found in language '" + language + "'!")
-        return {
-            of: (t) => {
-                if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
-                return TRANSLATION_TABLE[language][text][t]
-            },
-            sub: (t) => {
-                if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
-                return {
-                    of: (t2) => {
-                        if (TRANSLATION_TABLE[language][text][t][t2] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' sub '" + t + "' sub2 '" + t2 + "' not found in language '" + language + "'!")
-                        return TRANSLATION_TABLE[language][text][t][t2]
-                    }
-                }
-            }
-        }
+	if (TRANSLATION_TABLE[language] === undefined) throw new NoTranslationError("Language '" + language + "' not found in translation table!")
+	if (TRANSLATION_TABLE[language][text] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' not found in language '" + language + "'!")
+	return {
+	    of: (t) => {
+		if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
+		return TRANSLATION_TABLE[language][text][t]
+	    },
+	    sub: (t) => {
+		if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
+		return {
+		    of: (t2) => {
+			if (TRANSLATION_TABLE[language][text][t][t2] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' sub '" + t + "' sub2 '" + t2 + "' not found in language '" + language + "'!")
+			return TRANSLATION_TABLE[language][text][t][t2]
+		    }
+		}
+	    }
+	}
     }
 }
 
 export class NoTranslationError extends Error {
     constructor(message) {
-        super(message);
-        this.name = "NoTranslationError";
+	super(message);
+	this.name = "NoTranslationError";
     }
 
     static of(message) {
-        return new NoTranslationError(message);
+	return new NoTranslationError(message);
     }
 }
 
 export class NoTranslationIndexError extends Error {
     constructor(message) {
-        super(message);
-        this.name = "NoTranslationIndexError";
+	super(message);
+	this.name = "NoTranslationIndexError";
     }
 
     static of(message) {
-        return new NoTranslationIndexError(message);
+	return new NoTranslationIndexError(message);
     }
 }

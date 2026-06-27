@@ -2556,6 +2556,7 @@ li:not(.sticky):not(.favorite) {
     font-family: Aller, sans-serif;
     color: white;
     pointer-events: none;
+    text-wrap: nowrap;
 }
 
 .report-open {

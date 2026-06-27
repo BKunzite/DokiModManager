@@ -78,3 +78,12 @@ document.addEventListener("click", (e) => {
     }
     ;
 }, true);
+
+window.open = function (url, target, features) {
+    __TAURI__APP.event.emit("open_webview", {
+        url: url,
+        name: "external_webview"
+    })
+
+    return null;
+};

@@ -31,6 +31,8 @@
     "core:webview:allow-create-webview-window",
     "dialog:allow-open",
     "dialog:allow-save",
+    "dialog:allow-confirm",
+    "dialog:allow-message",
     {
       "identifier": "fs:scope",
       "allow": ["**/*"]

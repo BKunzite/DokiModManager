@@ -1,11 +1,11 @@
 use std::fs::{create_dir_all, File};
-use std::path::PathBuf;
-use std::{io};
+use std::io;
 use std::io::BufWriter;
+use std::path::{Path, PathBuf};
 use unrar::Archive;
 use zip::ZipArchive;
 pub fn extract_rar_archive(
-    archive_path: &PathBuf,
+    archive_path: &Path,
     target_dir: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut archive = Archive::new(archive_path.to_str().unwrap())
@@ -25,16 +25,25 @@ pub fn extract_rar_archive(
 
 pub fn extract_zip_archive_without_toplevel(
     archive: &mut ZipArchive<&mut File>,
-    target_dir: &PathBuf,
+    target_dir: &Path,
     top_path: &str,
 ) -> Result<(), String> {
-    let mut simple_logger = crate::simple_logger::SimpleLogger::new(format!("TL Extract {}", target_dir.to_str().unwrap()));
+    let mut simple_logger = crate::simple_logger::SimpleLogger::new(format!(
+        "TL Extract {}",
+        target_dir.to_str().unwrap()
+    ));
     let archive_len = archive.len();
     for i in 0..archive_len {
         let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
 
         let outpath = match file.enclosed_name() {
-            Some(path) => target_dir.join(PathBuf::from(path.to_str().unwrap().strip_prefix(top_path).expect("Invalid Path").trim_start_matches('/'))),
+            Some(path) => target_dir.join(PathBuf::from(
+                path.to_str()
+                    .unwrap()
+                    .strip_prefix(top_path)
+                    .expect("Invalid Path")
+                    .trim_start_matches('/'),
+            )),
             None => continue,
         };
 
@@ -45,7 +54,10 @@ pub fn extract_zip_archive_without_toplevel(
                 create_dir_all(p).map_err(|e| e.to_string())?;
             }
             let outfile = File::create(&outpath).map_err(|e| e.to_string())?;
-            simple_logger.log(format!("Extract {}", file.enclosed_name().unwrap().to_str().unwrap()));
+            simple_logger.log(format!(
+                "Extract {}",
+                file.enclosed_name().unwrap().to_str().unwrap()
+            ));
             let mut outfile = BufWriter::with_capacity(256 * 1024, outfile);
             io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
         }
@@ -56,10 +68,13 @@ pub fn extract_zip_archive_without_toplevel(
 
 pub fn extract_zip_archive(
     archive: &mut ZipArchive<File>,
-    target_dir: &PathBuf,
+    target_dir: &Path,
 ) -> Result<(), String> {
     let archive_len = archive.len();
-    let mut simple_logger = crate::simple_logger::SimpleLogger::new(format!("Extract {}", target_dir.to_str().unwrap()));
+    let mut simple_logger = crate::simple_logger::SimpleLogger::new(format!(
+        "Extract {}",
+        target_dir.to_str().unwrap()
+    ));
     for i in 0..archive_len {
         let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
 
@@ -74,7 +89,10 @@ pub fn extract_zip_archive(
             if let Some(p) = outpath.parent() {
                 create_dir_all(p).map_err(|e| e.to_string())?;
             }
-            simple_logger.log(format!("Extract {}", file.enclosed_name().unwrap().to_str().unwrap()));
+            simple_logger.log(format!(
+                "Extract {}",
+                file.enclosed_name().unwrap().to_str().unwrap()
+            ));
             let mut outfile = File::create(&outpath).map_err(|e| e.to_string())?;
             io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
         }

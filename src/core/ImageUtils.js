@@ -12,6 +12,13 @@ function createURL(contents, fileName) {
     return url;
 }
 
+function createBase64URL(contents, type = "image/png") {
+    let blob = new Blob([contents], {type: type});
+    const url = URL.createObjectURL(blob);
+    blob = null
+    return url;
+}
+
 /**
  * Get An Image Based On A List Of Covers
  *
@@ -34,8 +41,9 @@ export async function getImage(id, covers = []) {
         const contents = await readFile(cover);
         return createURL(contents, cover)
     } else if (typeof (id) === "object") {
-        const base64String = Base64.fromUint8Array(id);
-        return `data:image/png;base64,${base64String}`
+        console.log("[WARN] BASE64 IS NOT RECOMMENDED FOR PERFORMANCE")
+        const bytes = new Uint8Array(id);
+        return createBase64URL(bytes)
     } else if (typeof (id) === "string" && id.includes(":")) {
         const contents = await readFile(id);
         return createURL(contents, id)

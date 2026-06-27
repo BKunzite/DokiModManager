@@ -1,5 +1,5 @@
-2.7.0-beta
-Mandatory (Improper CSP Settings)
+2.7.0-beta@1a
+Recommended (Improper CSP Settings Fixed + Dependency Updates + Rewrite pt. 2)
 
 Discord - {PLACEHOLDER}
 
@@ -38,6 +38,9 @@ the mod's cover or to the left of the mod's name.
 - You may also drag the pin into the cover to pin it,
 or, drag the pin out of the cover to unpin it.
 
+Mod Download Fixed
+- The Good Ending
+
 More complete translation support.
 Added last played date.
 Changed a few icons.
@@ -45,6 +48,9 @@ Faster HTML escaping.
 Improved loading speeds (caching covers now
     takes significantly less time).
 Underlying code rewrite pt. 2.
+    Minor refactor, like plus or minus ~2000 lines added/removed/modified
+    Should have feature parity, just more security and better for the future.
+    This took me an entire day (12 hours straight of coding) to update, and
+    now, I want to bash my head against the wall.
+Binary Optimizations (Smaller exe size)
 Dependency updates.
-
-More Stuff To Come! This Is Just A Minor Bug Fix.

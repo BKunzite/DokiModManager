@@ -1,7 +1,7 @@
 {
   "name": "dokimodmanager",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -24,6 +24,8 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.3",
     "@vitejs/plugin-vue": "^5.2.4",
+    "eslint-plugin-vue": "^10.9.2",
+    "prettier": "^3.8.5",
     "vite": "^6.4.3"
   }
 }
