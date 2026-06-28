@@ -575,7 +575,6 @@ async function update_cover_images(first_time) {
  */
 
 async function saveConfig() {
-    // console.log("Saving Config @ " + Date.now())
     localConfig.config.coverId = background_cover;
     localConfig.config.totalTime = total_time;
     localConfig.config.version = CLIENT_VERSION;
@@ -1004,7 +1003,7 @@ async function add_mod(name) {
     let launch_time = Date.now();
     sidetext.classList.add("sidebutton");
     sidetext.id = shorthand;
-    sidetext.style.order = char_code.toString()
+    sidetext.style.order = char_code
 
     if (configData.favorite) {
 	sidetext.style.order = char_code - 122
@@ -1016,7 +1015,6 @@ async function add_mod(name) {
     if (configData.pinned) {
 	sidetext.classList.add("pinned")
 	sidetext.style.order = char_code - 244
-
     } else {
 	sidetext.classList.remove("pinned")
     }
@@ -1037,7 +1035,7 @@ async function add_mod(name) {
 	preload: {},
 	isFavorite: configData.favorite,
 	nameId: name.toLowerCase(),
-	getOrder: async() => configData.pinned ? char_code - 244 : configData.favorite ? char_code - 122 : char_code,
+	getOrder: () => configData.pinned ? char_code - 244 : (configData.favorite ? char_code - 122 : char_code),
 	preloadImages: async () => {
 	    let images = 0;
 	    getLauncher(name).functions().preload = {}
@@ -1068,7 +1066,7 @@ async function add_mod(name) {
 	    return name
 	},
 	resetOrder: () => {
-	    sidetext.order = getLauncher(name).functions().getOrder()
+	    sidetext.style.order = getLauncher(name).functions().getOrder()
 	},
 	setPinned: async (b) => {
 	    if (b === undefined) {
@@ -1088,6 +1086,8 @@ async function add_mod(name) {
 		sidetext.innerHTML = normalText
 	    }
 
+	    getLauncher(name).functions().resetOrder()
+
 	    if (configData.pinned) {
 		play(dart_sfx)
 	    }
@@ -1098,7 +1098,7 @@ async function add_mod(name) {
 	    } else {
 		sidetext.classList.remove("pinned")
 	    }
-	    getLauncher(name).functions().resetOrder()
+
 	    await saveModData();
 	},
 	open: async () => {
@@ -1578,7 +1578,6 @@ async function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
  */
 
 async function home_main() {
-    // await updateDisplayInfo("Hi " + (await invoke("whois", {})) + "!", "", "", "") -- This could leak the user's full name; deprecated
     document.getElementById("covertext").innerHTML = ""
     await set_pin(false)
     document.getElementById("pin-holder").classList.add("hide")
@@ -2592,7 +2591,6 @@ async function onLoad() {
 	showContainers(true)
 	alert_path = undefined;
 	document.getElementById("alert").classList.add("hide")
-
     })
 
     // Opens Up Path Of The Mod That Is Installing
@@ -2661,7 +2659,7 @@ async function onLoad() {
 	}
     })
 
-    // This is what is recieved when you import a mod
+    // This is what is received when you import a mod
     // This is also the first handshake handler that tells the frontend (this) to listen to the downloads folder
 
     globLog("Finished Loading Defaults (" + (Date.now() - start) + "ms).")
@@ -3387,9 +3385,6 @@ async function onLoad() {
     })
 
     await globLog("Finished Loading Observers2 (" + (Date.now() - start) + "ms).")
-
-    // SNOWFLAKE
-
     await globLog("Loading Intervals.")
 
     // setInterval(snowflake, 100)
@@ -3437,7 +3432,7 @@ async function onLoad() {
 	document.getElementById("pin-holder").classList.remove("pin-holder-drag")
 
 	if (getLauncher(currentEntry)) {
-	    if (Date.now() - dragStart < 100) {
+	    if (Date.now() - dragStart < 150) {
 		document.getElementById("pin-holder").style.removeProperty("left")
 		document.getElementById("pin-holder").style.removeProperty("top")
 		getLauncher(currentEntry).functions().setPinned()

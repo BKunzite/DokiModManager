@@ -1,4 +1,4 @@
-2.7.0-beta@prod-e-cache2
+1.7.0-beta@final-rc
 Recommended (Improper CSP Settings Fixed + Dependency Updates)
 (This is where I start really ramping up changes to the code
 as I prepare for 2.0.0. If you dont want to update, dont.

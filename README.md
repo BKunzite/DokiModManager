@@ -1,6 +1,6 @@
 # Doki Doki Mod Manager
 
-![Doki Doki Mod Manager 1.6.0 Release Notes](Artwork/ddmm1.7.0.png)
+![Doki Doki Mod Manager 1.7.0 Artwork](Artwork/ddmm1.7.0.png)
 
 [![Written by Human, Not by AI](https://img.shields.io/badge/Written%20by%20Human-Not%20by%20AI-5B20B3?labelColor=FFF&style=for-the-badge)](https://notbyai.fyi)
 ![GitHub last commit](https://img.shields.io/github/last-commit/bkunzite/DokiModManager?display_timestamp=committer&style=for-the-badge&label=Last%20Update%20&color=violet)
@@ -56,10 +56,11 @@ Doki Doki Mod Manager, whilst open, will constantly scan downloads for newly dow
 # Support For Other Operating Systems
 
 ### macOS
-There are now plans for Mac support this summer. It will likely come out sometime in August 2026.
+There are now plans for Mac support this summer. I do not actually know if I can get a Mac this summer, so this is now on hold.
 
 ### Linux-Based Operating Systems
 There are currently no plans to support Linux. If you are on any Linux-based operating system, please use the original Doki Doki Mod Manager.
+This is partially due to Tauri not working well on linux.
 
 # Credits
 
@@ -68,9 +69,4 @@ There are currently no plans to support Linux. If you are on any Linux-based ope
 - Yuri    BG Image - [Reddit - Peaceable colt](https://www.reddit.com/r/DDLC/comments/w9h5yr/i_havent_posted_here_in_like_3_years_heres_a/)
 - Sayori  BG Image - [Twitter - Sascha_SAN](https://x.com/Saschaa_SAN/status/1533897941928525824)
 - Natsuki BG Image - [Reddit - The_Fish_Art](https://www.reddit.com/r/DDLC/comments/1ll685l/oc_the_simple_beauty_of_natsuki_202120232025_alts/)
-
-This software uses unrpyc, developed by CensoredUsername and others.
-Source: https://github.com/CensoredUsername/unrpyc
-
-unrpyc License (MIT):
-Copyright (c) 2012-2024 CensoredUsername
+- UnRPYC - https://github.com/CensoredUsername/unrpyc

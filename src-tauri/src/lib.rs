@@ -1066,22 +1066,6 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
                     DownloadEvent::Finished { .. } => {
                         true
                     }
-                    // DownloadEvent::Requested { url, destination } => {
-                    //     let og_dest = destination.clone();
-                    //     *destination = PathBuf::from(downloads_dir.clone()).join(og_dest.file_name().unwrap());
-                    //     println!("{} | {} | {}", downloads_dir, og_dest.display(), destination.display());
-                    //     app.emit("download_start",
-                    //              StringData {
-                    //                  text: &format!("{} | {}", url, destination.display()),
-                    //              }).unwrap();
-                    // }
-                    // DownloadEvent::Finished { url, path, success }
-                    //     if path.is_some() => {
-                    //         app.emit("download_end",
-                    //                  StringData {
-                    //                      text: &format!("{} | {:?} | {}", url, path.unwrap().display(), success),
-                    //                  }).unwrap();
-                    //     }
                     _ => false,
                 }
             })

@@ -4,6 +4,8 @@ window.__TAURI__ = null;
 /**
  * This function block is here to hide the
  * constants from the rest of the page.
+ *
+ * Blocks A Few Well Known Ads/Trackers
  */
 
 (function () {
@@ -64,6 +66,10 @@ window.__TAURI__ = null;
     };
 })();
 
+/**
+ * Fix Links That Open To _blank
+ */
+
 document.addEventListener("click", (e) => {
     const a = e.target.closest?.("a[href]");
     if (!a) return;
@@ -79,6 +85,10 @@ document.addEventListener("click", (e) => {
         })
     }
 }, true);
+
+/**
+ * Hijack New Window And Re-route It Through Tauri
+ */
 
 window.open = function (url, target, features) {
     __TAURI__APP.event.emit("open_webview", {
