@@ -25,7 +25,7 @@ import App from "./App.vue";
 import Desktop from "./Desktop.vue";
 
 // Utils
-import {getImage} from "./core/ImageUtils";
+import {deref, getImage, lazy_deref} from "./core/ImageUtils";
 import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
 import {Translation, TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE} from "./core/Translation.js"
 import {Base64} from 'js-base64';
@@ -229,7 +229,7 @@ function preloadImage(src) {
     return new Promise(async (resolve, reject) => {
 	const img = new Image();
 	img.decoding = 'async';
-	img.src = await getImage(src, covers);
+	img.src = await getImage(src, covers, true);
 	img.onerror = reject;
 	resolve(img);
     });
@@ -704,17 +704,24 @@ function exit_program() {
  * @param {string} dir Directory Of Image
  * @param {string} image Image Name
  * @param {string} entry Launcher Name 2
+ * @param {boolean} preload Is This A Preload Image?
  * @returns {HTMLDivElement} Created Div
  */
 
-function createScreenshotDiv(src, entryName, dir, image, entry) {
+function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
     const newScreenshot = document.createElement("img")
     const cover_text = document.createElement("button");
     const path_text = document.createElement("button");
 
     const cover_bg = document.createElement("div");
     newScreenshot.decoding = "async"
-    newScreenshot.loading = "lazy"
+    if (!preload) {
+	newScreenshot.loading = "lazy"
+    } else {
+	newScreenshot.onload = () => {
+	    lazy_deref(src)
+	}
+    }
     newScreenshot.classList.add("screenshots-image")
     newScreenshot.src = src;
     newScreenshot.addEventListener("mouseup", async () => {
@@ -1012,7 +1019,7 @@ async function add_mod(name) {
 
 	    for (const localEntry of await readDir(dir)) {
 		if (localEntry.name.includes("screenshot")) {
-		    getLauncher(name).functions().preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name, []), name, dir, localEntry.name, name);
+		    getLauncher(name).functions().preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name, []), name, dir, localEntry.name, name, true);
 		    getLauncher(name).functions().preload[localEntry.name].classList.add("preload-image")
 		    images++
 
@@ -1151,6 +1158,15 @@ async function add_mod(name) {
 	    await getLauncher(name).functions().leftClick();
 	},
 	leftClick: async () => {
+	    let taskPromise;
+	    let taskFiles;
+	    taskPromise = readDir(dir).then((v) => {
+		taskFiles = v
+		return v
+	    }).finally(() => {
+		taskPromise = null;
+	    })
+
 	    currentEntry = name;
 	    await setCover(configData.coverId);
 	    await set_pin(configData.pinned);
@@ -1161,7 +1177,6 @@ async function add_mod(name) {
 		pin_holder.style.removeProperty("top")
 	    }
 
-	    const screenshotWanderer = await readDir(dir);
 
 	    if (configData.renpy === "" || configData.renpy === undefined) {
 		configData.renpy = await getRenpy(dir);
@@ -1171,17 +1186,19 @@ async function add_mod(name) {
 	    let renpy = configData.renpy;
 	    let screenshots = false;
 	    let images = []
+	    const children =  Array.from(document.getElementById("screenshots").children);
 
-	    while (document.getElementById("screenshots").children.length > 0) {
-		const child = document.getElementById("screenshots").children.item(document.getElementById("screenshots").children.length - 1);
+	    for (const child of children) {
 		if (!child.classList.contains("preload-image")) {
-		    URL.revokeObjectURL(child.getElementsByClassName("screenshots-image")[0].src);
+		    lazy_deref(child.getElementsByClassName("screenshots-image")[0].src);
 		    child.getElementsByClassName("screenshots-image")[0].src = ""
 		}
 		child.remove()
 	    }
 
-	    for (const localEntry of screenshotWanderer) {
+	    await taskPromise;
+
+	    for (const localEntry of taskFiles) {
 		if (localEntry.name.startsWith("screenshot")) {
 		    screenshots = true;
 		    if (getLauncher(name).functions().preload[localEntry.name] !== undefined) {
@@ -1200,9 +1217,11 @@ async function add_mod(name) {
 
 	    renpy = name + "<br>Renpy: " + htmlEscape(renpy) + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith("DDLC.exe")) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (modCredits !== undefined ? modCredits : "None Found!");
 	    document.getElementById("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
-	    play(sound_boop)
-	    const min = Math.floor(configData.time / 60000);
+	    new Promise(() => {
+		play(sound_boop)
+	    }).then(() => {})
 
+	    const min = Math.floor(configData.time / 60000);
 	    const msSinceLastPlayed = Date.now() - configData.last_played;
 	    let lastPlayed = Translation.of("never");
 
@@ -1227,7 +1246,7 @@ async function add_mod(name) {
 		    let data = await metadata(selectedPath + fileTerminator + name);
 		    configData.size = data.size;
 		    if (currentEntry === name) {
-			updateDisplayInfo(name, configData.author, (configData.size / 1048600) > 1000 ? (Math.floor(configData.size / 1_048_600_000) + " GB") : (Math.floor(configData.size / 1048600) + " MB"), Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), renpy, lastPlayed).then(() => {
+			updateDisplayInfo(name, configData.author, (configData.size / 1048600) > 1000 ? (Math.floor(configData.size / 1_048_600_000) + " GB") : (Math.floor(configData.size / 1048600) + " MB"), Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), name + "<br>Renpy: " + htmlEscape(configData.renpy) + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith("DDLC.exe")) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (modCredits !== undefined ? modCredits : "None Found!"), lastPlayed).then(() => {
 			})
 		    }
 		    data = null
@@ -1249,12 +1268,12 @@ async function add_mod(name) {
 		    document.getElementById("screenshots").onscroll = null
 
 		    for (const image_url of images) {
-			let imageS = createScreenshotDiv(await getImage(dir + fileTerminator + image_url, []), name, dir, image_url, name)
+			let imageS = createScreenshotDiv(await getImage(dir + fileTerminator + image_url, [], true), name, dir, image_url, name, false)
 			document.getElementById("screenshots").appendChild(
 			    imageS
 			);
 			imageS.getElementsByClassName("screenshots-image")[0].decode().then(() => {
-			    URL.revokeObjectURL(imageS.getElementsByClassName("screenshots-image")[0].src);
+			    lazy_deref(imageS.getElementsByClassName("screenshots-image")[0].src);
 			    caches.delete(imageS.getElementsByClassName("screenshots-image")[0].src);
 			}).catch(err => {
 			    console.warn("Failed To Load Image: " + dir + fileTerminator + image_url + " Error: " + err)
@@ -2150,7 +2169,7 @@ async function onLoad() {
 	tracked_downloads.push(components[1])
 	await globLog(tracked_downloads)
 	document.getElementById("install-info").classList.remove("hide")
-	confirm("Go Back To Mod Manager?").then(async (e) => {
+	confirm("Close Other Windows?").then(async (e) => {
 	    if (e) {
 		await invoke("goto_main")
 	    }
@@ -2284,7 +2303,7 @@ async function onLoad() {
      */
 
     document.getElementById("view-image").onload = () => {
-	URL.revokeObjectURL(document.getElementById("view-image").src);
+	deref(document.getElementById("view-image").src);
     }
 
     document.getElementById("cover-up").addEventListener("click", () => {
@@ -2409,14 +2428,28 @@ async function onLoad() {
 
     // Used for sidebar animations
 
+    let observer_await = false;
     observer = new IntersectionObserver((entries) => {
+	if (observer_await) return
+	let toRemove = []
+	let toAdd = []
 	entries.forEach(entry => {
 	    if (entry.isIntersecting) {
-		entry.target.classList.add("sidevisible");
+		toAdd.push(entry.target)
 	    } else {
-		entry.target.classList.remove("sidevisible");
+		toRemove.push(entry.target)
 	    }
 	});
+	observer_await = true;
+	requestAnimationFrame(() => {
+	    for (const entry of toAdd) {
+		entry.classList.add("sidevisible")
+	    }
+	    for (const entry of toRemove) {
+		entry.classList.remove("sidevisible")
+	    }
+	    observer_await = false;
+	})
     })
 
     // Initiates Sidebar Animations
@@ -3473,7 +3506,7 @@ async function launch_desktop() {
     document.getElementById("console").scrollTo(0, document.getElementById("console").scrollHeight)
     document.getElementById("desktop-version").textContent = "Doki Doki Mod Manager " + CLIENT_VERSION
     document.getElementById("desktop-launch").addEventListener("mouseup", () => {
-	window.location.reload(true)
+	window.location.reload()
     })
 
     document.getElementById("desktop-close2").addEventListener("mouseup", () => {

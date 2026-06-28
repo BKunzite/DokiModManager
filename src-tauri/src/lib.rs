@@ -808,7 +808,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     }
 
     if !target_dir.ends_with("game") && is_file(PathBuf::from(&target_dir).join("game").join("firstrun")).await {
-        remove_file(PathBuf::from(&target_dir).join("firstrun")).unwrap();
+        remove_file(PathBuf::from(&target_dir).join("game").join("firstrun")).unwrap();
     }
 
     app.emit(
@@ -836,7 +836,7 @@ fn post_status(app: &AppHandle, status: &str) {
 }
 
 fn remove_numbered_suffix(input: &str) -> &str {
-    static RE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+    static RE: OnceLock<Regex> = OnceLock::new();
     let regex = RE.get_or_init(|| Regex::new(r"\s*\(\d+\)$").unwrap());
 
     if let Some(m) = regex.find(input) {
@@ -845,6 +845,7 @@ fn remove_numbered_suffix(input: &str) -> &str {
         input
     }
 }
+
 fn detect_nest_1(zip_archive: Option<&mut ZipArchive<File>>) -> Option<String> {
     let mut newest_found: Option<String> = None;
     let archive = zip_archive.unwrap();
@@ -1204,63 +1205,16 @@ async fn update_exe() {
     let resp = reqwest::get(LATEST_ARTIFACT)
         .await
         .expect("Failed to download latest");
+
     let mut out = File::create("./dokimodmanager-new.exe").expect("Failed to create file");
     out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
         .unwrap();
-    let update_script = r#"$Host.UI.RawUI.WindowTitle = 'Doki Doki Mod Manager Updater';
-$art = @'
-██████╗  ██████╗ ██╗  ██╗██╗    ██████╗  ██████╗ ██╗  ██╗██╗
-██╔══██╗██╔═══██╗██║ ██╔╝██║    ██╔══██╗██╔═══██╗██║ ██╔╝██║
-██║  ██║██║   ██║█████╔╝ ██║    ██║  ██║██║   ██║█████╔╝ ██║
-██║  ██║██║   ██║██╔═██╗ ██║    ██║  ██║██║   ██║██╔═██╗ ██║
-██████╔╝╚██████╔╝██║  ██╗██║    ██████╔╝╚██████╔╝██║  ██╗██║
-╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝    ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝
 
-███╗   ███╗ ██████╗ ██████╗
-████╗ ████║██╔═══██╗██╔══██╗
-██╔████╔██║██║   ██║██║  ██║
-██║╚██╔╝██║██║   ██║██║  ██║
-██║ ╚═╝ ██║╚██████╔╝██████╔╝
-╚═╝     ╚═╝ ╚═════╝ ╚═════╝
+    let script = RESOURCES
+        .get_file("update.ps1")
+        .expect("Failed to get script path");
 
-███╗   ███╗ █████╗ ███╗   ██╗ █████╗  ██████╗ ███████╗██████╗
-████╗ ████║██╔══██╗████╗  ██║██╔══██╗██╔════╝ ██╔════╝██╔══██╗
-██╔████╔██║███████║██╔██╗ ██║███████║██║  ███╗█████╗  ██████╔╝
-██║╚██╔╝██║██╔══██║██║╚██╗██║██╔══██║██║   ██║██╔══╝  ██╔══██╗
-██║ ╚═╝ ██║██║  ██║██║ ╚████║██║  ██║╚██████╔╝███████╗██║  ██║
-╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝
-Updater
-By // BKunzite
-'@
-
-$colors = @('Red', 'Yellow', 'Green', 'Cyan', 'Blue', 'Magenta');
-$lines = $art -split "`n";
-$row = 0;
-foreach ($line in $lines) {
-    $col = 0;
-    foreach ($char in $line.ToCharArray()) {
-        $colorIndex = [math]::Floor(($row + $col / 3) % $colors.Length);
-        Write-Host -NoNewline -ForegroundColor $colors[$colorIndex] $char;
-        $col++;
-    };
-    Write-Host "";
-    $row++;
-};
-echo "Waiting for DDMM To Close... (3s)";
-Start-Sleep 3;
-echo "Updating DDMM...";
-if (Test-Path 'dokimodmanager-new.exe') {
-    if (Test-Path 'dokimodmanager.exe') {
-        Remove-Item 'dokimodmanager.exe' -Force -ErrorAction SilentlyContinue;
-    }
-    Rename-Item 'dokimodmanager-new.exe' 'dokimodmanager.exe';
-};
-echo "Updated DDMM, Launching... (2s)";
-Start-Sleep 2;
-if (Test-Path 'dokimodmanager.exe') {
-    $binDir = (Get-Location).Path;
-    Start-Process '.\dokimodmanager.exe' -WorkingDirectory $binDir -WindowStyle Normal;
-}"#;
+    let update_script = script.contents_utf8().unwrap();
 
     println!("{:?}", env::current_dir().unwrap().display());
 
@@ -1271,6 +1225,7 @@ if (Test-Path 'dokimodmanager.exe') {
         .expect("failed to launch cmd");
     std::process::exit(0);
 }
+
 #[tauri::command]
 fn open_path(path: &str) {
     let _ = Command::new("explorer.exe")
@@ -1281,6 +1236,7 @@ fn open_path(path: &str) {
         .expect("failed to launch cmd")
         .wait();
 }
+
 #[tauri::command]
 fn tracker(app: AppHandle, event: String, props: Option<serde_json::Value>) {
     track(&app, event, props);
@@ -1290,6 +1246,7 @@ fn track(app: &AppHandle, event: String, props: Option<serde_json::Value>) {
     app.track_event(&event, props)
         .expect("Failed to track event");
 }
+
 async fn make_config() {
     let default_config_data: ConfigData = ConfigData {
         directory: env::current_dir().unwrap().display().to_string() + "\\store\\mods",

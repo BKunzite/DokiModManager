@@ -1,9 +1,15 @@
-import {Base64} from 'js-base64';
 import {
     readFile
 } from '@tauri-apps/plugin-fs';
 
 let cache = {}
+let cache_size = 0
+let cache_events = {
+    miss: 0,
+    hit: 0
+}
+let cache_clear_interval;
+const USE_CACHED = true;
 
 function createURL(contents, fileName) {
     let blob = new Blob([contents], {type: 'image/' + fileName.split('.').pop()});
@@ -17,6 +23,19 @@ function createBase64URL(contents, type = "image/png") {
     const url = URL.createObjectURL(blob);
     blob = null
     return url;
+}
+
+export function deref(url) {
+    if (USE_CACHED) return;
+    _internal_deref(url)
+}
+
+export function lazy_deref(url) {
+    _internal_deref(url)
+}
+
+function _internal_deref(url) {
+    URL.revokeObjectURL(url);
 }
 
 /**
@@ -35,7 +54,15 @@ function createBase64URL(contents, type = "image/png") {
  * @returns {Promise<string>}
  */
 
-export async function getImage(id, covers = []) {
+export async function getImage(id, covers = [], eager = false) {
+    if (USE_CACHED && !eager) {
+        return await getImageCache(id, covers)
+    } else {
+        return await getImageEager(id, covers)
+    }
+}
+
+async function getImageEager(id, covers = []) {
     const cover = covers[id];
     if (cover !== undefined && cover.includes(":")) {
         const contents = await readFile(cover);
@@ -58,35 +85,52 @@ export async function getImage(id, covers = []) {
 }
 
 // CACHE
-// export async function getImage(id, covers = []) {
-//     const cover = covers[id];
-//     if (cache[id]) {
-//         return cache[id]
-//     }
-//     if (cover !== undefined && cover.includes(":")) {
-//         const contents = await readFile(cover);
-//         cache[id] = createURL(contents, cover)
-//         return cache[id]
-//     } else if (typeof (id) === "object") {
-//         if (cache[id] === undefined) {
-//             const base64String = Base64.fromUint8Array(id);
-//             cache[id] = `data:image/png;base64,${base64String}`
-//         }
-//
-//         return cache[id]
-//     } else if (typeof (id) === "string" && id.includes(":")) {
-//         if (cache[id] === undefined) {
-//             const contents = await readFile(id);
-//             cache[id] = createURL(contents, id)
-//         }
-//
-//         return cache[id]
-//     } else {
-//         if (cache[id] === undefined) {
-//             const images = import.meta.glob('../assets/**/*.{png,jpg,jpeg,svg,json,webp}', {eager: true, as: 'url'});
-//             cache[id] = cover === undefined ? cache[id] = images["../assets/" + id] : cache[id] = images["../assets/" + cover]
-//         }
-//
-//         return cache[id]
-//     }
-// }
+export async function getImageCache(id, covers = []) {
+    if (cache[id] !== undefined) {
+        cache[id].time = Date.now()
+        cache_events.hit++;
+        return cache[id].url
+    } else {
+        const url = await getImageEager(id, covers)
+        cache[id] = {
+            url: url,
+            id: id,
+            time: Date.now()
+        };
+        cache_size++;
+        cache_events.miss++;
+        if (cache_clear_interval === undefined) {
+            cache_clear_interval = setInterval(() => {
+                if (cache_size > 0) {
+                    cull_cache()
+                } else {
+                    clearInterval(cache_clear_interval)
+                    cache_clear_interval = undefined
+                }
+            }, 500)
+        }
+        return url;
+    }
+}
+
+function cull_cache() {
+    let oldestKey = undefined;
+    let oldest = Date.now() + 1;
+    for (const key in cache) {
+        const data = cache[key];
+        if (oldest - data.time > 5_000) {
+            delete cache[key]
+            cache_size--;
+            continue
+        }
+        if (data.time < oldest) {
+            oldestKey = data
+            oldest = data.time
+        }
+    }
+    if (oldestKey !== undefined) {
+        _internal_deref(oldestKey.url)
+        delete cache[oldestKey.id]
+        cache_size--;
+    }
+}

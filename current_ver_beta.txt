@@ -1,5 +1,9 @@
-2.7.0-beta@1a
-Recommended (Improper CSP Settings Fixed + Dependency Updates + Rewrite pt. 2)
+2.7.0-beta@prod-e-cache
+Recommended (Improper CSP Settings Fixed + Dependency Updates)
+(This is where I start really ramping up changes to the code
+as I prepare for 2.0.0. If you dont want to update, dont.
+You can also install any old version on github if
+you find the new update unstable)
 
 Discord - {PLACEHOLDER}
 
@@ -10,6 +14,11 @@ this.
 
 Please report issues only through the UI and/or the new discord!
 (or if you really want, GitHub)
+
+(For this update mainly, please report literally any
+issues you find, or any features you want, since
+this is a pretty heavy rewrite and I want to make sure that
+no bugs exist)
 
 I have now updated tauri to the latest version,
 if you experience issues, that is probably where
@@ -23,7 +32,9 @@ Screenshot Preview Of Images Not Loading Fixed
 When Renaming A Mod, The Title Will Scroll To The Right,
 Allowing You To See What You Are Typing.
 
-Again, send issues or suggestions through report an issue.
+You now no longer can rename a mod to an existing mod.
+Downloads with the same name as existing mods
+will have a number appended to the end.
 
 Pins!
 - Pins now allow you to pin mods to the top of the list
@@ -54,3 +65,5 @@ Underlying code rewrite pt. 2.
     now, I want to bash my head against the wall.
 Binary Optimizations (Smaller exe size)
 Dependency updates.
+Preload images now actually preload
+ - Better Cache Management
