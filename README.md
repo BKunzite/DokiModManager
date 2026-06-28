@@ -1,6 +1,6 @@
 # Doki Doki Mod Manager
 
-![Doki Doki Mod Manager 1.6.0 Release Notes](ddmm1.6.0.png)
+![Doki Doki Mod Manager 1.6.0 Release Notes](Artwork/ddmm1.7.0.png)
 
 [![Written by Human, Not by AI](https://img.shields.io/badge/Written%20by%20Human-Not%20by%20AI-5B20B3?labelColor=FFF&style=for-the-badge)](https://notbyai.fyi)
 ![GitHub last commit](https://img.shields.io/github/last-commit/bkunzite/DokiModManager?display_timestamp=committer&style=for-the-badge&label=Last%20Update%20&color=violet)
