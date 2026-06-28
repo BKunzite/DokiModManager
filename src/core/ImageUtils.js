@@ -26,7 +26,7 @@ function createBase64URL(contents, type = "image/png") {
 }
 
 export function deref(url) {
-    if (USE_CACHED) return;
+    if (USE_CACHED && cache[url] !== undefined) return;
     _internal_deref(url)
 }
 
@@ -68,14 +68,13 @@ async function getImageEager(id, covers = []) {
         const contents = await readFile(cover);
         return createURL(contents, cover)
     } else if (typeof (id) === "object") {
-        console.log("[WARN] BASE64 IS NOT RECOMMENDED FOR PERFORMANCE")
         const bytes = new Uint8Array(id);
         return createBase64URL(bytes)
     } else if (typeof (id) === "string" && id.includes(":")) {
         const contents = await readFile(id);
         return createURL(contents, id)
     } else {
-        const images = import.meta.glob('../assets/**/*.{png,jpg,jpeg,svg,json,webp}', {eager: true, as: 'url'});
+        const images = import.meta.glob('../assets/**/*.{png,jpg,jpeg,svg,json,webp}', {eager: true, query: '?url', import: 'default'});
         if (cover !== undefined) {
             return images["../assets/" + cover]
         } else {
@@ -118,11 +117,6 @@ function cull_cache() {
     let oldest = Date.now() + 1;
     for (const key in cache) {
         const data = cache[key];
-        if (oldest - data.time > 5_000) {
-            delete cache[key]
-            cache_size--;
-            continue
-        }
         if (data.time < oldest) {
             oldestKey = data
             oldest = data.time

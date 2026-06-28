@@ -1,4 +1,4 @@
-2.7.0-beta@prod-e-cache
+2.7.0-beta@prod-e-cache2
 Recommended (Improper CSP Settings Fixed + Dependency Updates)
 (This is where I start really ramping up changes to the code
 as I prepare for 2.0.0. If you dont want to update, dont.
@@ -67,3 +67,5 @@ Binary Optimizations (Smaller exe size)
 Dependency updates.
 Preload images now actually preload
  - Better Cache Management
+Better Searching Algorithm
+ - Mods are back in alphabetical order

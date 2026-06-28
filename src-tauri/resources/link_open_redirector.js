@@ -39,6 +39,7 @@ window.__TAURI__ = null;
         }
         return AD_DOMAINS.some(domain => url.includes(domain));
     };
+
     const OLD_FETCH = window.fetch;
     const OLD_OPEN = XMLHttpRequest.prototype.open;
     const OLD_SEND = XMLHttpRequest.prototype.send;
@@ -62,6 +63,7 @@ window.__TAURI__ = null;
         return OLD_SEND.apply(this, arguments);
     };
 })();
+
 document.addEventListener("click", (e) => {
     const a = e.target.closest?.("a[href]");
     if (!a) return;
@@ -76,7 +78,6 @@ document.addEventListener("click", (e) => {
             name: label
         })
     }
-    ;
 }, true);
 
 window.open = function (url, target, features) {

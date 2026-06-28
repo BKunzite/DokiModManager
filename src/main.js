@@ -1,11 +1,13 @@
-// Vue
-import {createApp} from "vue";
+//// Vue
 
-// Tauri Based Imports
-import {invoke} from '@tauri-apps/api/core';
-import {listen} from "@tauri-apps/api/event";
-import {open} from '@tauri-apps/plugin-dialog';
-import {openUrl} from "@tauri-apps/plugin-opener";
+import { createApp } from "vue";
+
+//// Tauri
+
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from "@tauri-apps/api/event";
+import { open } from '@tauri-apps/plugin-dialog';
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
     create,
     mkdir,
@@ -17,28 +19,34 @@ import {
     writeFile,
     writeTextFile
 } from '@tauri-apps/plugin-fs';
-import {isDir, isExist, metadata} from "tauri-plugin-fs-pro-api";
+import { isDir, isExist, metadata } from "tauri-plugin-fs-pro-api";
 import { confirm } from '@tauri-apps/plugin-dialog';
 
-// Pages
+//// Internal Pagges
+
 import App from "./App.vue";
 import Desktop from "./Desktop.vue";
 
-// Utils
-import {deref, getImage, lazy_deref} from "./core/ImageUtils";
-import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
-import {Translation, TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE} from "./core/Translation.js"
-import {Base64} from 'js-base64';
-import {addLauncher, clearLaunchers, getLauncher, getLaunchers, LauncherAbstract} from "./core/Launchers.js"
-import {openWebview} from "./core/WebviewWindowHelper";
+//// Utils
 
-// Assets
+// ----- INTERNAL ------- //
+import { deref, getImage, lazy_deref } from "./core/ImageUtils";
+import { CLIENT_VERSION, getLatest, shouldUpdate } from "./core/VersionHandler";
+import { Translation, TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE } from "./core/Translation.js"
+import { addLauncher, clearLaunchers, getLauncher, getLaunchers, LauncherAbstract } from "./core/Launchers.js"
+import { openWebview } from "./core/WebviewWindowHelper";
+
+// ----- EXTERNAL ------- //
+import { Base64 } from 'js-base64';
+import { Fzf } from 'fzf';
+
+//// Internal Assets
 import sound_beep from './assets/select.ogg';
 import sound_boop from './assets/hover.ogg';
 import sound_click from './assets/pageflip.ogg';
 import dart_sfx from './assets/dart_sfx.mp3';
 
-// Profile Data
+//// Profile Data
 let selected_button = null;
 let selected_name = ""
 let current_profile = ""
@@ -49,13 +57,13 @@ let original_profile = "";
 let current_game_data_path = "";
 let rename_target = "";
 
-// Tutorial Variables
+//// Tutorial
 
 let tutorial_complete = false;
 let tutorial_step = 0;
 let tutorial_pointer = null
 
-// Config Variables
+//// Config Variables
 
 let bg_offset = 0;
 let current_bg_max = 0;
@@ -66,7 +74,7 @@ let localConfig = {
 let save_path = "";
 let user_name = "";
 
-// Misc
+//// Misc
 
 let lastInputLength = 0
 let logs = []
@@ -86,12 +94,15 @@ let previous_app = null
 let preload_covers = {}
 let fileTerminator = "\\"
 let tracked_downloads = []
+let observer_await = false;
 
-// Loading Bar
+//// Loading Bar
+
 let goal_slow_bar = -1
 let current_bar = 0;
 
-// Downloads Detector
+//// Downloads Detector
+
 let part_file_size = 0;
 let last_change = 0;
 let part_file = null;
@@ -100,7 +111,8 @@ let part_file = null;
 
 // --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
 
-// CONSTANTS
+//// CONSTANTS
+
 const SHOULD_ESCAPE_HTML_PATTERN = /["&'<>]/;
 
 const CLIENT_THEME_ENUM = [
@@ -374,6 +386,7 @@ async function loadConfig(path) {
 	    }
 	    configData.totalTime = total_time;
 	}
+
 	await create(configPath)
 	const contents = JSON.stringify(configData, null, "\t");
 	await writeTextFile(configPath, contents);
@@ -618,7 +631,13 @@ async function import_mod(path) {
 		path: selectedPath
 	    })
 	} else {
-	    await confirm("Not A Zip File!")
+	    document.getElementById("loader").classList.add("hide")
+	    document.getElementById("main").classList.remove("hide")
+	    alert_path = undefined;
+	    showContainers(true)
+	    document.getElementById("alert").classList.add("hide")
+
+	    await confirm("Unsupported Format! {Supported: .zip, .rar, .rpa}")
 	}
     }
 }
@@ -976,6 +995,7 @@ async function add_mod(name) {
     }
 
     let shorthand = formatModName(name)
+    const char_code = shorthand.toLowerCase().charCodeAt(0) <= 122 ? shorthand.toLowerCase().charCodeAt(0) : 0
     const sidetext = document.createElement("header");
     const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
     const favoriteText = "<span style=\"font-family: Icon,serif\">&#60938;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
@@ -984,8 +1004,10 @@ async function add_mod(name) {
     let launch_time = Date.now();
     sidetext.classList.add("sidebutton");
     sidetext.id = shorthand;
+    sidetext.style.order = char_code.toString()
 
     if (configData.favorite) {
+	sidetext.style.order = char_code - 122
 	sidetext.classList.add("favorite")
     } else {
 	sidetext.classList.remove("favorite")
@@ -993,6 +1015,8 @@ async function add_mod(name) {
 
     if (configData.pinned) {
 	sidetext.classList.add("pinned")
+	sidetext.style.order = char_code - 244
+
     } else {
 	sidetext.classList.remove("pinned")
     }
@@ -1013,6 +1037,7 @@ async function add_mod(name) {
 	preload: {},
 	isFavorite: configData.favorite,
 	nameId: name.toLowerCase(),
+	getOrder: async() => configData.pinned ? char_code - 244 : configData.favorite ? char_code - 122 : char_code,
 	preloadImages: async () => {
 	    let images = 0;
 	    getLauncher(name).functions().preload = {}
@@ -1042,6 +1067,9 @@ async function add_mod(name) {
 	getName: async () => {
 	    return name
 	},
+	resetOrder: () => {
+	    sidetext.order = getLauncher(name).functions().getOrder()
+	},
 	setPinned: async (b) => {
 	    if (b === undefined) {
 		if (configData.pinned === undefined || configData.pinned == null) {
@@ -1070,6 +1098,7 @@ async function add_mod(name) {
 	    } else {
 		sidetext.classList.remove("pinned")
 	    }
+	    getLauncher(name).functions().resetOrder()
 	    await saveModData();
 	},
 	open: async () => {
@@ -1128,6 +1157,7 @@ async function add_mod(name) {
 		sidetext.innerHTML = normalText
 	    }
 	    getLauncher(name).functions().isFavorite = configData.favorite;
+	    getLauncher(name).functions().resetOrder()
 	    await saveModData();
 	    document.getElementById("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
 	},
@@ -1347,16 +1377,16 @@ function htmlEscape(text) {
  *
  * Different Cases
  *
- * init.py -> version_tuple = VersionTuple(x, y, z)
+ * \_\_init__.py -> version_tuple = VersionTuple(x, y, z)
  *
- * init.py -> version_tuple = (x, y, z, vc_version)
+ * \_\_init__.py -> version_tuple = (x, y, z, vc_version)
  *
  * vc_version.py -> version_tuple = u'x.y.z'
  *
  * @example ```javascript
  * let renpy_version_string = await getRenpy("C:\\Path\\To\\The\\Mod");
  *
- * console.log(renpy_version_string) // 8.0.1
+ * console.log(renpy_version_string) // 8.0.3
  * ```
  *
  * @param {string} dir Directory Of Ren'Py Mod
@@ -1364,33 +1394,37 @@ function htmlEscape(text) {
  */
 
 async function getRenpy(dir) {
-    let renpy;
+    let renpy = undefined;
     const dirFiles = await readDir(dir + fileTerminator + "renpy");
     for (const localEntry of dirFiles) {
-	if (localEntry.name === "__init__.py") {
-	    const code = await readTextFile(dir + fileTerminator + "renpy" + fileTerminator + localEntry.name);
-	    const lines = code.split("\n");
-	    for (const line of lines) {
-		if (line.startsWith("version_tuple = ") && !line.includes("*")) {
-		    renpy = (line + "").replace("version_tuple = (", "").replace(", vc_version)", "").replaceAll(", ", ".");
-		    break;
-		} else if (line.trim().startsWith("version_tuple = ") && line.trim().includes("(8") && !line.includes("*")) {
-		    renpy = (line.trim() + "").replace("version_tuple = ", "").replace("VersionTuple", "").replace("(", "").replace(", vc_version)", "").replaceAll(", ", ".");
-		    break;
+	switch (localEntry.name) {
+	    case "__init__.py": {
+		const code = await readTextFile(dir + fileTerminator + "renpy" + fileTerminator + localEntry.name);
+		const lines = code.split("\n");
+		for (const line of lines) {
+		    if (line.startsWith("version_tuple = ") && !line.includes("*")) {
+			renpy = line.replace("version_tuple = (", "").replace(", vc_version)", "").replaceAll(", ", ".");
+			break;
+		    } else if (line.trim().startsWith("version_tuple = ") && line.trim().includes("(8") && !line.includes("*")) {
+			renpy = line.trim().replace("version_tuple = ", "").replace("VersionTuple", "").replace("(", "").replace(", vc_version)", "").replaceAll(", ", ".");
+			break;
+		    }
 		}
+		break;
+	    }
+	    case "vc_version.py": {
+		const code = await readTextFile(dir + fileTerminator + "renpy" + fileTerminator + localEntry.name);
+		const lines = code.split("\n");
+		for (const line of lines) {
+		    if (line.startsWith("version = ")) {
+			renpy = line.replace("version = ", "").replaceAll("'", "").replace("u", "");
+			break;
+		    }
+		}
+		break;
 	    }
 	}
-	if (localEntry.name === "vc_version.py" && renpy === undefined) {
-	    const code = await readTextFile(dir + fileTerminator + "renpy" + fileTerminator + localEntry.name);
-	    const lines = code.split("\n");
-	    for (const line of lines) {
-		if (line.startsWith("version = ")) {
-		    renpy = (line + "").replace("version = ", "").replaceAll("'", "").replace("u", "");
-		    break;
-		}
-	    }
-	}
-
+	if (renpy !== undefined) break;
     }
     return renpy
 }
@@ -1448,7 +1482,7 @@ function getTextWidth(text, font) {
 }
 
 function formatModName(text) {
-    return text.replace(/\b(ddlc|renpy7mod|renpy8mod)\b/gi, "").replace(/-/g, " ")
+    return text.replace(/\b(ddlc|renpy7mod|renpy8mod)\b/gi, "").replace(/-/g, " ").trim()
 }
 
 /**
@@ -1499,12 +1533,12 @@ async function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
 	document.getElementById("cover-up").classList.add("hide");
 	document.getElementById("cover-down").classList.add("hide");
 	document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60755;</span> " + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61966;</span> " + time + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61974;</span> " + lastTime;
-	document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
+	document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 150) + "px"
 	if (space !== "Reading...") {
 	    document.getElementById("authinput").addEventListener("input", async (e) => {
-		document.getElementById("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 225) + "px"
+		document.getElementById("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 150) + "px"
 	    })
-	    document.getElementById("authinput").addEventListener("blur", async () => {
+	    document.getElementById("authinput").addEventListener("focusout", async () => {
 		await setAuthor();
 	    })
 	    document.getElementById("authinput").addEventListener("keydown", async (e) => {
@@ -2192,7 +2226,6 @@ async function onLoad() {
     })
 
     await listen("download_end", async (e) => {
-	await globLog(e.payload.text)
 	let components = e.payload.text.split(" | ");
 	let path = components[1]
 	let split = terminatePath(path).split(fileTerminator)
@@ -2210,13 +2243,13 @@ async function onLoad() {
 	    part_file = null
 	}
 
-	document.getElementById("alert").classList.remove("hide")
-
-	showContainers(false)
-	await globLog(path)
 	alert_path = path
+
+	await globLog("Download Finished - " + e.payload.text)
 	const data = await metadata(path);
 
+	showContainers(false)
+	document.getElementById("alert").classList.remove("hide")
 	document.getElementById("alert-size").innerText = Math.floor(data.size / 1048600).toString() + "mb";
 	document.getElementById("alert-pth").innerText = dir;
 	document.getElementById("alert-name").textContent = file
@@ -2225,10 +2258,11 @@ async function onLoad() {
     // Listens For Rename Finishing
 
     await listen("rename_done", async (event) => {
-	await requestDirectory(selectedPath);
-	while (document.getElementById("loader").classList.contains("hide")) {
-	}
 	const value = event.payload.text;
+
+	await requestDirectory(selectedPath);
+	while (document.getElementById("loader").classList.contains("hide")) {}
+
 	await globLog(value)
 	if (getLauncher(value)) {
 	    await getLauncher(value).functions().leftClick();
@@ -2351,6 +2385,7 @@ async function onLoad() {
 	    save_profile_name();
 	}
     })
+
     document.getElementById("input-prompt-agree").addEventListener("mouseup", save_profile_name)
     document.getElementById("input-prompt-cancel").addEventListener("mouseup", close_profile_rename)
 
@@ -2428,7 +2463,6 @@ async function onLoad() {
 
     // Used for sidebar animations
 
-    let observer_await = false;
     observer = new IntersectionObserver((entries) => {
 	if (observer_await) return
 	let toRemove = []
@@ -2604,10 +2638,11 @@ async function onLoad() {
 		    props: {}
 		});
 		await import_mod(path)
-	    } else {
+	    } else if ((/\.(gif|jpe?g|tiff?|png|webp|bmp)$/i).test(path)) {
 		let dir = await readDir(local_path + fileTerminator + terminatePath("store\\images") + fileTerminator)
 		await writeFile(local_path + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
-
+	    } else {
+		await confirm("Unsupported Format " + (path.includes("\.") ? path.split("\.").pop() : "None") + "! {Supported: .zip, .rar, .rpa}")
 	    }
 	}
 	setTimeout(async () => {
@@ -3082,25 +3117,23 @@ async function onLoad() {
     })
 
     document.getElementById("search").addEventListener("input", async (event) => {
-
-	if (event.target.value === "") {
+	if (event.target.value === "" && lastInputLength > 0) {
 	    for (const index in getLaunchers()) {
 		const element = getLauncher(index).functions();
-		element.item.classList.add("hide2");
-		element.item.style.removeProperty("order")
+		element.item.classList.remove("hide2");
+		element.resetOrder()
 	    }
-	    setTimeout(() => {
-		for (const index in getLaunchers()) {
-		    const element = getLauncher(index).functions();
-		    element.item.classList.remove("hide2");
-		}
-	    }, 0)
 	    lastInputLength = 0;
 	    return;
+	} else if (event.target.value === "") {
+	    return
 	}
+
 	let lowerTarget = event.target.value.toLowerCase();
 	const length = lowerTarget.length;
 	const ignoreInvis = length > lastInputLength;
+	let names = []
+
 	for (const index in getLaunchers()) {
 	    const element = getLauncher(index).functions();
 
@@ -3108,41 +3141,17 @@ async function onLoad() {
 		continue;
 	    }
 
-	    const lowerName = element.nameId;
-	    let isValid = true;
-	    let split = lowerName.split(" ");
-	    let trunc = lowerName;
-	    let markers = 0;
-	    for (const letter in lowerTarget) {
-		if (letter < split.length) {
-		    if (split[letter].startsWith(lowerTarget[letter])) {
-			markers++;
-		    }
-		}
-		if (trunc.indexOf(lowerTarget[letter]) === -1) {
-		    isValid = false;
-		    break;
-		}
-		trunc = trunc.replace(lowerTarget[letter], "");
-	    }
-
-	    if (isValid) {
-		let index = 10 - (markers * 2)
-		if (element.isFavorite) {
-		    index--;
-		}
-		if (element.isPinned) {
-		    index--;
-		}
-		if (lowerName.includes(lowerTarget)) {
-		    index -= lowerTarget.length;
-		}
-		element.item.style.order = index.toString();
-		element.item.classList.remove("hide2");
-	    } else {
-		element.item.classList.add("hide2");
-	    }
+	    element.item.classList.add("hide2")
+	    names.push(index)
 	}
+
+	const fzf_list = new Fzf(names)
+	const entries = fzf_list.find(lowerTarget)
+
+	entries.forEach(e => {
+	    getLauncher(e.item).functions().item.classList.remove("hide2")
+	})
+
 	lastInputLength = length;
     })
 

@@ -1,5 +1,5 @@
 # 💗 (Kunzite) Doki Doki Mod Manager
-![img.png](img.png)
+![img.png](Artwork/ddmm1.0.0_release.png)
 <a href="https://www.buymeacoffee.com/bkunzite" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 [![Written by Human, Not by AI](https://img.shields.io/badge/Written%20by%20Human-Not%20by%20AI-5B20B3?labelColor=FFF&style=for-the-badge)](https://notbyai.fyi)
 

@@ -44,6 +44,7 @@ static SCRIPTS_RPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 
 static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
+static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
 
 #[tauri::command]
 fn close(window: tauri::Window) {
@@ -1128,8 +1129,6 @@ fn import_game_zip(archive: &mut ZipArchive<File>, toppath: &str) -> bool {
     }
     found
 }
-
-static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
 
 fn get_pool() -> &'static ThreadPool {
     COPY_POOL.get_or_init(|| ThreadPoolBuilder::new().num_threads(8).build().unwrap())

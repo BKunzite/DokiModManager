@@ -16,8 +16,8 @@
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@vueuse/core": "^14.3.0",
-    "js-base64": "^3.7.8",
-    "js-levenshtein": "^1.1.6",
+    "base64-js": "^1.5.1",
+    "fzf": "^0.5.2",
     "tauri-plugin-fs-pro-api": "^2.4.0",
     "vue": "^3.5.38"
   },

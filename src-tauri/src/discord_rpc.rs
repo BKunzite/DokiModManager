@@ -18,7 +18,7 @@ pub fn start() {
     });
 
     drpc.on_error(|_ctx| {
-        println!("An error occured");
+        println!("An error occurred");
     });
 
     drpc.start();

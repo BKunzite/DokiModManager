@@ -1,0 +1,24 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "src",
+      "dependencies": {
+        "@tauri-apps/api": "^2.6.0",
+        "@tauri-apps/plugin-dialog": "^2.3.0",
+        "js-base64": "^3.7.8",
+        "tauri-plugin-fs-pro-api": "^2.4.0",
+      },
+    },
+  },
+  "packages": {
+    "@tauri-apps/api": ["@tauri-apps/api@2.11.1", "", {}, "sha512-M2FPuYND2m+wh5hfW9ZpSdxMPdEJovPBWwoHJmwUpysTYNHaOkVFN419m/K0LIgjb/7KU2vBgsUepJWugQCvAA=="],
+
+    "@tauri-apps/plugin-dialog": ["@tauri-apps/plugin-dialog@2.7.1", "", { "dependencies": { "@tauri-apps/api": "^2.11.0" } }, "sha512-OK1UBXYt+ojcmxMktzzuyonYIFta8CmAASpX+CA+DTGK24KlHjhYI6x2iOJ/TjZF4N7/ACK1oFmEOjIY9IhzOQ=="],
+
+    "js-base64": ["js-base64@3.8.0", "", {}, "sha512-65kvbemyZhj+ExQt1PEFyBEjL5vAHysu1lJdW1AwhhChkO8ZBPizYk/m9GVrpbS2Je1hF+UYZ+6KywqtZV8mHw=="],
+
+    "tauri-plugin-fs-pro-api": ["tauri-plugin-fs-pro-api@2.4.0", "", { "dependencies": { "@tauri-apps/api": "^2.3.0" } }, "sha512-SfXMQC3SClaHCzEfrQOeSgQvx+YrlfQQpbbtj1U9LJhRjhwpIsC71UqtzcI2J7aJTt5njD+7Oe8daa3mH0Eybg=="],
+  }
+}
