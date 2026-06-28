@@ -50,7 +50,7 @@ the mod's cover or to the left of the mod's name.
 or, drag the pin out of the cover to unpin it.
 
 Mod Download Fixed
-- The Good Ending
+- The Good Ending (Some Imports Into The Game Folder Were Not Detected)
 
 More complete translation support.
 Added last played date.
