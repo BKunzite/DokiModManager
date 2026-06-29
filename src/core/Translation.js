@@ -35,7 +35,6 @@ export const Translation = {
     },
     /**
      * Translate text using global table
-     * @param {string} language Language (ex. en, fr)
      * @param {TRANSLATION_TABLE["en"]} text Text To Translate
      * @returns {*}
      */
@@ -70,19 +69,11 @@ export class NoTranslationError extends Error {
 	super(message);
 	this.name = "NoTranslationError";
     }
-
-    static of(message) {
-	return new NoTranslationError(message);
-    }
 }
 
 export class NoTranslationIndexError extends Error {
     constructor(message) {
 	super(message);
 	this.name = "NoTranslationIndexError";
-    }
-
-    static of(message) {
-	return new NoTranslationIndexError(message);
     }
 }

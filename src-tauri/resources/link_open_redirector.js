@@ -90,7 +90,7 @@ document.addEventListener("click", (e) => {
  * Hijack New Window And Re-route It Through Tauri
  */
 
-window.open = function (url, target, features) {
+window.open = function (url, _target, _features) {
     __TAURI__APP.event.emit("open_webview", {
         url: url,
         name: "external_webview"

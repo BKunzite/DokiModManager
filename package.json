@@ -23,9 +23,9 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",
-    "@vitejs/plugin-vue": "^5.2.4",
+    "@vitejs/plugin-vue": "^6.0.7",
     "eslint-plugin-vue": "^10.9.2",
     "prettier": "^3.9.1",
-    "vite": "^6.4.3"
+    "vite": "^8.1.0"
   }
 }

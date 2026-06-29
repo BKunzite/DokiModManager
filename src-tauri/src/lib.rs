@@ -406,7 +406,7 @@ fn extract_rpa(app: &AppHandle, path: &str, out: &str) {
         let output = path_out.join(output.as_path());
         if let Some(parent) = output.parent() {
             if !parent.exists() {
-                fs::create_dir_all(parent).unwrap();
+                create_dir_all(parent).unwrap();
             }
         }
 
@@ -1144,7 +1144,7 @@ pub fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
     dirs.sort_unstable_by_key(|(p, _)| p.components().count());
 
     for (_, dst_dir) in &dirs {
-        fs::create_dir_all(dst_dir)?;
+        create_dir_all(dst_dir)?;
     }
 
     get_pool().install(|| {
