@@ -1203,22 +1203,27 @@ async function add_mod(name) {
             await setCover(configData.coverId);
             await set_pin(configData.pinned);
 
-            const pin_holder = document.getElementById("pin-holder");
-            if (pin_holder.style.top !== "") {
-                pin_holder.style.removeProperty("left")
-                pin_holder.style.removeProperty("top")
-            }
-
-
             if (configData.renpy === "" || configData.renpy === undefined) {
                 configData.renpy = await getRenpy(dir);
                 await saveModData();
             }
 
-            let renpy = configData.renpy;
+            let renpy = configData.renpy || (Translation.of("unknown") + " (Try Reinstalling; If its still broken, please create a git issue on this)");
             let screenshots = false;
             let images = []
+            let lastPlayed = Translation.of("never");
+
             const children = Array.from(document.getElementById("screenshots").children);
+            const escaped_renpy = htmlEscape(renpy);
+            const min = Math.floor(configData.time / 60000);
+            const msSinceLastPlayed = Date.now() - configData.last_played;
+            const pin_holder = document.getElementById("pin-holder");
+
+            if (pin_holder.style.top !== "") {
+                pin_holder.style.removeProperty("left")
+                pin_holder.style.removeProperty("top")
+            }
+
 
             for (const child of children) {
                 if (!child.classList.contains("preload-image")) {
@@ -1243,20 +1248,12 @@ async function add_mod(name) {
                 }
             }
 
-            if (renpy === undefined) {
-                renpy = Translation.of("unknown") + " (Try Reinstalling; If its still broken, please create a git issue on this)";
-            }
-
-            renpy = name + "<br>Renpy: " + htmlEscape(renpy) + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith("DDLC.exe")) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (modCredits !== undefined ? modCredits : "None Found!");
+            renpy = name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith("DDLC.exe")) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (modCredits !== undefined ? modCredits : "None Found!");
             document.getElementById("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
+
             new Promise(() => {
                 play(sound_boop)
-            }).then(() => {
-            })
-
-            const min = Math.floor(configData.time / 60000);
-            const msSinceLastPlayed = Date.now() - configData.last_played;
-            let lastPlayed = Translation.of("never");
+            }).then(() => {})
 
             if (configData.last_played !== -1) {
                 let date = new Date(configData.last_played).toLocaleString();
@@ -1279,7 +1276,7 @@ async function add_mod(name) {
                     let data = await metadata(selectedPath + fileTerminator + name);
                     configData.size = data.size;
                     if (currentEntry === name) {
-                        updateDisplayInfo(name, configData.author, (configData.size / 1048600) > 1000 ? (Math.floor(configData.size / 1_048_600_000) + " GB") : (Math.floor(configData.size / 1048600) + " MB"), Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), name + "<br>Renpy: " + htmlEscape(configData.renpy) + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith("DDLC.exe")) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (modCredits !== undefined ? modCredits : "None Found!"), lastPlayed).then(() => {
+                        updateDisplayInfo(name, configData.author, (configData.size / 1048600) > 1000 ? (Math.floor(configData.size / 1_048_600_000) + " GB") : (Math.floor(configData.size / 1048600) + " MB"), Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith("DDLC.exe")) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (modCredits !== undefined ? modCredits : "None Found!"), lastPlayed).then(() => {
                         })
                     }
                     data = null
@@ -1345,33 +1342,49 @@ async function add_mod(name) {
  */
 
 function htmlEscape(text) {
-    if (SHOULD_ESCAPE_HTML_PATTERN.exec(text) === null) {
+    let match_case = SHOULD_ESCAPE_HTML_PATTERN.exec(text)
+    if (match_case === null) {
         return text;
     }
 
+    const startScan = match_case.index
+    const length = text.length
     let string = ""
-    for (const char of text) {
-        switch (char) {
-            case "&":
-                string += "&amp;";
+    let lastIndex = -1;
+
+    for (let i = startScan; i < length; i++) {
+        let char = undefined;
+        switch (text.charCodeAt(i)) {
+            case 34: // Char: "
+                char = "&quot;";
                 break;
-            case "<":
-                string += "&lt;";
+            case 60: // Char: <
+                char = "&lt;";
                 break;
-            case ">":
-                string += "&gt;";
+            case 39: // Char: '
+                char = "&#039;";
                 break;
-            case "\"":
-                string += "&quot;";
+            case 62: // Char: >
+                char = "&gt;";
                 break;
-            case "'":
-                string += "&#039;";
+            case 38: // Char: &
+                char = "&amp;";
                 break;
             default:
-                string += char;
                 break;
         }
+
+        if (char !== undefined) {
+            const slice = text.slice(lastIndex + 1, i);
+            string += slice + char;
+            lastIndex = i;
+        }
     }
+
+    if (lastIndex !== length - 1) {
+        string += text.slice(lastIndex, length - 1)
+    }
+
     return string;
 }
 
@@ -1773,21 +1786,12 @@ async function rename_mod() {
  */
 
 async function update_profiles(path) {
-    /*
-    <div class="profile-button">
-              <header class="profile-item-name">Default</header>
-              <button class="profile-item-delete profile-item-source" id="down-profile">&#60445;</button>
-              <button class="profile-item-select profile-item-source" id="select-profile">&#60285;</button>
-              <button class="profile-item-drag profile-item-source" id="copy-profile">&#62782;</button>
+    const profiles_path = path + "--profiles";
+    const current_info_path = profiles_path + fileTerminator + ".info.json";
 
-            </div>
-     */
     if (document.getElementById("profiles").children !== null) {
         document.getElementById("profiles").replaceChildren();
     }
-
-    const profiles_path = path + "--profiles";
-    const current_info_path = profiles_path + fileTerminator + ".info.json";
 
     profile_path = profiles_path;
 
@@ -2196,8 +2200,33 @@ async function save_profile_name() {
 async function onLoad() {
     let start = Date.now();
 
-    await globLog("[MARKER] Debugger Attached.")
-    await globLog("Loading Observers...")
+    await globLog("[MARKER] Debugger Attached.");
+    await globLog("Loading Observers...");
+
+    await globLog("Running Field Tests");
+
+    // New HTML Escape Test - Thrown Out For Production
+    /*(function() {
+        const test_case = "<span style=\"font-family: Icon,serif;\">&#62038;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61966;</span> 60h 60m"
+        const escaped_case = htmlEscape(test_case)
+
+        const false_positive = "hello world!"
+        const false_case = htmlEscape(false_positive)
+
+        console.log(test_case, " | ", escaped_case, " | ", false_positive, " | ", false_case)
+
+        if (escaped_case === test_case) {
+            throw new Error("Test Case For HTML Escaping Failed - Expected Not " + test_case + "; Got " + escaped_case)
+        } else if (false_positive !== false_case) {
+            throw new Error("Test Case For HTML Escaping Failed - Expected " + false_positive + "; Got " + false_case)
+        }
+
+        if (SHOULD_ESCAPE_HTML_PATTERN.exec("hello world!") !== null) {
+            throw new Error("Should Escape HTML Pattern Is Invalid {expect = false, got true}")
+        } else if (SHOULD_ESCAPE_HTML_PATTERN.exec(test_case) === null) {
+            throw new Error("Should Escape HTML Pattern Is Invalid {expect = true, got false}")
+        }
+    })();*/
 
     await listen("import_done", async (event) => {
         if (alert_path.includes(fileTerminator + "Downloads" + fileTerminator)) {
