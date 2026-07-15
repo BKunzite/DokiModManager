@@ -117,6 +117,10 @@ let part_file = null;
 
 const SHOULD_ESCAPE_HTML_PATTERN = /["&'<>]/;
 
+const WARN_GENERIC_DATA_PATHS = [
+    "DDLC-1454445547", "DDLCModTemplateTwo-Py3"
+]
+
 const CLIENT_THEME_ENUM = [
     "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
 ]
@@ -1350,7 +1354,7 @@ function htmlEscape(text) {
     const startScan = match_case.index
     const length = text.length
     let string = ""
-    let lastIndex = -1;
+    let lastIndex = 0;
 
     for (let i = startScan; i < length; i++) {
         let char = undefined;
@@ -1375,9 +1379,9 @@ function htmlEscape(text) {
         }
 
         if (char !== undefined) {
-            const slice = text.slice(lastIndex + 1, i);
+            const slice = text.slice(lastIndex, i);
             string += slice + char;
-            lastIndex = i;
+            lastIndex = i + 1;
         }
     }
 
@@ -1884,18 +1888,34 @@ async function save_concurrent_profile_data() {
     await writeTextFile(active_profile_path, JSON.stringify(await get_concurrent_game_data(), null, "\t"));
 }
 
-async function get_concurrent_game_data(path) {
+async function get_concurrent_game_data(path, recursive = false) {
     if (path === undefined) path = current_game_data_path;
     let data = {}
     for (const file of await readDir(path)) {
         if (file.isDirectory) {
             console.log(path, file.name)
-            data[file.name] = await get_concurrent_game_data(path + fileTerminator + file.name)
+            data[file.name] = await get_concurrent_game_data(path + fileTerminator + file.name, true)
             console.log(data[file.name])
         } else {
             data[file.name] = Base64.fromUint8Array(await readFile(path + fileTerminator + file.name));
         }
     }
+
+    if (getLauncher(currentEntry) !== undefined && !recursive) {
+        const data_path = getLauncher(currentEntry).functions().absolute_location + fileTerminator + "game" + fileTerminator + "saves"
+        console.log(data_path)
+        if (await isExist(data_path)) {
+            let fdata = await readDir(data_path)
+            for (const file of fdata) {
+                const p = data_path + fileTerminator + file.name
+                if (!file.isDirectory) {
+                    console.log("saving " + p)
+                    data["mod_saves_folder:" + file.name] = Base64.fromUint8Array(await readFile(p));
+                }
+            }
+        }
+    }
+
     return data;
 }
 
@@ -1923,6 +1943,7 @@ async function load_concurrent_profile_data(reload, reset_data) {
     console.log(" should reload: " + reload + " file: " + current_profile)
     if (reload) {
         await delete_dir(current_game_data_path);
+        await delete_dir(getLauncher(currentEntry).functions().absolute_location + fileTerminator + "game" + fileTerminator + "saves");
 
         let data = await readTextFile(get_profile_path(current_profile));
         const self_data = JSON.parse(data);
@@ -1941,17 +1962,40 @@ async function load_data(self_data, upstream) {
             continue;
         }
         let n = f.replaceAll(fileTerminator, "/");
-        if (n.includes("/")) {
-            for (const dir of n.split("/")) {
-                if (dir === n.split("/").pop()) continue;
-                await mkdir(upstream + fileTerminator + dir, {recursive: true});
+
+        if (f.startsWith("mod_saves_folder:")) {
+            let global_path = getLauncher(currentEntry).functions().absolute_location + fileTerminator + "game" + fileTerminator + "saves"
+            let path = f.replace(/mod_saves_folder:/,"")
+            n = path.replaceAll(fileTerminator, "/")
+            if (await isExist(global_path)) {
+                if (n.includes("/")) {
+                    for (const dir of n.split("/")) {
+                        if (dir === n.split("/").pop()) continue;
+                        await mkdir(global_path + fileTerminator + dir, {recursive: true});
+                    }
+                }
+
+                try {
+                    await writeFile(global_path + fileTerminator + path,
+                        Base64.toUint8Array(file));
+                } catch (e) {
+                    console.log(f + " is not encoded in base64!")
+                }
             }
-        }
-        try {
-            await writeFile(upstream + fileTerminator + f,
-                Base64.toUint8Array(file));
-        } catch (e) {
-            console.log(f + " is not encoded in base64!")
+
+        } else {
+            if (n.includes("/")) {
+                for (const dir of n.split("/")) {
+                    if (dir === n.split("/").pop()) continue;
+                    await mkdir(upstream + fileTerminator + dir, {recursive: true});
+                }
+            }
+            try {
+                await writeFile(upstream + fileTerminator + f,
+                    Base64.toUint8Array(file));
+            } catch (e) {
+                console.log(f + " is not encoded in base64!")
+            }
         }
     }
 }
@@ -2189,6 +2233,21 @@ async function save_profile_name() {
 
 }
 
+function linkify(inputText) {
+    var replacedText, replacePattern1, replacePattern2, replacePattern3;
+
+    replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+    replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank" style="cursor: grab;">$1</a>');
+
+    replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
+    replacedText = replacedText.replace(replacePattern2, '$1<a href="http://$2" target="_blank" style="cursor: grab;">$2</a>');
+
+    replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
+    replacedText = replacedText.replace(replacePattern3, '<a href="mailto:$1" style="cursor: grab;">$1</a>');
+
+    return replacedText;
+}
+
 /**
  * Called Upon DOM On-Load
  * @example ```javascript
@@ -2351,10 +2410,11 @@ async function onLoad() {
 
                     document.getElementById("changelog").classList.remove("hide")
                     document.getElementById("changelog-title").textContent = "New Update! | " + newest_version.split("\n")[0]
-                    document.getElementById("changelog-text").textContent = newest_version.split("\n").slice(1).join("\n")
+                    document.getElementById("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\n/gi, "<br>")
                     document.getElementById("changelog-update").textContent = Translation.of("update")
                     document.getElementById("changelog-ignore").textContent = Translation.of("ignore")
                     document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
+
                     let response = await new Promise(resolve => {
                         document.getElementById("changelog-update").addEventListener("mouseup", async () => {
                             resolve(true)
@@ -2368,7 +2428,6 @@ async function onLoad() {
 
                     if (response) {
                         await updateClient()
-
                         return;
                     }
                 } else {
@@ -2542,6 +2601,7 @@ async function onLoad() {
         document.getElementById("profile-bg").classList.add("hide")
         await save_profile();
         document.getElementById("profile-blur").classList.add("hide")
+        document.getElementById("profile-bg").classList.add("hide")
     });
 
     document.getElementById("create-profile").addEventListener("click", async () => {
@@ -2635,19 +2695,25 @@ async function onLoad() {
         saveConfig();
     })
 
-    document.getElementById("copy-profile").addEventListener("click", async () => {
-        let newProfile = "Default 0";
-        while (document.getElementById("profile-" + newProfile) !== null) {
-            newProfile = "Default " + (parseInt(newProfile.split(" ")[1]) + 1);
-        }
-        concurrent_profile_data[newProfile] = concurrent_profile_data[original_profile];
-        await create_profile(newProfile)()
-        await writeTextFile(get_profile_path(newProfile), JSON.stringify(await get_concurrent_game_data(), null, "\t"));
-        document.getElementById("profiles").scroll({
-            top: document.getElementById("profiles").scrollHeight,
-            behavior: "smooth"
-        })
+    document.getElementById("load-profile").addEventListener("click", async () => {
+        await load_concurrent_profile_data(true)
+        document.getElementById("profile-blur").classList.add("hide")
+        document.getElementById("profile-bg").classList.add("hide")
     })
+
+    // document.getElementById("copy-profile").addEventListener("click", async () => {
+    //     let newProfile = "Default 0";
+    //     while (document.getElementById("profile-" + newProfile) !== null) {
+    //         newProfile = "Default " + (parseInt(newProfile.split(" ")[1]) + 1);
+    //     }
+    //     concurrent_profile_data[newProfile] = concurrent_profile_data[original_profile];
+    //     await create_profile(newProfile)()
+    //     await writeTextFile(get_profile_path(newProfile), JSON.stringify(await get_concurrent_game_data(), null, "\t"));
+    //     document.getElementById("profiles").scroll({
+    //         top: document.getElementById("profiles").scrollHeight,
+    //         behavior: "smooth"
+    //     })
+    // })
 
     document.getElementById("input-prompt-box").addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -2969,10 +3035,15 @@ async function onLoad() {
                 path: path,
                 out: final
             })
-            if (loc !== "") {
+            let loc2 = final + fileTerminator + "game" + fileTerminator + "saves"
+            let data = false
+            if (await isExist(loc2)) {
+                data = (await readDir(loc2)).length !== 0
+            }
+            if (loc !== "" || data) {
                 document.getElementById("delete-prompt").classList.remove("hide")
-                document.getElementById("delete-context").textContent = "Are you sure you want to delete\n" + loc + "?"
-                save_path = loc;
+                document.getElementById("delete-context").textContent = "Are you sure you want to delete\n" + loc + (data ? " & " + loc2 : "") + "?"
+                save_path = loc + "|" + (data ? loc2 : "");
             } else {
                 confirm("Unknown Save Data Location!")
             }
@@ -2995,13 +3066,56 @@ async function onLoad() {
                     return;
                 }
             }
-            let loc = await invoke("rpa_data", {
+            const loc = await invoke("rpa_data", {
                 path: path,
-                out: final
+                out: final,
+                option: "save_directory"
             })
-            if (loc !== "") {
+            const dat = await invoke("rpa_data", {
+                path: path,
+                out: final,
+                option: "config.name"
+            })
+            const loc2 = final + fileTerminator + "game" + fileTerminator + "saves"
+            const loc3 = local_path + fileTerminator + terminatePath("store\\save_data_secondary")
+            let secondary = dat === "" ? loc3 + fileTerminator + currentEntry : dat + "_DDMM_data"
+            let data = false
+
+            if (loc === "") {
+                let secondary_name = secondary.split(fileTerminator).pop()
+                if (secondary_name.match(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/g) || secondary_name.match(/^(con|prn|aux|nul|com\d|lpt\d)$/i)) {
+                    secondary_name = secondary_name.replace(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/gi, "")
+                    secondary_name = secondary_name.replace(/^(con|prn|aux|nul|com\d|lpt\d)$/gi, "")
+                    let comps = secondary.split(fileTerminator)
+                    comps.pop()
+                    secondary = comps.join(fileTerminator) + fileTerminator + secondary_name
+                }
+
+                await globWarn(secondary)
+                data = await isExist(secondary)
+
+                if (!await isExist(loc3)) {
+                    await mkdir(loc3)
+                }
+
+                if (await isExist(loc2)) {
+                    data = data || (await readDir(loc2)).length !== 0
+                }
+            } else {
+                for (const e of WARN_GENERIC_DATA_PATHS) {
+                    if (loc.endsWith(e)) {
+                        await confirm("This mod uses a generic save folder name '" + e + "'. Mod data will be shared across mods with the same generic config folder. Consider making a profile with that name and loading it every time you play.")
+                    }
+                }
+            }
+
+            if (loc !== "" || data) {
+                const name = loc === "" ? secondary : loc
+                if (!await isExist(name)) {
+                    await mkdir(name)
+                }
                 document.getElementById("profile-blur").classList.remove("hide")
-                await update_profiles(loc)
+                await update_profiles(name)
             } else {
                 document.getElementById("profile-blur").classList.add("hide")
                 confirm("Unknown Save Data Location!")
@@ -3041,9 +3155,12 @@ async function onLoad() {
     document.getElementById("delete-yes").addEventListener("mouseup", async () => {
         document.getElementById("delete-prompt").classList.add("hide")
         if (save_path === "") return;
-        await invoke("delete_path", {
-            path: save_path
-        });
+        for (const p of save_path.split("|")) {
+            if (p === "") continue
+            await invoke("delete_path", {
+                path: p
+            });
+        }
     })
 
     document.getElementById("delete-no").addEventListener("mouseup", async () => {

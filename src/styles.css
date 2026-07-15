@@ -258,6 +258,9 @@
     scrollbar-width: none;
     resize: none;
     outline: none;
+    overflow: scroll;
+    text-wrap: pretty;
+    user-select: text;
 }
 
 .changelog-text-gradient {

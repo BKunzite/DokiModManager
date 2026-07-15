@@ -1,16 +1,18 @@
-1.7.0-beta@final-rc
-Recommended (Improper CSP Settings Fixed + Dependency Updates)
+1.7.0-release
+Optional (Recommended)
 (This is where I start really ramping up changes to the code
 as I prepare for 2.0.0. If you dont want to update, dont.
 You can also install any old version on github if
 you find the new update unstable)
 
-Discord - {PLACEHOLDER}
+Discord - https://discord.gg/gCJgyUrvjY
+You can either copy it or update DDMM first,
+as it will register as a hyperlink after the update
 
 Sorry for the long wait with this update,
 I wanted to push it out faster but
 my SSD literally died on me whilst I was working on
-this.
+this, then I got busy with IRL stuff.
 
 Please report issues only through the UI and/or the new discord!
 (or if you really want, GitHub)
@@ -69,3 +71,11 @@ Preload images now actually preload
  - Better Cache Management
 Better Searching Algorithm
  - Mods are back in alphabetical order
+Profiles now work with more mods and no longer fails if the game
+saves to mod/games/saves
+
+As a final note, I am migrating away from Bun as a package manager.
+With the recent contraversies surrounding Bun. I decided it was best
+to move on from Bun, and move forward with another package manager.
+For now, that new package manager will be Deno, but that may change
+a later statement.

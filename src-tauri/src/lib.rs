@@ -36,7 +36,7 @@ mod hash;
 mod simple_logger;
 
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
-static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT_BETA/dokimodmanager.exe";
+static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/dokimodmanager.exe";
 static UN_RPYC: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
 
 static UN_RPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
@@ -235,7 +235,7 @@ fn extract_game_script(app: AppHandle, path: &str, out: &str) {
 }
 
 #[tauri::command]
-fn rpa_data(app: AppHandle, path: &str, out: &str) -> String {
+fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
     println!("{} | {}", path, out);
     let binding = PathBuf::from(path);
     let path_out = &PathBuf::from(out);
@@ -264,6 +264,7 @@ fn rpa_data(app: AppHandle, path: &str, out: &str) -> String {
                 fs::read_to_string(path_out.join("ddmm-temp-options").join("options.rpy"))
                     .unwrap()
                     .as_str(),
+                option
             )
             .unwrap_or_default();
         }
@@ -277,7 +278,7 @@ fn rpa_data(app: AppHandle, path: &str, out: &str) -> String {
         println!("Found Options File!");
 
         return parse_source(
-            &fs::read_to_string(path_out.join("ddmm-temp-options\\options.rpy")).unwrap(),
+            &fs::read_to_string(path_out.join("ddmm-temp-options\\options.rpy")).unwrap(), option
         )
         .unwrap_or_default();
     }
@@ -306,7 +307,7 @@ fn rpa_data(app: AppHandle, path: &str, out: &str) -> String {
             content.copy_to(&mut rpa_archive.reader, &mut file).unwrap();
             println!("Found Options! Extracting Data");
 
-            let response = rpa_archive_option(path_out, cmain);
+            let response = rpa_archive_option(path_out, cmain, option);
             if !response.is_empty() {
                 return response;
             }
@@ -316,7 +317,7 @@ fn rpa_data(app: AppHandle, path: &str, out: &str) -> String {
     String::new()
 }
 
-fn rpa_archive_option(path_out: &Path, cmain: &str) -> String {
+fn rpa_archive_option(path_out: &Path, cmain: &str, option: &str) -> String {
     let mut exchild = Command::new(
         env::current_exe()
             .unwrap()
@@ -354,7 +355,7 @@ fn rpa_archive_option(path_out: &Path, cmain: &str) -> String {
         if output_src.exists() {
             println!("Found RPY File! Extracting Data");
             let src_text = fs::read_to_string(output_src.as_path().to_str().unwrap()).unwrap();
-            return parse_source(&src_text).unwrap_or_default();
+            return parse_source(&src_text, &option).unwrap_or_default();
         } else {
             eprintln!("Failed to find RPY File!");
         }
@@ -368,9 +369,9 @@ fn rpa_archive_option(path_out: &Path, cmain: &str) -> String {
     String::new()
 }
 
-fn parse_source(source: &str) -> Option<String> {
+fn parse_source(source: &str, option: &str) -> Option<String> {
     for line in source.split("\n").filter(|line| !line.starts_with("#")) {
-        if !line.contains("save_directory") {
+        if !line.contains(option) {
             continue;
         }
         let mut contents = line.split('"');
@@ -378,10 +379,8 @@ fn parse_source(source: &str) -> Option<String> {
         let content = contents.next().unwrap_or("");
         println!("{}", line);
         let data = dirs::config_dir().unwrap().join("RenPy").join(content);
-        if data.exists() {
-            println!("Found Mod Data @ {}", data.as_path().to_str().unwrap());
-            return Some(data.to_str().unwrap().to_string());
-        }
+        println!("Found Mod Data @ {}", data.as_path().to_str().unwrap());
+        return Some(data.to_str().unwrap().to_string());
     }
     None
 }
@@ -595,6 +594,12 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         .unwrap()
         .unminimize()
         .expect("Failed To Unminimize");
+
+    app.get_window("main")
+        .unwrap()
+        .show()
+        .expect("Failed to focus");
+
     app.get_window("main")
         .unwrap()
         .set_focus()

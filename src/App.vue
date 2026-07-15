@@ -177,7 +177,7 @@
 
         </div>
         <button class="profile-button-default smooth-hide profile-button-create" id="create-profile">New</button>
-        <button class="profile-button-default smooth-hide profile-button-copy" id="copy-profile">Duplicate</button>
+        <button class="profile-button-default smooth-hide profile-button-copy" id="load-profile">Reload</button>
         <button class="profile-button-default smooth-hide profile-button-save" id="save-profile">Save Changes</button>
         <button class="profile-button-default smooth-hide profile-button-backup" id="backup-profile">Save & Backup All
           Data
@@ -226,7 +226,7 @@
     <header class="changelog-title" id="changelog-title"></header>
     <button class="changelog-ignore changelog-button" id="changelog-ignore">Ignore</button>
     <button class="changelog-update changelog-button" id="changelog-update">Update</button>
-    <textarea class="changelog-text" id="changelog-text" spellcheck="false" readonly="readonly"></textarea>
+    <header class="changelog-text" id="changelog-text" spellcheck="false" readonly="readonly"></header>
     <div class="changelog-text-gradient"></div>
   </div>
   <div id="pill-contains" class="pill-contains smooth-hide hide">
