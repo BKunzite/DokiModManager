@@ -13,10 +13,10 @@
     "npm:base64-js@^1.5.1": "1.5.1",
     "npm:eslint-plugin-vue@^10.9.2": "10.9.2",
     "npm:fzf@~0.5.2": "0.5.2",
-    "npm:prettier@^3.9.1": "3.9.1",
+    "npm:prettier@^3.9.5": "3.9.5",
     "npm:tauri-plugin-fs-pro-api@^2.4.0": "2.4.0",
     "npm:vite@^6.4.3": "6.4.3",
-    "npm:vite@^8.1.0": "8.1.4",
+    "npm:vite@^8.1.4": "8.1.4",
     "npm:vue@^3.5.39": "3.5.39"
   },
   "npm": {
@@ -1146,8 +1146,8 @@
     "prelude-ls@1.2.1": {
       "integrity": "sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g=="
     },
-    "prettier@3.9.1": {
-      "integrity": "sha512-ppiDo2CSwexck1eyZUwJHg/N3nf1+6IRCv7W/VJ5vaLnVCmB7+3CdRfMwoCHBBX6xTrREDTksZ4OZl5SSf4zXA==",
+    "prettier@3.9.5": {
+      "integrity": "sha512-/FVl766LpUfB5vXgCYOYa0MeV/441Ia99AeICQIQFTY/Nw0roZwULcXpku5i1/m5kt/baz+s4Zogspd839HSMg==",
       "bin": true
     },
     "punycode@2.3.1": {
@@ -1342,9 +1342,9 @@
         "npm:base64-js@^1.5.1",
         "npm:eslint-plugin-vue@^10.9.2",
         "npm:fzf@~0.5.2",
-        "npm:prettier@^3.9.1",
+        "npm:prettier@^3.9.5",
         "npm:tauri-plugin-fs-pro-api@^2.4.0",
-        "npm:vite@^8.1.0",
+        "npm:vite@^8.1.4",
         "npm:vue@^3.5.39"
       ]
     }

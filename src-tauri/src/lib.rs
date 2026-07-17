@@ -1,4 +1,5 @@
 use crate::hash::get_file_hash;
+use futures_util::TryStreamExt;
 use include_dir::{include_dir, Dir};
 use jwalk::WalkDir;
 use rand::{rng, Rng};
@@ -25,9 +26,8 @@ use tokio::fs::File as TokioFile;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::task;
 use unrar::Archive;
-use window_vibrancy::apply_acrylic;
+use window_vibrancy::{apply_acrylic, apply_vibrancy, NSVisualEffectMaterial};
 use zip::ZipArchive;
-use futures_util::TryStreamExt;
 
 mod discord_rpc;
 mod downloader;
@@ -37,7 +37,8 @@ mod simple_logger;
 
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
 static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/dokimodmanager.exe";
-static UN_RPYC: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
+static UN_RPYC: &str =
+    "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
 
 static UN_RPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
 static SCRIPTS_RPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
@@ -207,11 +208,13 @@ async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
     if !is_file(scriptsrpa.clone()).await {
         return;
     }
+
     let file_size = File::open(&scriptsrpa)
         .unwrap()
         .metadata()
         .unwrap()
         .file_size();
+
     println!("File Size: {}", file_size);
     if file_size > 280_0000 {
         return;
@@ -264,7 +267,7 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
                 fs::read_to_string(path_out.join("ddmm-temp-options").join("options.rpy"))
                     .unwrap()
                     .as_str(),
-                option
+                option,
             )
             .unwrap_or_default();
         }
@@ -278,7 +281,8 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
         println!("Found Options File!");
 
         return parse_source(
-            &fs::read_to_string(path_out.join("ddmm-temp-options\\options.rpy")).unwrap(), option
+            &fs::read_to_string(path_out.join("ddmm-temp-options\\options.rpy")).unwrap(),
+            option,
         )
         .unwrap_or_default();
     }
@@ -671,10 +675,13 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
     if target_dir.exists() {
         let mut extention = 0;
-        while target_dir_parent.join(format!("{} {}",source_name_no_ext,extention)).exists() {
-            extention+=1;
+        while target_dir_parent
+            .join(format!("{} {}", source_name_no_ext, extention))
+            .exists()
+        {
+            extention += 1;
         }
-        target_dir = target_dir_parent.join(format!("{} {}",source_name_no_ext,extention));
+        target_dir = target_dir_parent.join(format!("{} {}", source_name_no_ext, extention));
     }
 
     let initial_target_dir = target_dir.clone();
@@ -813,7 +820,9 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         }
     }
 
-    if !target_dir.ends_with("game") && is_file(PathBuf::from(&target_dir).join("game").join("firstrun")).await {
+    if !target_dir.ends_with("game")
+        && is_file(PathBuf::from(&target_dir).join("game").join("firstrun")).await
+    {
         remove_file(PathBuf::from(&target_dir).join("game").join("firstrun")).unwrap();
     }
 
@@ -828,7 +837,11 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     app.emit(
         "import_done",
         StringData {
-            text: PathBuf::from(&initial_target_dir).file_name().expect("Could not get file name").to_str().unwrap(),
+            text: PathBuf::from(&initial_target_dir)
+                .file_name()
+                .expect("Could not get file name")
+                .to_str()
+                .unwrap(),
         },
     )
     .unwrap();
@@ -999,10 +1012,19 @@ async fn download_file(app: &AppHandle, url: String, save_path: String) -> Resul
         downloaded += chunk.len() as u64;
 
         if start.elapsed().as_secs() >= 1 {
-            app.emit("download_percent",
-                     StringData {
-                         text: &format!("{:.1}% ({:.1} MB/s)", (downloaded as f64 / total as f64) * 100f64, (downloaded - last_downloaded) as f64 / start.elapsed().as_millis().max(1) as f64 / 1024f64),
-                     }).unwrap();
+            app.emit(
+                "download_percent",
+                StringData {
+                    text: &format!(
+                        "{:.1}% ({:.1} MB/s)",
+                        (downloaded as f64 / total as f64) * 100f64,
+                        (downloaded - last_downloaded) as f64
+                            / start.elapsed().as_millis().max(1) as f64
+                            / 1024f64
+                    ),
+                },
+            )
+            .unwrap();
             start = Instant::now();
             last_downloaded = downloaded.clone();
         }
@@ -1080,7 +1102,10 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
 }
 
 fn is_game_folder(name: &str) -> bool {
-    name.ends_with(".rpyc") || name.ends_with(".rpa") || name.starts_with("mod_assets") || name.ends_with(".rpy")
+    name.ends_with(".rpyc")
+        || name.ends_with(".rpa")
+        || name.starts_with("mod_assets")
+        || name.ends_with(".rpy")
 }
 
 #[tauri::command]
@@ -1302,6 +1327,10 @@ pub async fn run() {
             #[cfg(target_os = "windows")]
             apply_acrylic(&window, Some((0, 0, 0, 10)))
                 .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
+
+            #[cfg(target_os = "macos")]
+            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
+                .expect("Unsupported platform! 'apply_blur' is only supported on MacOs");
 
             // Track App Closed
             app.get_webview_window("main")

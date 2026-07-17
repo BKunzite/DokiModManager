@@ -74,8 +74,15 @@ Better Searching Algorithm
 Profiles now work with more mods and no longer fails if the game
 saves to mod/games/saves
 
+Both Mac & Linux Support Is Comming
+(MacOS Support Via A Cloud Instance
+and Linux Support Via A Dualboot Instance)
+
+Development Note
+
 As a final note, I am migrating away from Bun as a package manager.
-With the recent contraversies surrounding Bun. I decided it was best
+With the recent controversies surrounding Bun. I decided it was best
 to move on from Bun, and move forward with another package manager.
 For now, that new package manager will be Deno, but that may change
-a later statement.
+a later statement. For end users, switching from Bun to Deno should
+result in no tangible changes.

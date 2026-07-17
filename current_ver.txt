@@ -1,75 +1,72 @@
-1.7.0-release
-Optional (Recommended)
-(This is where I start really ramping up changes to the code
-as I prepare for 2.0.0. If you dont want to update, dont.
-You can also install any old version on github if
-you find the new update unstable)
+1.6.0-release
+Recommended (More UI Updates & Bug Fixes)
+PLEASE read the changelog (THIS). There are a lot of changes
+and some tips.
 
-Discord - https://discord.gg/gCJgyUrvjY
-You can either copy it or update DDMM first,
-as it will register as a hyperlink after the update
+Thank you guys so much for the support recently!
+There have been around 100 new downloads (1300+ total) and
+30-40 more daily users on average,
+So many in fact that I now have to pay
+for analytics, but it's worth it!
 
-Sorry for the long wait with this update,
-I wanted to push it out faster but
-my SSD literally died on me whilst I was working on
-this, then I got busy with IRL stuff.
+- Notes
+I might make a discord soon, and if I do, I will announce it here.
+Summer break is here! Expect some more updates!
+Mac support might be coming this summer.
 
-Please report issues only through the UI and/or the new discord!
-(or if you really want, GitHub)
+This update might feel a bit slower at first launch after updating,
+but this is due to data being cached. After the first launch,
+it should be significantly faster than before.
 
-(For this update mainly, please report literally any
-issues you find, or any features you want, since
-this is a pretty heavy rewrite and I want to make sure that
-no bugs exist)
+I've been postponing this update for a while,
+but I wanted to make sure that it was ready for release.
+This fixes many of the issues that were created over the releases.
 
-I have now updated tauri to the latest version,
-if you experience issues, that is probably where
-they are coming from. I still decided to do this
-in order to prevent potential vulnerabilities.
+- FOR REPORT AN ISSUE!
+PLEASE make sure that you report an issue
+only when mods don't launch or something that has to
+do with the mod launcher, not issues about
+the mods themselves. (And please, please be descriptive)
 
-Screenshot Preview Of Images Not Loading Fixed
- - Extreme Cache-Culling caused images
- to be dereferenced before they were loaded.
+- There have been a lot of changes in the code
+with this update, so if you have any issues,
+please report it!
 
-When Renaming A Mod, The Title Will Scroll To The Right,
-Allowing You To See What You Are Typing.
+- Username
+You might notice that with this update,
+the name on the home screen is different from
+what it was before. This change was done
+to support the shift to macOS cleaner whenever
+I get the chance to add it.
+It now uses the name of the computer instead
+of the name of your user folder.
+If you do not like it, you can now click on
+the name to change it.
 
-You now no longer can rename a mod to an existing mod.
-Downloads with the same name as existing mods
-will have a number appended to the end.
+- Files For Mods
+There are two ways to view files for mods:
 
-Pins!
-- Pins now allow you to pin mods to the top of the list
-and play them later (they are above favorites).
-- This is in order for you to make a mod that you want to play,
-but do not feel like marking it as a favorite.
+1. Before you launch the mod:
+    You can click on the file icon to the right of the
+    play button to view the files
+    of the mod in Explorer.
 
-How To Pin A Mod:
-- To pin a mod, click the heart icon to the right of
-the mod's cover or to the left of the mod's name.
-- To unpin, click on the pin.
-- You may also drag the pin into the cover to pin it,
-or, drag the pin out of the cover to unpin it.
+2. After you launch the mod:
+    Focus back onto the mod manager, there
+    should be a pill-shaped button that says "Files".
+    Click on it to view the files of the mod in Explorer.
 
-Mod Download Fixed
-- The Good Ending (Some Imports Into The Game Folder Were Not Detected)
 
-More complete translation support.
-Added last played date.
-Changed a few icons.
-Faster HTML escaping.
-Improved loading speeds (caching covers now
-    takes significantly less time).
-Underlying code rewrite pt. 2.
-    Minor refactor, like plus or minus ~2000 lines added/removed/modified
-    Should have feature parity, just more security and better for the future.
-    This took me an entire day (12 hours straight of coding) to update, and
-    now, I want to bash my head against the wall.
-Binary Optimizations (Smaller exe size)
-Dependency updates.
-Preload images now actually preload
- - Better Cache Management
-Better Searching Algorithm
- - Mods are back in alphabetical order
-Profiles now work with more mods and no longer fails if the game
-saves to mod/games/saves
+- New Update Screen
+Yes, pressing update will automatically update the manager;
+you don't have to reinstall.
+
++ File Download Indicator
++ Loading Bar
++ Game Cards
++ Major Memory Optimization
+    Removed A Memory Leak
++ Rename Home Screen Name
+/ Renaming Mod To An Invalid Name Causing A Crash Fixed
+/ Minor UI Errors
+/ Code Refactor

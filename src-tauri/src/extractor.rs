@@ -8,8 +8,7 @@ pub fn extract_rar_archive(
     archive_path: &Path,
     target_dir: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut archive = Archive::new(archive_path.to_str().unwrap())
-        .open_for_processing()?;
+    let mut archive = Archive::new(archive_path.to_str().unwrap()).open_for_processing()?;
     while let Some(header) = archive.read_header()? {
         archive = if header.entry().is_directory() {
             header.skip()?
