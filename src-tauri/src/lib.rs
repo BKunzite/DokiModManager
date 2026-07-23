@@ -1385,6 +1385,7 @@ async fn update_linux_binary() {
     let update_script = script.contents_utf8().unwrap();
     let mut update_script_path = File::create(get_current_dir().join("update.sh")).unwrap();
     update_script_path.write_all(update_script.as_bytes()).unwrap();
+    chmod_x_file(&get_current_dir().join("update.sh")).unwrap();
 
     match install_info.kind {
         InstallType::Appimage => {
@@ -1403,6 +1404,7 @@ async fn update_linux_binary() {
             let update_script2 = script2.contents_utf8().unwrap();
             let mut update_script_path2 = File::create(get_current_dir().join("update_app.sh")).unwrap();
             update_script_path2.write_all(update_script.as_bytes()).unwrap();
+            chmod_x_file(get_current_dir().join("update_app.sh").display().to_string());
 
             let status = Command::new("pkexec")
                 .arg(get_current_dir().join("update_app.sh").display().to_string())
@@ -1416,6 +1418,7 @@ async fn update_linux_binary() {
             let mut out = File::create(get_current_dir().join("dokimodmanager.deb")).expect("Failed to create file");
             out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
                 .unwrap();
+
             let status = Command::new("pkexec")
                 .arg(get_current_dir().join("update.sh").display().to_string())
                 .arg(get_current_dir().join("dokimodmanager.deb").display().to_string())

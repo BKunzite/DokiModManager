@@ -78,6 +78,23 @@ Both Mac & Linux Support Is Comming
 (MacOS Support Via A Cloud Instance
 and Linux Support Via A Dualboot Instance)
 
+LINUX BETA SUPPORT IS HERE!
+(Note: This is very buggy, expect issues)
+Known Issues:
+ - WebGTK rendering artifacts
+ - Downloads Randomly Not Starting (WebGTK Issue)
+ - Current Update System May Be Broken, If So, Update Manually
+ - Some Mods May Not Load (Not all mods support linux)
+ - Non-Resizeable Window (A full UI update would have to be done)
+   - This may cause an issue for tiling managers
+ - Absurdly Slow Loading Times
+ - No Window Blur Transparency Support
+ - Non-Debian Users May Have Other Issues
+
+MacOS Beta Support Will Come As The 1.8.0 Release
+Linux Port Took Way Too Long, So I Will Release It First Before
+  Starting Macos Support.
+
 Development Note
 
 As a final note, I am migrating away from Bun as a package manager.
