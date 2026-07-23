@@ -4,9 +4,9 @@
   "version": "1.7.0",
   "identifier": "com.dokimodmanager.app",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "deno run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "deno run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -22,7 +22,11 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; connect-src 'self' http://ipc.localhost https://raw.githubusercontent.com;"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; connect-src 'self' http://ipc.localhost https://raw.githubusercontent.com;",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
     },
     "withGlobalTauri": true
   },
@@ -41,6 +45,18 @@
       "nsis": {
         "installerIcon": "icons/icon.ico"
       }
+    },
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/README.md": "../README.md"
+        }
+      }
+    }
+  },
+  "plugins": {
+    "fs": {
+      "requireLiteralLeadingDot": false
     }
   }
 }

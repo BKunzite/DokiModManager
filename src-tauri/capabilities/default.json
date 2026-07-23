@@ -20,6 +20,7 @@
     "dialog:default",
     "fs:default",
     "fs:read-all",
+    "fs:allow-read-text-file",
     "fs:write-all",
     "fs:allow-rename",
     "fs:allow-mkdir",
@@ -35,7 +36,14 @@
     "dialog:allow-message",
     {
       "identifier": "fs:scope",
-      "allow": ["**/*"]
+      "allow": [
+        { "path": "**/*" },
+        { "path": "**" },
+        { "path":  "/mnt"},
+        { "path": "/mnt/**" },
+        { "path": "/**/*" }
+      ],
+      "requireLiteralLeadingDot": false
     }
   ]
 }

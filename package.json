@@ -15,17 +15,22 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
+    "@tauri-apps/plugin-os": "^2.3.2",
     "@vueuse/core": "^14.3.0",
     "base64-js": "^1.5.1",
+    "fdir": "^6.5.0",
     "fzf": "^0.5.2",
+    "picomatch": "^4.0.5",
+    "rolldown": "^1.2.0",
     "tauri-plugin-fs-pro-api": "^2.4.0",
+    "tinyglobby": "^0.2.17",
+    "vite": "5.4.10",
     "vue": "^3.5.39"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",
     "@vitejs/plugin-vue": "^6.0.7",
     "eslint-plugin-vue": "^10.9.2",
-    "prettier": "^3.9.5",
-    "vite": "^8.1.4"
+    "prettier": "^3.9.5"
   }
 }

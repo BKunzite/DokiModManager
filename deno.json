@@ -1,0 +1,7 @@
+{
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "dev": "deno run -A --node-modules-dir npm:vite",
+    "tauri": "deno run -A --node-modules-dir npm:@tauri-apps/cli"
+  }
+}

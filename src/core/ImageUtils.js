@@ -62,15 +62,23 @@ export async function getImage(id, covers = [], eager = false) {
     }
 }
 
+function isAbsolute(cover) {
+    if (navigator.userAgent.toLowerCase().includes('linux')) {
+        return cover.startsWith("/")
+    } else {
+        return cover.includes(":")
+    }
+}
+
 async function getImageEager(id, covers = []) {
     const cover = covers[id];
-    if (cover !== undefined && cover.includes(":")) {
+    if (cover !== undefined && isAbsolute(cover)) {
         const contents = await readFile(cover);
         return createURL(contents, cover)
     } else if (typeof (id) === "object") {
         const bytes = new Uint8Array(id);
         return createBase64URL(bytes)
-    } else if (typeof (id) === "string" && id.includes(":")) {
+    } else if (typeof (id) === "string" && isAbsolute(id)) {
         const contents = await readFile(id);
         return createURL(contents, id)
     } else {

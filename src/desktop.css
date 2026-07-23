@@ -2,6 +2,10 @@
     --bar-position: 0%;
 }
 
+#app {
+    aspect-ratio: 2/1;
+}
+
 .taskbar {
     width: 100vw;
     height: 7vh;

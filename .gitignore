@@ -11,13 +11,17 @@ node_modules
 dist
 dist-ssr
 *.local
-/src-tauri/store
+/src-tauri/back
+/src-tauri/.dokimodmanager
 /src-tauri/target
 /dist
 /node_modules
-/src-tauri/client-config.json
-/src-tauri/DNNconfig.json
+/src-tauri/.dokimodmanager/client-config.json
+/src-tauri/.dokimodmanager/DNNconfig.json
 /src-tauri/.gitignore
+/src-tauri/unrpyc.sh
+/src-tauri/unrpyc.exe
+/src-tauri/dokimodmanager-new.exe
 
 # Editor directories and files
 .vscode/*

@@ -11,16 +11,19 @@ use serde_json::json;
 use std::fs::{create_dir_all, exists, remove_dir_all, remove_file, File};
 #[allow(unused_imports)]
 use std::io::{Read, Write};
-use std::os::windows::{fs::MetadataExt, process::CommandExt};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
+use std::fmt::format;
+use dirs::home_dir;
 use sysinfo::{ProcessesToUpdate, System};
 use tauri::webview::{DownloadEvent, NewWindowResponse};
-use tauri::{AppHandle, Emitter, Listener, Manager, Url, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Listener, Manager, PhysicalSize, PixelUnit, Size, Url, WebviewUrl, WebviewWindowBuilder, WindowSizeConstraints};
+use tauri::window::Color;
 use tauri_plugin_aptabase::EventTracker;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_fs_pro::{is_dir, is_file};
 use tokio::fs::File as TokioFile;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -28,6 +31,8 @@ use tokio::task;
 use unrar::Archive;
 use window_vibrancy::{apply_acrylic, apply_vibrancy, NSVisualEffectMaterial};
 use zip::ZipArchive;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 mod discord_rpc;
 mod downloader;
@@ -37,15 +42,38 @@ mod simple_logger;
 
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
 static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/dokimodmanager.exe";
+static LATEST_ARTIFACT_LINUX_DEB: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/DEB/dokimodmanager.deb";
+static LATEST_ARTIFACT_LINUX_APP: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/APP/dokimodmanager.AppImage";
+static LATEST_ARTIFACT_LINUX_RPM: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/RPM/dokimodmanager.rpm";
+
 static UN_RPYC: &str =
     "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
+static UN_RPYC_LINUX: &str =
+    "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.sh";
 
 static UN_RPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
+static UN_RPYC_LINUX_HASH: &str = "b74b408f748bf45fe8a8023525ba728d25fac6a677b711c77dc8aa8d7e4a25f6";
 static SCRIPTS_RPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 
 static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
 static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum InstallType {
+    Appimage,
+    Deb,
+    Rpm,
+    Unknown,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct InstallData {
+    kind: InstallType,
+    path: Option<PathBuf>,
+    package: Option<String>,
+}
 
 #[tauri::command]
 fn close(window: tauri::Window) {
@@ -78,6 +106,12 @@ struct WebviewOpen<'a> {
     name: &'a str,
 }
 
+#[derive(serde::Deserialize)]
+struct DownloadRequest<'a> {
+    file_name: &'a str,
+    url: &'a str,
+}
+
 #[derive(Clone, Serialize)]
 struct IntData {
     number: u16,
@@ -100,7 +134,7 @@ async fn path_select(path: &str) -> Result<(), String> {
     let json_data =
         serde_json::to_string_pretty(&default_config_data).map_err(|e| e.to_string())?;
 
-    let mut file = TokioFile::create("DNNconfig.json")
+    let mut file = TokioFile::create(get_current_dir().join("DNNconfig.json"))
         .await
         .map_err(|e| e.to_string())?;
 
@@ -115,18 +149,17 @@ async fn path_select(path: &str) -> Result<(), String> {
 #[tauri::command]
 async fn request_path(app: AppHandle) -> Result<(), String> {
     let default_config_data: ConfigData = ConfigData {
-        directory: env::current_dir()
-            .expect("Unable to get current running directory!")
+        directory: get_current_dir()
             .display()
             .to_string()
-            + "\\store\\mods",
+            + std::path::MAIN_SEPARATOR_STR + "store" + std::path::MAIN_SEPARATOR_STR + "mods",
     };
     let mut contents = String::new();
 
-    if fs::metadata("DNNconfig.json").is_err() {
+    if fs::metadata(get_current_dir().join("DNNconfig.json")).is_err() {
         let json_data =
             serde_json::to_string_pretty(&default_config_data).map_err(|e| e.to_string())?;
-        let mut file = TokioFile::create("DNNconfig.json")
+        let mut file = TokioFile::create(get_current_dir().join("DNNconfig.json"))
             .await
             .map_err(|e| e.to_string())?;
         file.write_all(json_data.as_bytes())
@@ -134,7 +167,7 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         contents = json_data;
     } else {
-        let mut file = TokioFile::open("DNNconfig.json")
+        let mut file = TokioFile::open(get_current_dir().join("DNNconfig.json"))
             .await
             .map_err(|e| e.to_string())?;
         file.read_to_string(&mut contents)
@@ -147,8 +180,7 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
         "pathRespond",
         ReturnPath {
             final_data: &final_data.directory,
-            local_path: &env::current_dir()
-                .expect("Current dir is unreachable!")
+            local_path: &get_current_dir()
                 .to_string_lossy(),
             path: dirs::home_dir()
                 .unwrap()
@@ -213,7 +245,7 @@ async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
         .unwrap()
         .metadata()
         .unwrap()
-        .file_size();
+        .len();
 
     println!("File Size: {}", file_size);
     if file_size > 280_0000 {
@@ -253,7 +285,7 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
                 println!(
                     "{}",
                     path_out
-                        .join(format!("ddmm-temp-options\\{}", ""))
+                        .join(format!("ddmm-temp-options{}{}",std::path::MAIN_SEPARATOR, ""))
                         .to_str()
                         .unwrap()
                 );
@@ -277,11 +309,13 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
     let mut rpa_archive = warpalib::RenpyArchive::open(binding.as_path()).unwrap();
 
     create_dir_all(path_out.as_path()).unwrap();
-    if exists(path_out.join("ddmm-temp-options\\options.rpy")).unwrap() {
-        println!("Found Options File!");
+    let early_path = path_out.join(format!("ddmm-temp-options{}options.rpy", std::path::MAIN_SEPARATOR));
+    println!("path - {}", early_path.to_str().unwrap() );
+    if exists(&early_path).unwrap() {
+        println!("Found Options File! (EARLY ESCAPE)");
 
         return parse_source(
-            &fs::read_to_string(path_out.join("ddmm-temp-options\\options.rpy")).unwrap(),
+            &fs::read_to_string(early_path).unwrap(),
             option,
         )
         .unwrap_or_default();
@@ -296,13 +330,13 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
             println!(
                 "{}",
                 path_out
-                    .join(format!("ddmm-temp-options\\{}", cmain))
+                    .join(format!("ddmm-temp-options{}{}",std::path::MAIN_SEPARATOR, cmain))
                     .to_str()
                     .unwrap()
             );
             let mut file = File::create(
                 path_out
-                    .join(format!("ddmm-temp-options\\{}", cmain))
+                    .join(format!("ddmm-temp-options{}{}",std::path::MAIN_SEPARATOR, cmain))
                     .as_path()
                     .to_str()
                     .unwrap(),
@@ -322,19 +356,30 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
 }
 
 fn rpa_archive_option(path_out: &Path, cmain: &str, option: &str) -> String {
-    let mut exchild = Command::new(
-        env::current_exe()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("unrpyc.exe")
-            .as_path()
-            .to_str()
-            .unwrap(),
-    );
+    let mut exchild: Command;
+    #[cfg(windows)]
+    {
+        exchild = Command::new(
+            get_current_dir()
+                .join("unrpyc.exe")
+                .as_path()
+                .to_str()
+                .unwrap(),
+        );
+    }
+    #[cfg(target_os = "linux")]
+    {
+        exchild = Command::new(
+            get_current_dir()
+                .join("unrpyc.sh")
+                .as_path()
+                .to_str()
+                .unwrap(),
+        );
+    }
     exchild.arg(
         path_out
-            .join(format!("ddmm-temp-options\\{}", cmain))
+            .join(format!("ddmm-temp-options{}{}",std::path::MAIN_SEPARATOR, cmain))
             .as_path()
             .to_str()
             .unwrap(),
@@ -352,7 +397,8 @@ fn rpa_archive_option(path_out: &Path, cmain: &str, option: &str) -> String {
     if rput.status.success() {
         println!("{}", String::from_utf8_lossy(&rput.stdout));
         let output_src = path_out.join(format!(
-            "ddmm-temp-options\\{}",
+            "ddmm-temp-options{}{}",
+            std::path::MAIN_SEPARATOR,
             cmain.replace(".rpyc", ".rpy")
         ));
         println!("{:?}", output_src);
@@ -382,7 +428,15 @@ fn parse_source(source: &str, option: &str) -> Option<String> {
         contents.next()?;
         let content = contents.next().unwrap_or("");
         println!("{}", line);
-        let data = dirs::config_dir().unwrap().join("RenPy").join(content);
+        let mut data: PathBuf;
+        #[cfg(target_os = "linux")]
+        {
+            data = home_dir().unwrap().join(".renpy").join(content);
+        }
+        #[cfg(windows)]
+        {
+            data = dirs::config_dir().unwrap().join("RenPy").join(content);
+        }
         println!("Found Mod Data @ {}", data.as_path().to_str().unwrap());
         return Some(data.to_str().unwrap().to_string());
     }
@@ -436,12 +490,12 @@ fn extract_rpyc(app: &AppHandle, path: &str, out: &str) {
 }
 
 fn decrypt_rpa_dir(app: &AppHandle, root_path: &Path) {
-    let exe_dir = env::current_exe()
-        .expect("Failed to get exe path")
-        .parent()
-        .unwrap()
-        .to_path_buf();
-    let unrpyc_path = exe_dir.join("unrpyc.exe");
+    let exe_dir = get_current_dir();
+    let mut unrpyc_path = exe_dir.join("unrpyc.exe");
+    #[cfg(target_os = "linux")]
+    {
+        unrpyc_path = exe_dir.join("unrpyc.sh");
+    }
 
     let files: Vec<_> = WalkDir::new(root_path)
         .into_iter()
@@ -461,10 +515,16 @@ fn decrypt_rpa_dir(app: &AppHandle, root_path: &Path) {
             .as_str(),
         );
 
-        let status = Command::new(&unrpyc_path)
-            .arg(rpyc_path)
-            .creation_flags(0x08000000)
-            .status();
+        let mut cmd = Command::new(&unrpyc_path);
+        cmd.arg(rpyc_path);
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+
+        let status = cmd.status();
 
         match status {
             Ok(s) if s.success() => {}
@@ -475,16 +535,51 @@ fn decrypt_rpa_dir(app: &AppHandle, root_path: &Path) {
 
     println!("Done!");
 }
+#[cfg(target_os = "linux")]
+fn chmod_x_file(path: &str) {
+    let mut permissions = fs::metadata(&path).unwrap().permissions();
+    if permissions.mode() & 0o111 == 0 {
+        permissions.set_mode(permissions.mode() | 0o111);
+        fs::set_permissions(path, permissions).unwrap();
+        println!("chmod +x {}", path);
+    }
+}
 #[tauri::command]
 async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(), String> {
     let _ = app.get_window("main").unwrap().minimize();
     let scripts = PathBuf::from(&path).parent().unwrap().join("game");
-
     let dir = PathBuf::from(&path).parent().unwrap().display().to_string();
+    let mut try_admin = false;
+    let file_path = PathBuf::from(path);
+    let file_name = file_path.file_name().unwrap().to_str().unwrap();
+    let mut launch_time = Instant::now();
+    let mut error: Option<String> = None;
 
     println!("{}", path);
     fix_renpy_8(renpy, &scripts).await;
     set_playing(id);
+
+    #[cfg(target_os = "linux")]
+    if path.ends_with(".sh") {
+        chmod_x_file(path);
+        let execs = PathBuf::from(&path).parent().unwrap().join("lib").join("py2-linux-x86_64");
+        if is_dir(PathBuf::from(&path).parent().unwrap().join("lib").join("py2-linux-x86_64")).await {
+            for entry in WalkDir::new(&execs)
+                .skip_hidden(false)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
+                let path = entry.path();
+                if !path.is_file() {
+                    continue;
+                }
+                let file_name = path.file_name().unwrap().to_str().unwrap();
+                chmod_x_file(path.to_str().unwrap());
+            }
+        } else {
+            println!("No Execs Found! path={}", &execs.to_str().unwrap());
+        }
+    }
 
     let mut launch_result = Command::new(path)
         .current_dir(&dir)
@@ -492,11 +587,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         .stderr(Stdio::piped())
         .spawn();
 
-    let mut try_admin = false;
-    let file_path = PathBuf::from(path);
-    let file_name = file_path.file_name().unwrap().to_str().unwrap();
-    let mut launch_time = Instant::now();
-    let mut error: Option<String> = None;
+
     match launch_result {
         Ok(process) => {
             println!("File Launched Successfully!");
@@ -515,6 +606,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         }
     }
 
+    #[cfg(windows)]
     if try_admin {
         app.emit("popup", StringData { text: "Running as normal user failed; re-running as admin. Do not give 'random mods' admin privileges. (3s)" }).expect("Popup Error");
         tokio::time::sleep(Duration::from_millis(3000)).await;
@@ -537,7 +629,26 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
             let _ = process.wait();
         }
     }
+
+    #[cfg(target_os = "linux")]
+    if try_admin {
+        app.emit("popup", StringData { text: "Running as script failed; tring to execute sh through bash. If it still doesnt run, this mod cannot be ran on linux." }).expect("Popup Error");
+        tokio::time::sleep(Duration::from_millis(3000)).await;
+        launch_time = Instant::now();
+
+        launch_result = Command::new("bash")
+            .arg(path)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn();
+
+        if let Ok(mut process) = launch_result {
+            let _ = process.wait();
+        }
+    }
+
     println!("Time: {}", launch_time.elapsed().as_secs());
+
     if launch_time.elapsed().as_secs() <= 10 {
         tokio::time::sleep(Duration::from_millis(1000)).await;
         if is_process_running(file_name) {
@@ -643,7 +754,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     .unwrap();
 
     let mut logger = simple_logger::SimpleLogger::new(format!("Import_Mod {}", path));
-    let config_contents = tokio::fs::read_to_string("DNNconfig.json")
+    let config_contents = tokio::fs::read_to_string(get_current_dir().join("DNNconfig.json"))
         .await
         .map_err(|e| e.to_string())?;
 
@@ -715,7 +826,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     )
     .unwrap();
 
-    copy_dir_recursive(&PathBuf::from("./store/ddlc"), &target_dir).expect("Failed to copy ddlc!");
+    copy_dir_recursive(&get_current_dir().join("store").join("ddlc"), &target_dir).expect("Failed to copy ddlc!");
 
     logger.log(String::from("I/O Copy DDLC Files Finished"));
 
@@ -804,8 +915,8 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
                 let p = &PathBuf::from(nested);
                 for file in p.read_dir().unwrap() {
                     let path = file.unwrap().path();
-                    let close_dir = path.to_str().unwrap().replace(&format!("{}\\", nested), "");
-                    if is_game_folder(&close_dir) && !close_dir.contains("\\") {
+                    let close_dir = path.to_str().unwrap().replace(&format!("{}{}", nested, std::path::MAIN_SEPARATOR), "");
+                    if is_game_folder(&close_dir) && !close_dir.contains(std::path::MAIN_SEPARATOR) {
                         is_game = true;
                         break;
                     }
@@ -970,7 +1081,7 @@ fn import_game_rar(archive_path: &Path) -> bool {
             header.skip().expect("Failed to skip header")
         } else if header.entry().is_file() {
             if is_game_folder(header.entry().filename.to_str().unwrap())
-                && !header.entry().filename.to_str().unwrap().contains("\\")
+                && !header.entry().filename.to_str().unwrap().contains(std::path::MAIN_SEPARATOR)
             {
                 found = true;
                 break;
@@ -1040,13 +1151,12 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
         .get_file("link_open_redirector.js")
         .expect("Failed to get script path");
     let script = script_path.contents_utf8().unwrap();
-    let downloads_dir = env::current_dir()
-        .unwrap()
+    let downloads_dir = get_current_dir()
         .join("store")
         .join("downloads")
         .display()
         .to_string();
-    let cache_dir = env::current_dir().unwrap().join("store").join("cache");
+    let cache_dir = get_current_dir().join("store").join("cache");
 
     create_dir_all(&downloads_dir).expect("FS Error: Failed To Create Store/Mods");
     create_dir_all(&cache_dir).expect("FS Error: Failed To Create Store/Cache");
@@ -1193,14 +1303,17 @@ async fn set_ddlc_zip(path: &str) -> Result<(), bool> {
         return Err(false);
     }
 
+    create_dir_all(get_current_dir().join("store")).unwrap();
+
     fs::copy(
         PathBuf::from(path),
-        env::current_dir().unwrap().join("store").join("ddlc.zip"),
+        get_current_dir().join("store").join("ddlc.zip")
     )
     .unwrap();
+
     downloader::extract_folder(
-        &PathBuf::from("./store/ddlc"),
-        &mut File::open(PathBuf::from("./store/ddlc.zip")).unwrap(),
+        &get_current_dir().join("store").join("ddlc"),
+        &mut File::open(get_current_dir().join("store").join("ddlc.zip")).unwrap(),
     )
     .await;
 
@@ -1214,6 +1327,123 @@ fn get_host_name() -> String {
 }
 #[tauri::command]
 async fn update_exe() {
+    #[cfg(target_os = "windows")]
+    update_windows_binary().await;
+
+    #[cfg(target_os = "linux")]
+    update_linux_binary().await;
+}
+
+fn command_succeeds(program: &str, args: &[&str]) -> bool {
+    Command::new(program)
+        .args(args)
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
+#[cfg(target_os = "linux")]
+fn detect_install(exe: &Path) -> InstallData {
+    if exe.extension().is_some_and(|ext| ext == "AppImage") {
+        return InstallData {
+            kind: InstallType::Appimage,
+            path: Some(exe.to_owned()),
+            package: None,
+        };
+    }
+
+    let exe_string = exe.to_string_lossy();
+
+    if command_succeeds("dpkg-query", &["-S", &exe_string]) {
+        return InstallData {
+            kind: InstallType::Deb,
+            path: None,
+            package: Some("dokimodmanager".into()),
+        };
+    }
+
+    if command_succeeds("rpm", &["-qf", &exe_string]) {
+        return InstallData {
+            kind: InstallType::Rpm,
+            path: None,
+            package: Some("dokimodmanager".into()),
+        };
+    }
+
+    InstallData {
+        kind: InstallType::Unknown,
+        path: Some(exe.to_owned()),
+        package: None,
+    }
+}
+#[cfg(target_os = "linux")]
+async fn update_linux_binary() {
+    let exe = std::env::current_exe().expect("Failed to get current exe");
+    let install_info = detect_install(&exe);
+    let script = RESOURCES
+        .get_file("update.sh")
+        .expect("Failed to get script path");
+
+    let update_script = script.contents_utf8().unwrap();
+    let mut update_script_path = File::create(get_current_dir().join("update.sh")).unwrap();
+    update_script_path.write_all(update_script.as_bytes()).unwrap();
+
+    match install_info.kind {
+        InstallType::Appimage => {
+            let resp = reqwest::get(LATEST_ARTIFACT_LINUX_APP)
+                .await
+                .expect("Failed to download latest");
+
+            let mut out = File::create("dokimodmanager-new.AppImage").expect("Failed to create file");
+            out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
+                .unwrap();
+
+            let script2 = RESOURCES
+                .get_file("update_app.sh")
+                .expect("Failed to get script path");
+
+            let update_script2 = script2.contents_utf8().unwrap();
+            let mut update_script_path2 = File::create(get_current_dir().join("update_app.sh")).unwrap();
+            update_script_path2.write_all(update_script.as_bytes()).unwrap();
+
+            let status = Command::new("pkexec")
+                .arg(get_current_dir().join("update_app.sh").display().to_string())
+                .status()
+                .map_err(|e| e.to_string()).expect("Failed to run command");
+        }
+        InstallType::Deb => {
+            let resp = reqwest::get(LATEST_ARTIFACT_LINUX_DEB)
+                .await
+                .expect("Failed to download latest");
+            let mut out = File::create(get_current_dir().join("dokimodmanager.deb")).expect("Failed to create file");
+            out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
+                .unwrap();
+            let status = Command::new("pkexec")
+                .arg(get_current_dir().join("update.sh").display().to_string())
+                .arg(get_current_dir().join("dokimodmanager.deb").display().to_string())
+                .status()
+                .map_err(|e| e.to_string()).expect("Failed to run update script");
+        }
+        InstallType::Rpm => {
+            let resp = reqwest::get(LATEST_ARTIFACT_LINUX_RPM)
+                .await
+                .expect("Failed to download latest");
+            let mut out = File::create(get_current_dir().join("dokimodmanager.rpm")).expect("Failed to create file");
+            out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
+                .unwrap();
+            let status = Command::new("pkexec")
+                .arg(get_current_dir().join("update.sh").display().to_string())
+                .arg(get_current_dir().join("dokimodmanager.rpm").display().to_string())
+                .status()
+                .map_err(|e| e.to_string()).expect("Failed to run script");
+        }
+        InstallType::Unknown => {
+
+        }
+    }
+
+    std::process::exit(0);
+}
+#[cfg(target_os = "windows")]
+async fn update_windows_binary() {
     println!("Updating Using {}", LATEST_ARTIFACT);
     let resp = reqwest::get(LATEST_ARTIFACT)
         .await
@@ -1229,10 +1459,10 @@ async fn update_exe() {
 
     let update_script = script.contents_utf8().unwrap();
 
-    println!("{:?}", env::current_dir().unwrap().display());
+    println!("{:?}", get_current_dir().display());
 
     Command::new("powershell")
-        .current_dir(env::current_dir().unwrap())
+        .current_dir(get_current_dir())
         .args(["-NoProfile", "-Command", update_script])
         .spawn()
         .expect("failed to launch cmd");
@@ -1241,13 +1471,15 @@ async fn update_exe() {
 
 #[tauri::command]
 fn open_path(path: &str) {
-    let _ = Command::new("explorer.exe")
-        .args([path])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .expect("failed to launch cmd")
-        .wait();
+    let ppath = Path::new(path);
+    if ppath.exists() {
+        if ppath.is_dir() {
+            opener::open(path).expect("Failed to open path");
+        } else {
+            opener::reveal(path).expect("Failed to open path");
+        }
+    }
+
 }
 
 #[tauri::command]
@@ -1262,48 +1494,82 @@ fn track(app: &AppHandle, event: String, props: Option<serde_json::Value>) {
 
 async fn make_config() {
     let default_config_data: ConfigData = ConfigData {
-        directory: env::current_dir().unwrap().display().to_string() + "\\store\\mods",
+        directory: get_current_dir().display().to_string() + std::path::MAIN_SEPARATOR_STR + "store" + std::path::MAIN_SEPARATOR_STR + "mods",
     };
 
     let json_data = serde_json::to_string_pretty(&default_config_data).unwrap();
-    if fs::metadata("DNNconfig.json").is_err() {
-        let file = File::create("DNNconfig.json");
+    if fs::metadata(get_current_dir().join("DNNconfig.json")).is_err() {
+        let file = File::create(get_current_dir().join("DNNconfig.json"));
         let _ = file.expect("write failure").write_all(json_data.as_bytes());
     }
 }
 
 async fn update_unrpyc() {
-    let resp = reqwest::get(UN_RPYC)
+    let mut rpyc = UN_RPYC;
+    #[cfg(target_os = "linux")]
+    {
+        rpyc = UN_RPYC_LINUX;
+    }
+    let resp = reqwest::get(rpyc)
         .await
         .expect("Failed to download latest");
-    let mut out = File::create("./unrpyc.exe").expect("Failed to create file");
+    let mut out;
+    #[cfg(target_os = "windows")]
+    {
+        out = File::create(get_current_dir().join("unrpyc.exe")).expect("Failed to create file");
+    }
+    #[cfg(target_os = "linux")]
+    {
+        out = File::create(get_current_dir().join("unrpyc.sh")).expect("Failed to create file");
+    }
     out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
         .unwrap();
+}
+
+pub fn get_current_dir() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        return env::current_dir().expect("Could Not Get Current Directory");
+    }
+    #[cfg(target_os = "linux")]
+    {
+        return env::current_dir().expect("Could Not Get Current Directory").join(".dokimodmanager");
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
     create_dir_all(
-        env::current_dir()
-            .unwrap()
+        get_current_dir()
             .join("store/mods")
             .display()
             .to_string(),
     )
     .expect("FS Error: Failed To Create Store/Mods");
     create_dir_all(
-        env::current_dir()
-            .unwrap()
+        get_current_dir()
             .join("store/images")
             .display()
             .to_string(),
     )
     .expect("FS Error: Failed To Create Store/Mods");
 
-    if !exists("./unrpyc.exe").unwrap()
-        || get_file_hash("./unrpyc.exe").expect("Unable to get hash on UNRPYC") != UN_RPYC_HASH
+    #[cfg(target_os = "windows")]
     {
-        update_unrpyc().await;
+        if !exists("./unrpyc.exe").unwrap()
+            || crate::hash::get_file_hash("./unrpyc.exe").expect("Unable to get hash on UNRPYC") != crate::UN_RPYC_HASH
+        {
+            crate::update_unrpyc().await;
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        if !exists("./unrpyc.sh").unwrap()
+            || get_file_hash("./unrpyc.sh").expect("Unable to get hash on UNRPYC") != UN_RPYC_LINUX_HASH
+        {
+            update_unrpyc().await;
+        }
     }
 
     std::thread::spawn(move || {
@@ -1311,6 +1577,7 @@ pub async fn run() {
     });
     discord_rpc::set_activity("In Main Menu");
     make_config().await;
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -1321,8 +1588,16 @@ pub async fn run() {
             let window = app.get_webview_window("main").unwrap();
             let app_handle = app.handle().clone();
             let clone_handle = app.handle().clone();
-            let downloads_dir = env::current_dir().unwrap().join("store").join("downloads");
+            let clone_handle2 = app.handle().clone();
+            let downloads_dir = get_current_dir().join("store").join("downloads");
             app.track_event("app_started", None).unwrap();
+            let _ = window.set_size(Size::Physical(PhysicalSize::new(1200, 600)));
+            window.set_size_constraints(WindowSizeConstraints {
+                min_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
+                max_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
+                min_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
+                max_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
+            }).ok();
 
             #[cfg(target_os = "windows")]
             apply_acrylic(&window, Some((0, 0, 0, 10)))
@@ -1331,6 +1606,11 @@ pub async fn run() {
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
                 .expect("Unsupported platform! 'apply_blur' is only supported on MacOs");
+
+            #[cfg(target_os = "linux")]
+            {
+                let _ = window.set_background_color(Some(Color(50,50,50,255)));
+            }
 
             // Track App Closed
             app.get_webview_window("main")
@@ -1343,6 +1623,27 @@ pub async fn run() {
                         std::thread::sleep(Duration::from_millis(100));
                     }
                 });
+
+            app.listen("request_download", move |event2| {
+                let payload = event2.payload().to_string();
+                let value = clone_handle2.clone();
+
+                task::spawn(async move {
+                    let data: DownloadRequest = serde_json::from_str(&payload).expect("Failed to read download request");
+                    let downloads_dir = get_current_dir()
+                        .join("store")
+                        .join("downloads");
+                    let confirmed = value
+                        .dialog()
+                        .message(format!("Do you want to download \"{}\"?", data.file_name))
+                        .title("Download Request")
+                        .buttons(MessageDialogButtons::YesNo)
+                        .blocking_show();
+                    if confirmed {
+                        let _ = download_file(&value, data.url.to_string(), downloads_dir.join(data.file_name).display().to_string()).await;
+                    }
+                });
+            });
 
             // Track Webview Open
             app.listen("open_webview", move |event| {
