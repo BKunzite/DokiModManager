@@ -1383,16 +1383,23 @@ async fn update_linux_binary() {
         .expect("Failed to get script path");
 
     let update_script = script.contents_utf8().unwrap();
+    if exists(get_current_dir().join("update.sh")).unwrap() {
+        remove_file(get_current_dir().join("update.sh")).unwrap();
+    }
+
     let mut update_script_path = File::create(get_current_dir().join("update.sh")).unwrap();
     update_script_path.write_all(update_script.as_bytes()).unwrap();
-    chmod_x_file(&get_current_dir().join("update.sh")).unwrap();
+    chmod_x_file(get_current_dir().join("update.sh").display().to_string().as_str());
 
     match install_info.kind {
         InstallType::Appimage => {
+            println!("Updating DokimodManager - AppImage");
             let resp = reqwest::get(LATEST_ARTIFACT_LINUX_APP)
                 .await
                 .expect("Failed to download latest");
-
+            if exists(get_current_dir().join("dokimodmanager-new.AppImage")).unwrap() {
+                remove_file(get_current_dir().join("dokimodmanager-new.AppImage")).unwrap();
+            }
             let mut out = File::create("dokimodmanager-new.AppImage").expect("Failed to create file");
             out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
                 .unwrap();
@@ -1402,48 +1409,69 @@ async fn update_linux_binary() {
                 .expect("Failed to get script path");
 
             let update_script2 = script2.contents_utf8().unwrap();
+            if exists(get_current_dir().join("update_app.sh")).unwrap() {
+                remove_file(get_current_dir().join("update_app.sh")).unwrap();
+            }
             let mut update_script_path2 = File::create(get_current_dir().join("update_app.sh")).unwrap();
             update_script_path2.write_all(update_script.as_bytes()).unwrap();
-            chmod_x_file(get_current_dir().join("update_app.sh").display().to_string());
-
-            let status = Command::new("pkexec")
-                .arg(get_current_dir().join("update_app.sh").display().to_string())
-                .status()
-                .map_err(|e| e.to_string()).expect("Failed to run command");
+            run_solo_proc_linux(get_current_dir().join("update_app.sh").display().to_string());
         }
         InstallType::Deb => {
+            println!("Updating DokimodManager - Debian");
             let resp = reqwest::get(LATEST_ARTIFACT_LINUX_DEB)
                 .await
                 .expect("Failed to download latest");
+            if exists(get_current_dir().join("dokimodmanager.deb")).unwrap() {
+                remove_file(get_current_dir().join("dokimodmanager.deb")).unwrap();
+            }
             let mut out = File::create(get_current_dir().join("dokimodmanager.deb")).expect("Failed to create file");
             out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
                 .unwrap();
 
-            let status = Command::new("pkexec")
-                .arg(get_current_dir().join("update.sh").display().to_string())
-                .arg(get_current_dir().join("dokimodmanager.deb").display().to_string())
-                .status()
-                .map_err(|e| e.to_string()).expect("Failed to run update script");
+            run_proc_linux(get_current_dir().join("update.sh").display().to_string(), get_current_dir().join("dokimodmanager.deb").display().to_string());
         }
         InstallType::Rpm => {
+            println!("Updating DokimodManager - RPM");
             let resp = reqwest::get(LATEST_ARTIFACT_LINUX_RPM)
                 .await
                 .expect("Failed to download latest");
+            if exists(get_current_dir().join("dokimodmanager.rpm")).unwrap() {
+                remove_file(get_current_dir().join("dokimodmanager.rpm")).unwrap();
+            }
             let mut out = File::create(get_current_dir().join("dokimodmanager.rpm")).expect("Failed to create file");
             out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
                 .unwrap();
-            let status = Command::new("pkexec")
-                .arg(get_current_dir().join("update.sh").display().to_string())
-                .arg(get_current_dir().join("dokimodmanager.rpm").display().to_string())
-                .status()
-                .map_err(|e| e.to_string()).expect("Failed to run script");
+            run_proc_linux(get_current_dir().join("update.sh").display().to_string(), get_current_dir().join("dokimodmanager.rpm").display().to_string());
         }
         InstallType::Unknown => {
-
+            println!("Unknown Install Type");
+            open::that(RELEASES_URL).unwrap();
         }
     }
 
     std::process::exit(0);
+}
+#[cfg(target_os = "linux")]
+fn run_proc_linux(executor: String, path: String) {
+    let _ = Command::new("setsid")
+        .arg("--fork")
+        .arg("x-terminal-emulator")
+        .arg("-e")
+        .arg(executor)
+        .arg(path)
+        .spawn()
+        .map_err(|e| e.to_string()).expect("Failed to run script");
+}
+
+#[cfg(target_os = "linux")]
+fn run_solo_proc_linux(executor: String) {
+    let _ = Command::new("setsid")
+        .arg("--fork")
+        .arg("x-terminal-emulator")
+        .arg("-e")
+        .arg(executor)
+        .spawn()
+        .map_err(|e| e.to_string()).expect("Failed to run script");
 }
 #[cfg(target_os = "windows")]
 async fn update_windows_binary() {

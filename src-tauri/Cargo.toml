@@ -1,10 +1,11 @@
 [package]
 name = "dokimodmanager"
 version = "1.7.0"
-description = "(Kunzite) Doki Doki Mod Manager"
-authors = ["bkunzite"]
+description = "Doki Doki Mod Manager is a mod manager for the game Doki Doki Literature Club."
+authors = ["BKunzite"]
 edition = "2021"
 license = "Apache-2.0"
+homepage = "https://github.com/BKunzite/DokiModManager"
 
 [profile.release]
 opt-level = 3

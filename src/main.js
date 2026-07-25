@@ -3098,6 +3098,7 @@ async function onLoad() {
     document.getElementById("cover-last").addEventListener("mouseenter", () => {
         mouse_cover_available = true
     })
+
     document.getElementById("cover-last").addEventListener("mouseleave", () => {
         mouse_cover_available = false
     })
@@ -3144,7 +3145,6 @@ async function onLoad() {
     })
 
     document.getElementById("reset-save").addEventListener("mouseup", async () => {
-
         if (currentEntry !== "") {
             let final = getLauncher(currentEntry).functions().absolute_location;
             let path = final + fileTerminator + terminatePath(terminatePath("game\\scripts.rpa"));
@@ -3176,8 +3176,8 @@ async function onLoad() {
         }
 
     })
-    document.getElementById("delete-save").addEventListener("mouseup", async () => {
 
+    document.getElementById("delete-save").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
             document.getElementById("profile-blur").classList.remove("hide")
 
