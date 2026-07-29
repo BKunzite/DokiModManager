@@ -26,11 +26,16 @@ import Desktop from "./Desktop.vue";
 
 //// Utils
 // ----- INTERNAL ------- //
-import {deref, getImage, lazy_deref} from "./core/ImageUtils";
+import {deref, getImage, lazy_deref, covers, preloadCovers, preloadImage} from "./core/utils/ImageUtils";
 import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
-import {Translation, TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE} from "./core/Translation.js"
-import {addLauncher, clearLaunchers, getLauncher, getLaunchers, LauncherAbstract} from "./core/Launchers.js"
-import {openWebview} from "./core/WebviewWindowHelper";
+import {TranslationUtil, TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE} from "./core/utils/TranslationUtil"
+import {addLauncher, clearLaunchers, getLauncher, getLaunchers, LauncherAbstract} from "./core/Launchers"
+import {openWebview} from "./core/utils/WebviewWindowUtil";
+import {htmlEscape, formatModName, getTextWidth, linkify, getFormattedDate} from "./core/utils/TextUtil";
+import {HEART_FULL, HEART_EMPTY, CLIENT_THEMES, CLIENT_THEME_ENUM, WARN_GENERIC_DATA_PATHS} from "./core/Constants";
+import {getOSType, OS, updateOSType} from "./core/utils/OSUtil";
+import Logger from "./core/utils/Logger";
+import {fileTerminator, terminatePath} from "./core/utils/FileSystem";
 
 // ----- EXTERNAL ------- //
 import {Base64} from 'js-base64';
@@ -41,6 +46,9 @@ import sound_beep from './assets/select.ogg';
 import sound_boop from './assets/hover.ogg';
 import sound_click from './assets/pageflip.ogg';
 import dart_sfx from './assets/dart_sfx.mp3';
+import {ProgramData} from "./core/utils/ConfigDataHelper";
+import HTMLHelper from "./core/utils/HTMLHelper";
+import Units from "./core/utils/Units";
 
 //// Profile Data
 
@@ -53,7 +61,6 @@ let profile_path = "";
 let original_profile = "";
 let current_game_data_path = "";
 let rename_target = "";
-let os = "windows"
 
 //// Tutorial
 
@@ -65,9 +72,12 @@ let tutorial_pointer = null
 
 let bg_offset = 0;
 let current_bg_max = 0;
+/**
+ * @type {{path: string, config: ProgramData}}
+ */
 let localConfig = {
     path: "",
-    config: {}
+    config: null
 }
 let save_path = "";
 let user_name = "";
@@ -75,10 +85,8 @@ let user_name = "";
 //// Misc
 
 let lastInputLength = 0
-let logs = []
 let start = Date.now();
 let currentEntry = ""
-let covers = []
 let background_cover = 0
 let total_time = 0;
 let mouse_cover_available = false;
@@ -89,15 +97,8 @@ let observer;
 let reset = false;
 let focused = true;
 let previous_app = null
-let preload_covers = {}
-let fileTerminator = "\\"
 let tracked_downloads = []
 let observer_await = false;
-
-//// Loading Bar
-
-let goal_slow_bar = -1
-let current_bar = 0;
 
 //// Downloads Detector
 
@@ -109,81 +110,6 @@ let part_file = null;
 
 // --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
 
-//// CONSTANTS
-
-const SHOULD_ESCAPE_HTML_PATTERN = /["&'<>]/;
-
-const WARN_GENERIC_DATA_PATHS = [
-    "DDLC-1454445547", "DDLCModTemplateTwo-Py3"
-]
-
-const CLIENT_THEME_ENUM = [
-    "NATSUKI", "MONIKA", "YURI", "SAYORI", "WINTER", "NORD", "CREAM", "NEON", "HACKER"
-]
-
-const CLIENT_THEMES = {
-    NATSUKI: {
-        primary_color: [254, 179, 188],
-        primary_color_saturated: [229, 127, 166],
-        image: "Chibi/chibi_natsuki.png"
-    },
-    MONIKA: {
-        primary_color: [128, 239, 128],
-        primary_color_saturated: [118, 138, 118],
-        image: "Chibi/chibi_monika.png"
-    },
-    YURI: {
-        primary_color: [108, 69, 130],
-        primary_color_saturated: [52, 24, 55],
-        image: "Chibi/chibi_yuri.png"
-
-    },
-    SAYORI: {
-        primary_color: [227, 138, 131],
-        primary_color_saturated: [192, 100, 107],
-        image: "Chibi/chibi_sayori.webp"
-
-    },
-    WINTER: {
-        primary_color: [220, 220, 220],
-        primary_color_saturated: [120, 120, 120],
-        image: "Other_Theme_Icons/snowflake.svg"
-    },
-    NORD: {
-        primary_color: [59, 66, 82],
-        primary_color_saturated: [136, 192, 208],
-        image: "Other_Theme_Icons/crown.png"
-    },
-    CREAM: {
-        primary_color: [245, 245, 220],
-        primary_color_saturated: [210, 105, 30],
-        image: "Other_Theme_Icons/sour-cream.png"
-    },
-    NEON: {
-        primary_color: [240, 6, 153],
-        primary_color_saturated: [0, 245, 255],
-        image: "Other_Theme_Icons/neon-planet.png"
-    },
-    HACKER: {
-        primary_color: [0, 255, 0],
-        primary_color_saturated: [0, 0, 0],
-        image: "Other_Theme_Icons/hacker-svgrepo-com.svg"
-    }
-}
-
-const HEART_EMPTY = "&#62920;";
-const HEART_FULL = "&#62919;";
-
-function getOS() {
-    if (navigator.userAgent.toLowerCase().includes('linux')) {
-        return "linux";
-    } else if (navigator.userAgent.toLowerCase().includes('mac')) {
-        return "mac";
-    } else {
-        return "windows";
-    }
-}
-
 /**
  * Initialize Translations
  *
@@ -193,89 +119,52 @@ function getOS() {
 
 function loadTranslation(lang, first) {
     if (TRANSLATION_TABLE[lang] === undefined) lang = "en";
-    if (Translation.getLanguage() !== lang) {
-        send_event('language', {
+    if (TranslationUtil.getLanguage() !== lang) {
+        sendEvent('language', {
             name: lang
         }).then(_ => {
         })
     }
 
-    Translation.setLanguage(lang);
+    TranslationUtil.setLanguage(lang);
 
     if (!tutorial_complete) {
-        document.getElementById("tutorial-title").textContent = tutorial_step === 0 ? Translation.of("tutorial-text") : Translation.sub("tutorial").of(tutorial_step).title;
-        document.getElementById("tutorial-context").textContent = tutorial_step === 0 ? Translation.of("tutorial-context") : Translation.sub("tutorial").of(tutorial_step).context;
+        document.getElementById("tutorial-title").textContent = tutorial_step === 0 ? TranslationUtil.of("tutorial-text") : TranslationUtil.sub("tutorial").of(tutorial_step).title;
+        document.getElementById("tutorial-context").textContent = tutorial_step === 0 ? TranslationUtil.of("tutorial-context") : TranslationUtil.sub("tutorial").of(tutorial_step).context;
         if (tutorial_pointer == null) {
             if (tutorial_step === 8) {
-                document.getElementById("tutorial-no").textContent = Translation.of("end")
+                document.getElementById("tutorial-no").textContent = TranslationUtil.of("end")
             } else {
-                document.getElementById("tutorial").textContent = Translation.of("next")
-                document.getElementById("tutorial-no").textContent = Translation.of("cancel")
+                document.getElementById("tutorial").textContent = TranslationUtil.of("next")
+                document.getElementById("tutorial-no").textContent = TranslationUtil.of("cancel")
             }
         } else {
-            document.getElementById("tutorial").textContent = Translation.of("yes")
-            document.getElementById("tutorial-no").textContent = Translation.of("no")
+            document.getElementById("tutorial").textContent = TranslationUtil.of("yes")
+            document.getElementById("tutorial-no").textContent = TranslationUtil.of("no")
         }
     }
 
     for (let i = 0; i < TRANSLATION_ELEMENT_MAP.length; i++) {
         const element = document.getElementById(TRANSLATION_ELEMENT_MAP[i].id);
         if (element) {
-            element[TRANSLATION_ELEMENT_MAP[i]["type"]] = Translation.of(TRANSLATION_ELEMENT_MAP[i].key);
+            element[TRANSLATION_ELEMENT_MAP[i]["type"]] = TranslationUtil.of(TRANSLATION_ELEMENT_MAP[i].key);
         }
     }
 
-    getImage(Translation.sub("data").of("flag"), []).then(url => {
+    getImage(TranslationUtil.sub("data").of("flag")).then(url => {
         document.getElementById("language-flag").src = url
     });
     document.getElementById("language-text").textContent = lang;
 
     if (currentEntry === "") {
         if (!first) {
-            home_main().then(_ => {
+            gotoHomePage().then(_ => {
             })
         }
     } else {
         getLauncher(currentEntry).functions().leftClick().then(_ => {
         });
     }
-}
-
-/**
- * Preloads and image given a path to optimize
- * image loading speeds.
- * @param {string} src - Path to the image
- * @returns {Promise<void>}
- */
-
-function preloadImage(src) {
-    return new Promise(async (resolve, reject) => {
-        const img = new Image();
-        img.decoding = 'async';
-        img.src = await getImage(src, covers, true);
-        img.onerror = reject;
-        resolve(img);
-    });
-}
-
-// Appends Message To User Console
-
-async function globLog(msg) {
-    console.log(msg)
-    await addConstant(msg, false, Date.now())
-}
-
-async function globWarn(msg) {
-    console.warn(msg)
-    await addConstant(msg, true, Date.now())
-}
-
-async function addConstant(msg, isWarn, timestamp) {
-    logs.push({
-        msg: msg,
-        isWarn: isWarn,
-        timestamp: timestamp
-    })
 }
 
 // Removes Right Click Menu
@@ -289,44 +178,33 @@ document.oncontextmenu = document.body.oncontextmenu = function () {
  * @returns {Promise<void>}
  */
 
-async function sync_covers() {
+async function syncCovers() {
     const imageLocation = terminatePath("\\store\\images")
 
-    covers = [
-        "house.webp",
-        "wallpapers.png",
-        "natsuki.jpg",
-        "yuri.jpg",
-        "sayori.jpg",
-        "monika.png"
-    ]
+    covers.reset().add(
+        "DefaultCovers/house.webp",
+        "DefaultCovers/wallpapers.png",
+        "DefaultCovers/natsuki.jpg",
+        "DefaultCovers/yuri.jpg",
+        "DefaultCovers/sayori.jpg",
+        "DefaultCovers/monika.png"
+    )
 
-    preload_covers = {}
+    preloadCovers.reset()
 
-    for (const cover of covers) {
-        preload_covers[cover] = await preloadImage(cover);
+    for (const cover of covers.asList()) {
+        preloadCovers.set(cover, await preloadImage(cover))
     }
 
     if (await isDir(local_path + imageLocation)) {
         for (const image of await readDir(local_path + imageLocation)) {
             if (image.name.endsWith(".png") || image.name.endsWith(".jpg") || image.name.endsWith(".jpeg") || image.name.endsWith(".webp")) {
                 const path = local_path + imageLocation + fileTerminator + image.name;
-                covers.push(path);
-                preload_covers[path] = await preloadImage(path);
+                covers.add(path)
+                preloadCovers.set(path, await preloadImage(path))
             }
         }
     }
-
-}
-
-/**
- * Replaces \\\\ with operating-system-specific terminator.
- * @param {string} path
- * @returns {string}
- */
-
-function terminatePath(path) {
-    return path.replace(/\\/g, fileTerminator);
 }
 
 /**
@@ -341,72 +219,30 @@ function terminatePath(path) {
 async function loadConfig(path) {
     let configPath = path + fileTerminator + "client-config.json";
     let hasConfig = await isExist(configPath)
-    const localFiles = await readDir(path);
     let hostname = await invoke("get_host_name", {})
+    let configData = await new ProgramData().set("user_name", hostname);
 
-    let configData = {
-        coverId: 0,
-        totalTime: 0,
-        warn_path: false,
-        tutorial: false,
-        theme: "NATSUKI",
-        language: "",
-        version: "0.0.0-release",
-        bg_offset: 0,
-        user_name: hostname
-    }
-
-    console.log("Local Path: " + path + " | Local Files: " + localFiles.map(entry => entry.name).join(","))
+    Logger.log("Local Path: " + path)
 
     local_path = path;
 
     // Detects Config
 
     if (!hasConfig) {
-        if (selectedPath !== "" && selectedPath !== undefined) {
-            for (const entry of await readDir(selectedPath)) {
-                if (entry.isDirectory) {
-                    const localFiles2 = await readDir(selectedPath + fileTerminator + entry.name);
-                    let hasConfig2 = false;
-                    let configPath2 = selectedPath + fileTerminator + entry.name + fileTerminator + ".ddmm.config.json";
-                    for (const localEntry of localFiles2) {
-                        if (localEntry.name === ".ddmm.config.json") {
-                            hasConfig2 = true;
-                            break;
-                        }
-                    }
-                    if (hasConfig2) {
-                        let kconfigData = {
-                            author: "unknown",
-                            time: 0,
-                            size: 0,
-                            favorite: false,
-                            coverId: 0
-                        }
-                        kconfigData = JSON.parse(await readTextFile(configPath2));
-                        if (!isNaN(kconfigData.time)) {
-                            total_time += kconfigData.time;
-                        }
-                    }
-                }
-            }
-            configData.totalTime = total_time;
-        }
-
         await create(configPath)
-        const contents = JSON.stringify(configData, null, "\t");
+        const contents = configData.getJSON()
         await writeTextFile(configPath, contents);
     } else {
         try {
-            configData = JSON.parse(await readTextFile(configPath));
+            configData.setJSON(await readTextFile(configPath))
         } catch (e) {
             console.error("Failed to parse config file: " + e);
 
-            document.getElementById("changelog").classList.remove("hide")
+            HTMLHelper.show("changelog")
             document.getElementById("changelog-title").textContent = "Critical Error | Cannot Load Config"
             document.getElementById("changelog-text").textContent = "File: " + configPath + "\n\n" + e + "\n\nData:\n" + (await readTextFile(configPath)).split("\n").map((line, index) => index + "|  " + line).join("\n")
-            document.getElementById("changelog-update").textContent = Translation.of("update")
-            document.getElementById("changelog-ignore").textContent = Translation.of("end")
+            document.getElementById("changelog-update").textContent = TranslationUtil.of("update")
+            document.getElementById("changelog-ignore").textContent = TranslationUtil.of("end")
             document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
 
             let response = await new Promise(resolve => {
@@ -418,7 +254,7 @@ async function loadConfig(path) {
                 })
             });
 
-            document.getElementById("changelog").classList.add("hide")
+            HTMLHelper.hide("changelog")
 
             if (response) {
                 await invoke("open_path", {
@@ -426,34 +262,36 @@ async function loadConfig(path) {
                 })
             }
 
-            exit_program();
+            exitProgram();
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
 
-    configData.theme = configData.theme || "NATSUKI";
-    configData.coverId = configData.coverId || 0;
-    configData.totalTime = configData.totalTime || 0;
-    configData.tutorial = configData.tutorial || false;
-    configData.version = configData.version || "0.0.0-release";
-    configData.language = configData.language || "";
-    configData.bg_offset = configData.bg_offset || 0;
-    configData.user_name = configData.user_name || hostname;
+    configData
+        .default("theme", "NATSUKI")
+        .default("coverId", 0)
+        .default("totalTime", 0)
+        .default("tutorial", false)
+        .default("version", "0.0.0-release")
+        .default("language", "")
+        .default("bg_offset", 0)
+        .default("user_name", hostname)
+        .post()
 
-    console.log("Cover Id: " + configData.coverId)
+    Logger.log("Cover Id: " + configData.get("coverId"))
 
     localConfig = {
         path: configPath,
         config: configData
     }
 
-    total_time = configData.totalTime;
-    background_cover = configData.coverId;
-    tutorial_complete = configData.tutorial;
-    bg_offset = configData.bg_offset;
-    user_name = configData.user_name;
+    total_time = configData.get("totalTime");
+    background_cover = configData.get("coverId");
+    tutorial_complete = configData.get("tutorial");
+    bg_offset = configData.get("bg_offset");
+    user_name = configData.get("user_name");
 
-    Translation.setLanguage(configData.language);
+    TranslationUtil.setLanguage(configData.get("language"));
 
     if (tutorial_complete) {
         document.getElementById("warn").remove()
@@ -468,8 +306,8 @@ async function loadConfig(path) {
  * @returns {Promise<void>}
  */
 
-async function update_cover_images(first_time = false) {
-    await sync_covers()
+async function updateCoverImages(first_time = false) {
+    await syncCovers()
     const images = document.getElementById("images")
 
     if (!first_time) {
@@ -478,8 +316,8 @@ async function update_cover_images(first_time = false) {
         }
     }
 
-    for (const cover in preload_covers) {
-        let cover_img = preload_covers[cover];
+    for (const cover in preloadCovers.asList()) {
+        let cover_img = preloadCovers.get(cover)
         let x = 1;
         let y = 1;
         let aspect = cover_img.naturalWidth / cover_img.naturalHeight;
@@ -518,7 +356,7 @@ async function update_cover_images(first_time = false) {
                 await setCover(background_cover)
             }
             play(sound_beep)
-            document.getElementById("profile-blur").classList.add("hide")
+            HTMLHelper.hide("profile-blur")
             document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
         })
 
@@ -533,9 +371,9 @@ async function update_cover_images(first_time = false) {
         }
     }
 
-    for (let i = covers.length - 1; i >= 0; i--) {
+    for (let i = covers.length() - 1; i >= 0; i--) {
         const cover_bg = document.createElement("div");
-        const cover_img = preload_covers[covers[i]].cloneNode(true);
+        const cover_img = preloadCovers.ofCover(i).cloneNode(true);
         const cover_text = document.createElement("button");
 
         cover_img.classList.add("covers-image");
@@ -552,11 +390,11 @@ async function update_cover_images(first_time = false) {
 
         if (i > 5) {
             cover_text.addEventListener("mouseup", () => {
-                remove(covers[i]);
+                remove(covers.get(i));
                 covers.splice(i, 1);
                 setTimeout(async () => {
                     let scroll = images.scrollLeft;
-                    await update_cover_images()
+                    await updateCoverImages()
                     await setCover(background_cover);
                     images.scrollTo({
                         left: scroll
@@ -581,14 +419,17 @@ async function update_cover_images(first_time = false) {
  */
 
 async function saveConfig() {
-    localConfig.config.coverId = background_cover;
-    localConfig.config.totalTime = total_time;
-    localConfig.config.version = CLIENT_VERSION;
-    localConfig.config.tutorial = tutorial_complete;
-    localConfig.config.language = Translation.getLanguage();
-    localConfig.config.bg_offset = bg_offset;
-    localConfig.config.user_name = user_name;
-    await writeTextFile(localConfig.path, JSON.stringify(localConfig.config, null, "\t"))
+    await writeTextFile(localConfig.path,
+        localConfig.config.map({
+            coverId: background_cover,
+            totalTime: total_time,
+            version: CLIENT_VERSION,
+            tutorial: tutorial_complete,
+            language: TranslationUtil.getLanguage(),
+            bg_offset: bg_offset,
+            user_name: user_name
+        }).getJSON()
+    )
 }
 
 // Plays interaction sounds
@@ -607,7 +448,7 @@ function play(song) {
  * @returns {Promise<void>}
  */
 
-async function import_mod(path) {
+async function importMod(path) {
     let selectedPath = path
     if (selectedPath === undefined) {
         selectedPath = await open({
@@ -619,15 +460,15 @@ async function import_mod(path) {
             }],
             title: 'Select Your Mod\'s Zip File'
         });
-        await send_event("manual_download", {
+        await sendEvent("manual_download", {
             name: selectedPath.split(fileTerminator).pop()
         })
     }
     if (selectedPath != null) {
         if (selectedPath.endsWith(".zip") || selectedPath.endsWith(".rar") || selectedPath.endsWith("scripts.rpa")) {
-            setLoadingBar(0);
-            document.getElementById("loader").classList.remove("hide")
-            document.getElementById("main").classList.add("hide")
+            HTMLHelper.setLoadingBar(0);
+            HTMLHelper.show("loader")
+            HTMLHelper.hide("main")
             document.getElementById("loadingsub").textContent = "Importing Mod " + selectedPath
             alert_path = selectedPath;
             showContainers(false)
@@ -635,11 +476,11 @@ async function import_mod(path) {
                 path: selectedPath
             })
         } else {
-            document.getElementById("loader").classList.add("hide")
-            document.getElementById("main").classList.remove("hide")
+            HTMLHelper.hide("loader")
+            HTMLHelper.show("main")
             alert_path = undefined;
             showContainers(true)
-            document.getElementById("alert").classList.add("hide")
+            HTMLHelper.hide("alert")
 
             await confirm("Unsupported Format! {Supported: .zip, .rar, .rpa}")
         }
@@ -653,12 +494,12 @@ async function import_mod(path) {
  */
 
 async function setCover(id) {
-    if (id > covers.length - 1) {
+    if (id > covers.length() - 1) {
         id = 0;
     }
-    let image = preload_covers[covers[id]].src;
+    let image = preloadCovers.ofCover(id).src;
     if (image === undefined) {
-        image = await getImage(id, covers)
+        image = await getImage(id)
     }
 
     document.getElementById("cove").style.backgroundImage = 'url("' + image + '")';
@@ -690,11 +531,11 @@ async function setTheme(name, first) {
         name = "NATSUKI";
     }
 
-    document.getElementById("chibi").src = await getImage(CLIENT_THEMES[name].image, covers);
+    document.getElementById("chibi").src = await getImage(CLIENT_THEMES[name].image);
     document.body.style.setProperty("--primary-color", CLIENT_THEMES[name].primary_color)
     document.body.style.setProperty("--primary-color-saturated", CLIENT_THEMES[name].primary_color_saturated)
 
-    localConfig.config.theme = name
+    localConfig.config.set("theme", name)
     if (!first) {
         await saveConfig()
     }
@@ -704,13 +545,13 @@ async function setTheme(name, first) {
  * Exits and Closes the mod manager
  */
 
-function exit_program() {
-    document.getElementById("loader").classList.remove("hide")
-    document.getElementById("main").classList.add("hide")
+function exitProgram() {
+    HTMLHelper.show("loader")
+    HTMLHelper.hide("main")
     document.getElementById("loadinghead").textContent = "Closing..."
     document.getElementById("loadingsub").textContent = "Saving Data..."
-    setLoadingBar(0, false)
-    setLoadingBar(100, true)
+    HTMLHelper.setLoadingBar(0, false)
+    HTMLHelper.setLoadingBar(100, true)
 
     setTimeout(async () => {
         await invoke("close");
@@ -751,9 +592,9 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
     newScreenshot.src = src;
 
     newScreenshot.addEventListener("mouseup", async () => {
-        document.getElementById("view-image").src = await getImage(dir + fileTerminator + image, []);
+        document.getElementById("view-image").src = await getImage(dir + fileTerminator + image);
         document.getElementById("view-image").classList.add("zoom")
-        document.getElementById("view-background").classList.remove("hide")
+        HTMLHelper.show("view-background")
     })
 
     cover_text.addEventListener("click", async () => {
@@ -791,7 +632,7 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
 async function requestDirectory(path = undefined) {
     let ppath = undefined;
     if (path === undefined || !await isExist(path)) {
-        while (ppath === null || ppath === undefined || !await isDir(ppath)){
+        while (ppath === null || ppath === undefined || !await isDir(ppath)) {
             ppath = await open({
                 directory: true,
                 multiple: false,
@@ -818,8 +659,8 @@ async function requestDirectory(path = undefined) {
         const files = await readDir(selectedPath);
 
         document.getElementById("search").value = ""
-        document.getElementById("loader").classList.remove("hide")
-        document.getElementById("main").classList.add("hide")
+        HTMLHelper.show("loader")
+        HTMLHelper.hide("main")
         document.getElementById("nummods").textContent = files.length.toString();
 
         // Update Mods List
@@ -831,37 +672,38 @@ async function requestDirectory(path = undefined) {
         for (const entry of files) {
             if (entry.isDirectory) {
                 mods_to_complete++;
-                add_mod(entry.name)
+                addMod(entry.name)
                     .then(() => {
                         finished.push(entry.name)
                         finished_mods++;
                     })
                     .catch(err => {
                         finished_mods++;
-                        globWarn("Failed To Add Mod: " + entry.name + "\n" + err)
+                        Logger.warn("Failed To Add Mod: " + entry.name + "\n" + err)
                     })
             }
         }
 
         let interval = setInterval(async () => {
             if (finished_mods === mods_to_complete) {
-                setLoadingBar(100)
+                HTMLHelper.setLoadingBar(100)
                 clearInterval(interval)
-                await globLog("Finished Loading DDMM - Enjoy!")
+                Logger.log("Finished Loading DDMM - Enjoy!")
                 document.getElementById("loadingsub").textContent = "Loaded Mods | Loading GUI"
 
                 setTimeout(() => {
                     play(sound_click)
-                    document.getElementById("loader").classList.add("hide")
-                    document.getElementById("main").classList.remove("hide")
+                    HTMLHelper.hide("loader")
+                    HTMLHelper.show("main")
                 }, 500)
             } else {
-                setLoadingBar((finished_mods / mods_to_complete) * 100)
+                HTMLHelper.setLoadingBar((finished_mods / mods_to_complete) * 100)
                 document.getElementById("loadingsub").textContent = "Loaded " + finished_mods + "/" + mods_to_complete + " Mods -> " + finished.join(" | ")
                 finished = []
 
             }
         }, 100)
+
         return new Promise(async (resolve) => {
             setInterval(async () => {
                 if (finished_mods === mods_to_complete) {
@@ -880,9 +722,9 @@ async function requestDirectory(path = undefined) {
  * @returns {Promise<void>}
  */
 
-async function add_mod(name) {
+async function addMod(name) {
     if (!await isExist(selectedPath + fileTerminator + name)) {
-        await globWarn("Mod " + name + " Does Not Exist! (path: " + selectedPath + fileTerminator + name + ")")
+        Logger.warn("Mod " + name + " Does Not Exist! (path: " + selectedPath + fileTerminator + name + ")")
         return
     }
     const localFiles = await readDir(selectedPath + fileTerminator + name);
@@ -891,7 +733,7 @@ async function add_mod(name) {
     let dir = selectedPath + fileTerminator + name;
     let isInDir = false;
     for (const localEntry of localFiles) {
-        if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
+        if (localEntry.name === OS.EXECUTABLE.WINDOWS || localEntry.name === "renpy") {
             isInDir = true;
             break;
         }
@@ -901,7 +743,7 @@ async function add_mod(name) {
         dir = selectedPath + fileTerminator + name + fileTerminator + "DDLC-1.1.1-pc"
         if (await isDir(dir)) {
             for (const localEntry of await readDir(dir)) {
-                if (localEntry.name === "DDLC.exe" || localEntry.name === "renpy") {
+                if (localEntry.name === OS.EXECUTABLE.WINDOWS || localEntry.name === "renpy") {
                     isInDir = true;
                     break;
                 }
@@ -910,7 +752,7 @@ async function add_mod(name) {
     }
 
     if (!isInDir) {
-        await globWarn(dir + " Does Not Contain DDLC.exe")
+        Logger.warn(dir + " Does Not Contain DDLC.exe")
         return;
     }
 
@@ -919,7 +761,7 @@ async function add_mod(name) {
     let hasConfig = false;
     let configPath = selectedPath + fileTerminator + name + fileTerminator + ".ddmm.config.json";
     let configData = {
-        author: Translation.of("unknown"),
+        author: TranslationUtil.of("unknown"),
         time: 0,
         size: 0,
         favorite: false,
@@ -942,12 +784,12 @@ async function add_mod(name) {
     let searchGame = async () => {
         gameExePath = undefined;
         for (const localEntry of await readDir(dir)) {
-            if (os === "windows") {
-                if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== "DDLC.exe" && gameExePath === undefined) {
+            if (getOSType() === OS.TYPE.WINDOWS) {
+                if (localEntry.name.endsWith(".exe") && !localEntry.name.endsWith("-32.exe") && localEntry.name !== OS.EXECUTABLE.WINDOWS && gameExePath === undefined) {
                     gameExePath = localEntry.name;
                 }
-            } else if (os === "linux") {
-                if (localEntry.name.endsWith(".sh") && !localEntry.name.endsWith("-32.sh") && localEntry.name !== "DDLC.sh" && localEntry.name !== "LinuxLauncher.sh"  && gameExePath === undefined) {
+            } else if (getOSType() === OS.TYPE.LINUX) {
+                if (localEntry.name.endsWith(".sh") && !localEntry.name.endsWith("-32.sh") && localEntry.name !== OS.EXECUTABLE.LINUX && localEntry.name !== OS.EXECUTABLE.LINUX_OTHER && gameExePath === undefined) {
                     gameExePath = localEntry.name;
                 }
             }
@@ -958,21 +800,19 @@ async function add_mod(name) {
         }
 
         if (gameExePath === undefined) {
-            if (os === "windows") {
-                gameExePath = "DDLC.exe";
-            } else if (os === "linux") {
-                if (await isExist(dir + fileTerminator + "LinuxLauncher.sh")) {
-                    gameExePath = "LinuxLauncher.sh";
-                } else {
-                    gameExePath = "DDLC.sh";
-                }
+            if (getOSType() === OS.TYPE.WINDOWS) {
+                gameExePath = OS.EXECUTABLE.WINDOWS;
+            } else if (getOSType() === OS.TYPE.LINUX) {
+                gameExePath = await isExist(dir + fileTerminator + OS.EXECUTABLE.LINUX_OTHER) ? OS.EXECUTABLE.LINUX_OTHER : OS.EXECUTABLE.LINUX
             }
-            await globWarn(
+
+            console.warn(
                 "No executable found in " + dir + "\n" +
                 "Attempting to use " + gameExePath + " as executable"
             )
+
             if (!await isExist(dir + fileTerminator + gameExePath)) {
-                await globWarn("No functional executable found in " + dir)
+                Logger.warn("No functional executable found in " + dir)
                 throw new Error("No executable found!\nPath: " + dir + "\nExecutable: " + gameExePath + "\nFiles: " + localFiles.map(v => v.name).join(", "))
             }
         }
@@ -1001,7 +841,7 @@ async function add_mod(name) {
                 configData[key] = c[key];
             }
         } catch (e) {
-            await globWarn("Failed To Parse Config File For Mod: " + configPath)
+            Logger.warn("Failed To Parse Config File For Mod: " + configPath)
             hasConfig = false;
         }
     }
@@ -1073,7 +913,7 @@ async function add_mod(name) {
 
             for (const localEntry of await readDir(dir)) {
                 if (localEntry.name.includes("screenshot")) {
-                    getLauncher(name).functions().preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name, []), name, dir, localEntry.name, name, true);
+                    getLauncher(name).functions().preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name), name, dir, localEntry.name, name, true);
                     getLauncher(name).functions().preload[localEntry.name].classList.add("preload-image")
                     images++
 
@@ -1123,7 +963,7 @@ async function add_mod(name) {
                 play(dart_sfx)
             }
 
-            await set_pin(configData.pinned)
+            await setPinned(configData.pinned)
             if (configData.pinned) {
                 sidetext.classList.add("pinned")
             } else {
@@ -1133,18 +973,18 @@ async function add_mod(name) {
             await saveModData();
         },
         open: async () => {
-            await send_event("game_launch", {
+            await sendEvent("game_launch", {
                 mod: name
             })
             showContainers(false)
-            await update_concurrent_game()
-            document.getElementById("pill").classList.remove("hide")
-            document.getElementById("pill-files").classList.remove("hide")
-            document.getElementById("pill-contains").classList.remove("hide")
-            if (covers[configData.coverId] !== null && covers[configData.coverId] !== undefined && preload_covers[covers[configData.coverId]] !== null && preload_covers[covers[configData.coverId]] !== undefined) {
-                document.getElementById("pill-profile").style.backgroundImage = 'url("' + preload_covers[covers[configData.coverId]].src + '")';
+            await keepaliveTicker()
+            HTMLHelper.show("pill")
+            HTMLHelper.show("pill-files")
+            HTMLHelper.show("pill-contains")
+            if (covers.get(configData.coverId) !== null && covers.get(configData.coverId) !== undefined && preloadCovers.ofCover(configData.coverId) !== null && preloadCovers.ofCover(configData.coverId) !== undefined) {
+                document.getElementById("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(configData.coverId).src + '")';
             } else {
-                document.getElementById("pill-profile").style.backgroundImage = 'url("' + preload_covers[covers[0]].src + '")';
+                document.getElementById("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(0).src + '")';
             }
             setTimeout(async () => {
                 play(sound_beep)
@@ -1155,14 +995,14 @@ async function add_mod(name) {
                 }
 
 
-                if (gameExePath === undefined || gameExePath === "" || (os === "linux" && !gameExePath.endsWith(".sh")) || (os === "windows" && !gameExePath.endsWith(".exe"))) {
+                if (gameExePath === undefined || gameExePath === "" || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
                     await searchGame()
                 }
 
                 await invoke("launch", {
                     path: dir + fileTerminator + gameExePath,
                     id: name,
-                    renpy: configData.renpy || Translation.of("unknown")
+                    renpy: configData.renpy || TranslationUtil.of("unknown")
                 })
             }, 1000)
 
@@ -1202,18 +1042,18 @@ async function add_mod(name) {
             }
             play(sound_click)
             const playTime = Date.now() - launch_time;
-            await send_event("game_close", {
+            await sendEvent("game_close", {
                 mod: name,
-                length: Math.floor(playTime / 3600000) + Translation.of("h") + " " + (Math.floor(playTime / 60000) % 60) + Translation.of("m") + " " + (Math.floor(playTime / 1000) % 60) + "s"
+                length: Math.floor(playTime / 3600000) + TranslationUtil.of("h") + " " + (Math.floor(playTime / 60000) % 60) + TranslationUtil.of("m") + " " + (Math.floor(playTime / 1000) % 60) + "s"
             })
             total_time += playTime;
             configData.time += playTime;
             const data = await metadata(selectedPath + fileTerminator + name);
             configData.size = data.size;
             configData.last_played = Date.now();
-            document.getElementById("pill").classList.add("hide")
-            document.getElementById("pill-files").classList.add("hide")
-            document.getElementById("pill-contains").classList.add("hide")
+            HTMLHelper.hide("pill")
+            HTMLHelper.hide("pill-files")
+            HTMLHelper.hide("pill-contains")
 
             await saveModData();
             await saveConfig()
@@ -1231,10 +1071,10 @@ async function add_mod(name) {
 
             currentEntry = name;
             await setCover(configData.coverId);
-            await set_pin(configData.pinned);
+            await setPinned(configData.pinned);
 
-            if (gameExePath === undefined || gameExePath === "" || (os === "linux" && !gameExePath.endsWith(".sh")) || (os === "windows" && !gameExePath.endsWith(".exe"))) {
-                console.log("re search")
+            if (gameExePath === undefined || gameExePath === "" || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
+                Logger.log("re search")
                 await searchGame()
             }
 
@@ -1243,10 +1083,10 @@ async function add_mod(name) {
                 await saveModData();
             }
 
-            let renpy = configData.renpy || (Translation.of("unknown") + " (Try Reinstalling; If its still broken, please create a git issue on this)");
+            let renpy = configData.renpy || (TranslationUtil.of("unknown") + " (Try Reinstalling; If its still broken, please create a git issue on this)");
             let screenshots = false;
             let images = []
-            let lastPlayed = Translation.of("never");
+            let lastPlayed = TranslationUtil.of("never");
 
             const children = Array.from(document.getElementById("screenshots").children);
             const escaped_renpy = htmlEscape(renpy);
@@ -1283,7 +1123,7 @@ async function add_mod(name) {
                 }
             }
 
-            renpy = name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith("DDLC.exe")) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!");
+            renpy = name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX_OTHER)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!");
             document.getElementById("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
 
             new Promise(() => {
@@ -1293,38 +1133,38 @@ async function add_mod(name) {
 
             if (configData.last_played !== -1) {
                 let date = new Date(configData.last_played).toLocaleString();
-                if (msSinceLastPlayed < 6000) {
-                    lastPlayed = Translation.of("just-now");
-                } else if (msSinceLastPlayed < 86_400_000) {
-                    const is_prefix = Translation.getLanguage() === "es" || Translation.getLanguage() === "fr";
-                    lastPlayed = (is_prefix ? Translation.of("ago") + " " : "") + (msSinceLastPlayed >= 3_600_000 ? Math.floor(msSinceLastPlayed / 3_600_000) + Translation.of("h") + " " : "") + (Math.floor(msSinceLastPlayed / 60_000) % 60) + Translation.of("m") + " " + (!is_prefix ? Translation.of("ago") : "");
-                } else if (msSinceLastPlayed < 172_800_000) {
-                    lastPlayed = Translation.of("yesterday");
+                if (msSinceLastPlayed < Units.MillisMap.MINUTE) {
+                    lastPlayed = TranslationUtil.of("just-now");
+                } else if (msSinceLastPlayed < Units.MillisMap.DAY) {
+                    const is_prefix = TranslationUtil.getLanguage() === "es" || TranslationUtil.getLanguage() === "fr";
+                    lastPlayed = (is_prefix ? TranslationUtil.of("ago") + " " : "") + (msSinceLastPlayed >= Units.MillisMap.HOUR ? Math.floor(msSinceLastPlayed / Units.MillisMap.HOUR) + TranslationUtil.of("h") + " " : "") + (Math.floor(msSinceLastPlayed / Units.MillisMap.MINUTE) % 60) + TranslationUtil.of("m") + " " + (!is_prefix ? TranslationUtil.of("ago") : "");
+                } else if (msSinceLastPlayed < Units.MillisMap.DAY * 2) {
+                    lastPlayed = TranslationUtil.of("yesterday");
                 } else if (msSinceLastPlayed) {
                     lastPlayed = date
                 }
             }
 
             if (configData.size === 0) {
-                updateDisplayInfo(name, configData.author, "Reading...", Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), renpy, "Never").then(() => {
+                updateDisplayInfo(name, configData.author, "Reading...", Math.floor(min / 60) + TranslationUtil.of("h") + " " + Math.floor(min % 60) + TranslationUtil.of("m"), renpy, "Never").then(() => {
                 })
                 setTimeout(async () => {
                     let data = await metadata(selectedPath + fileTerminator + name);
                     configData.size = data.size;
                     if (currentEntry === name) {
-                        updateDisplayInfo(name, configData.author, (configData.size / 1048600) > 1000 ? (Math.floor(configData.size / 1_048_600_000) + " GB") : (Math.floor(configData.size / 1048600) + " MB"), Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith("DDLC.exe")) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed).then(() => {
+                        updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(min / 60) + TranslationUtil.of("h") + " " + Math.floor(min % 60) + TranslationUtil.of("m"), name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed).then(() => {
                         })
                     }
                     data = null
                 }, 0)
             } else {
-                updateDisplayInfo(name, configData.author, (configData.size / 1048600) > 1000 ? (Math.round(configData.size / 1_048_600_00) / 10 + " GB") : (Math.floor(configData.size / 1048600) + " MB"), Math.floor(min / 60) + Translation.of("h") + " " + Math.floor(min % 60) + Translation.of("m"), renpy, lastPlayed).then(() => {
+                updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.round(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(min / 60) + TranslationUtil.of("h") + " " + Math.floor(min % 60) + TranslationUtil.of("m"), renpy, lastPlayed).then(() => {
                 })
             }
 
             if (!screenshots) {
-                document.getElementById("screenshots-header").classList.add("hide")
-                document.getElementById("screenshots-parent").classList.add("hide")
+                HTMLHelper.hide("screenshots-header")
+                HTMLHelper.hide("screenshots-parent")
                 document.getElementById("info").classList.remove("info")
                 document.getElementById("info").classList.add("expanded")
                 document.getElementById("setinfo-header").style.left = "16rem";
@@ -1334,7 +1174,7 @@ async function add_mod(name) {
                     document.getElementById("screenshots").onscroll = null
 
                     for (const image_url of images) {
-                        let imageS = createScreenshotDiv(await getImage(dir + fileTerminator + image_url, [], true), name, dir, image_url, name, false)
+                        let imageS = createScreenshotDiv(await getImage(dir + fileTerminator + image_url, true), name, dir, image_url, name, false)
                         document.getElementById("screenshots").appendChild(
                             imageS
                         );
@@ -1342,14 +1182,13 @@ async function add_mod(name) {
                             lazy_deref(imageS.getElementsByClassName("screenshots-image")[0].src);
                             caches.delete(imageS.getElementsByClassName("screenshots-image")[0].src);
                         }).catch(err => {
-                            console.warn("Failed To Load Image: " + dir + fileTerminator + image_url + " Error: " + err)
+                            Logger.warn("Failed To Load Image: " + dir + fileTerminator + image_url + " Error: " + err)
                         })
-
                     }
                 }
 
-                document.getElementById("screenshots-header").classList.remove("hide")
-                document.getElementById("screenshots-parent").classList.remove("hide")
+                HTMLHelper.show("screenshots-header")
+                HTMLHelper.show("screenshots-parent")
                 document.getElementById("info").classList.remove("expanded")
                 document.getElementById("info").classList.add("info")
                 document.getElementById("setinfo-header").style.left = "30rem";
@@ -1372,59 +1211,6 @@ async function add_mod(name) {
 }
 
 /**
- * Escapes HTML To Prevent Potential XSS Attacks
- * @param {string} text HTML To Escape
- * @returns {string} Escaped HTML Text
- */
-
-function htmlEscape(text) {
-    let match_case = SHOULD_ESCAPE_HTML_PATTERN.exec(text)
-    if (match_case === null) {
-        return text;
-    }
-
-    const startScan = match_case.index
-    const length = text.length
-    let string = ""
-    let lastIndex = 0;
-
-    for (let i = startScan; i < length; i++) {
-        let char = undefined;
-        switch (text.charCodeAt(i)) {
-            case 34: // Char: "
-                char = "&quot;";
-                break;
-            case 60: // Char: <
-                char = "&lt;";
-                break;
-            case 39: // Char: '
-                char = "&#039;";
-                break;
-            case 62: // Char: >
-                char = "&gt;";
-                break;
-            case 38: // Char: &
-                char = "&amp;";
-                break;
-            default:
-                break;
-        }
-
-        if (char !== undefined) {
-            const slice = text.slice(lastIndex, i);
-            string += slice + char;
-            lastIndex = i + 1;
-        }
-    }
-
-    if (lastIndex !== length - 1) {
-        string += text.slice(lastIndex, length - 1)
-    }
-
-    return string;
-}
-
-/**
  * Gets Ren'Py Version
  *
  * Different Cases
@@ -1438,7 +1224,7 @@ function htmlEscape(text) {
  * @example ```javascript
  * let renpy_version_string = await getRenpy("C:\\Path\\To\\The\\Mod");
  *
- * console.log(renpy_version_string) // 8.0.3
+ * Logger.log(renpy_version_string) // 8.0.3
  * ```
  *
  * @param {string} dir Directory Of Ren'Py Mod
@@ -1489,52 +1275,33 @@ async function getRenpy(dir) {
 function showContainers(show) {
     if (show) {
         if (tutorial_pointer != null) {
-            document.getElementById("warn").classList.remove("hide")
+            HTMLHelper.show("warn")
             tutorial_pointer.classList.remove("hide")
             document.getElementById("tutorial").dispatchEvent(new MouseEvent("mouseup", {}))
         }
-        document.getElementById("modlist").classList.remove("hide")
-        document.getElementById("container-boarder").classList.remove("hide")
-        document.getElementById("container-shadow").classList.remove("hide")
-        document.getElementById("search").classList.remove("hide")
-        document.getElementById("container").classList.remove("hide")
+        HTMLHelper.show("modlist")
+        HTMLHelper.show("container-boarder")
+        HTMLHelper.show("container-shadow")
+        HTMLHelper.show("search")
+        HTMLHelper.show("container")
 
     } else {
         if (tutorial_pointer != null) {
-            document.getElementById("warn").classList.add("hide")
+            HTMLHelper.hide("warn")
             tutorial_pointer.classList.add("hide")
         }
         if (!document.getElementById("pill").classList.contains("hide")) {
-            document.getElementById("pill").classList.add("hide")
-            document.getElementById("pill-files").classList.add("hide")
-            document.getElementById("pill-contains").classList.add("hide")
+            HTMLHelper.hide("pill")
+            HTMLHelper.hide("pill-files")
+            HTMLHelper.hide("pill-contains")
 
         }
-        document.getElementById("modlist").classList.add("hide")
-        document.getElementById("container-boarder").classList.add("hide")
-        document.getElementById("container-shadow").classList.add("hide")
-        document.getElementById("search").classList.add("hide")
-        document.getElementById("container").classList.add("hide")
+        HTMLHelper.hide("modlist")
+        HTMLHelper.hide("container-boarder")
+        HTMLHelper.hide("container-shadow")
+        HTMLHelper.hide("search")
+        HTMLHelper.hide("container")
     }
-}
-
-/**
- * Get Text Width
- * @param {string} text Text To Get Width Of
- * @param {string} font Font Name
- * @returns {number} Width Of Text
- */
-
-function getTextWidth(text, font) {
-    const canvas = getTextWidth.canvas || (getTextWidth.canvas = document.createElement("canvas"));
-    const context = canvas.getContext("2d");
-    context.font = font;
-    const metrics = context.measureText(text);
-    return metrics.width;
-}
-
-function formatModName(text) {
-    return text.replace(/\b(ddlc|renpy7mod|renpy8mod)\b/gi, "").replace(/-/g, " ").trim()
 }
 
 /**
@@ -1558,32 +1325,32 @@ function formatModName(text) {
  */
 
 async function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
-    document.getElementById("pin-holder").classList.remove("hide")
+    HTMLHelper.show("pin-holder")
     document.getElementById("modtitle").value = formatModName(mod)
-    document.getElementById("modtitle").classList.remove("hide");
-    document.getElementById("modinfo").classList.remove("hide");
-    document.getElementById("cove").classList.remove("hide");
+    HTMLHelper.show("modtitle");
+    HTMLHelper.show("modinfo");
+    HTMLHelper.show("cove");
     document.getElementById("language-list").classList.add("language-list-hide");
 
     if (author.length > 0) {
         currentEntry = mod;
-        document.getElementById("covers").classList.add("hide");
-        document.getElementById("setinfo-header").classList.remove("hide");
-        document.getElementById("info").classList.remove("hide");
+        HTMLHelper.hide("covers");
+        HTMLHelper.show("setinfo-header");
+        HTMLHelper.show("info");
         if (renpy !== undefined) {
             document.getElementById("info").innerHTML = renpy;
         } else {
             document.getElementById("info").textContent = "No Information Found!";
         }
-        document.getElementById("delete").classList.remove("hide");
-        document.getElementById("reset-save").classList.remove("hide");
-        document.getElementById("path").classList.remove("hide");
-        document.getElementById("extract").classList.remove("hide");
-        document.getElementById("delete-save").classList.remove("hide");
-        document.getElementById("play").classList.remove("hide");
-        document.getElementById("optionsmenu").classList.add("hide");
-        document.getElementById("cover-up").classList.add("hide");
-        document.getElementById("cover-down").classList.add("hide");
+        HTMLHelper.show("delete");
+        HTMLHelper.show("reset-save");
+        HTMLHelper.show("path");
+        HTMLHelper.show("extract");
+        HTMLHelper.show("delete-save");
+        HTMLHelper.show("play");
+        HTMLHelper.hide("optionsmenu");
+        HTMLHelper.hide("cover-up");
+        HTMLHelper.hide("cover-down");
         document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60755;</span> " + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61966;</span> " + time + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61974;</span> " + lastTime;
         document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 150) + "px"
         if (space !== "Reading...") {
@@ -1606,21 +1373,21 @@ async function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
         setCover(background_cover).then(() => {
         })
         let min = Math.floor(total_time / 60000);
-        document.getElementById("screenshots-header").classList.add("hide");
-        document.getElementById("screenshots-parent").classList.add("hide");
-        document.getElementById("covers").classList.remove("hide");
-        document.getElementById("setinfo-header").classList.add("hide");
-        document.getElementById("info").classList.add("hide");
-        document.getElementById("delete").classList.add("hide");
-        document.getElementById("reset-save").classList.add("hide");
-        document.getElementById("path").classList.add("hide");
-        document.getElementById("extract").classList.add("hide");
-        document.getElementById("delete-save").classList.add("hide");
-        document.getElementById("play").classList.add("hide");
-        document.getElementById("cover-up").classList.remove("hide");
-        document.getElementById("cover-down").classList.remove("hide");
-        document.getElementById("optionsmenu").classList.remove("hide");
-        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61966;</span> " + Math.floor(min / 60) + Translation.of("h") + " " + (min % 60) + Translation.of("m");
+        HTMLHelper.hide("screenshots-header");
+        HTMLHelper.hide("screenshots-parent");
+        HTMLHelper.show("covers");
+        HTMLHelper.hide("setinfo-header");
+        HTMLHelper.hide("info");
+        HTMLHelper.hide("delete");
+        HTMLHelper.hide("reset-save");
+        HTMLHelper.hide("path");
+        HTMLHelper.hide("extract");
+        HTMLHelper.hide("delete-save");
+        HTMLHelper.hide("play");
+        HTMLHelper.show("cover-up");
+        HTMLHelper.show("cover-down");
+        HTMLHelper.show("optionsmenu");
+        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61966;</span> " + Math.floor(min / 60) + TranslationUtil.of("h") + " " + (min % 60) + TranslationUtil.of("m");
     }
 }
 
@@ -1629,11 +1396,11 @@ async function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
  * @returns {Promise<void>}
  */
 
-async function home_main() {
+async function gotoHomePage() {
     document.getElementById("covertext").innerHTML = ""
-    await set_pin(false)
-    document.getElementById("pin-holder").classList.add("hide")
-    await updateDisplayInfo(Translation.of("greet") + " " + user_name + "!", "", "", "", "", "")
+    await setPinned(false)
+    HTMLHelper.hide("pin-holder")
+    await updateDisplayInfo(TranslationUtil.of("greet") + " " + user_name + "!", "", "", "", "", "")
 }
 
 /**
@@ -1662,8 +1429,8 @@ async function setAuthor() {
  * @returns {Promise<void>}
  */
 
-async function keepAlive() {
-    await send_event("keep_alive", {
+async function sendKeepAlive() {
+    await sendEvent("keep_alive", {
         name: currentEntry
     })
 }
@@ -1673,26 +1440,24 @@ async function keepAlive() {
  * @returns {Promise<void>}
  */
 
-async function update_concurrent_game() {
-    if (goal_slow_bar > 0) {
-        setLoadingBar(0, true)
-    }
+async function keepaliveTicker() {
+    HTMLHelper.tick()
 
     if (!document.getElementById("loader").classList.contains("hide")) return;
     if (!document.getElementById("modlist").classList.contains("hide") || alert_path !== undefined) {
         if (!document.getElementById("pill").classList.contains("hide")) {
-            document.getElementById("pill").classList.add("hide")
-            document.getElementById("pill-files").classList.add("hide")
-            document.getElementById("pill-contains").classList.add("hide")
+            HTMLHelper.hide("pill")
+            HTMLHelper.hide("pill-files")
+            HTMLHelper.hide("pill-contains")
 
         }
         return
     }
 
     if (document.getElementById("pill").classList.contains("hide")) {
-        document.getElementById("pill").classList.remove("hide")
-        document.getElementById("pill-files").classList.remove("hide")
-        document.getElementById("pill-contains").classList.remove("hide")
+        HTMLHelper.show("pill")
+        HTMLHelper.show("pill-files")
+        HTMLHelper.show("pill-contains")
 
     }
 
@@ -1706,31 +1471,6 @@ async function update_concurrent_game() {
     document.getElementById("pill-game").textContent = name
     document.getElementById("pill-author").textContent = author
     document.getElementById("pill-time").textContent = time
-}
-
-/**
- * Sets Current Loading Bar Percent
- * @param {number} percent Percent Of The Bar From 0 to 100
- * @param {boolean} isSlowMode Should Slowly Lerp To Value
- */
-
-function setLoadingBar(percent = 0, isSlowMode = false) {
-    if (isSlowMode && percent !== 0) {
-        goal_slow_bar = percent
-    }
-
-    if (isSlowMode && goal_slow_bar > 0) {
-        current_bar += (goal_slow_bar - current_bar) * 0.1
-        percent = current_bar;
-    } else {
-        current_bar = percent
-        goal_slow_bar = -1
-    }
-
-    percent = Math.min(Math.max(percent, 0), 100)
-
-    let width = 125 * (percent / 100)
-    document.getElementById("loading-bar-fill").style.width = width + "vh";
 }
 
 /**
@@ -1771,7 +1511,7 @@ async function snowflake() {
  * @returns {Promise<void>}
  */
 
-async function rename_mod() {
+async function renameMod() {
     if (currentEntry === "") return;
     let value = document.getElementById("modtitle").value.trimStart().trimEnd();
     let name = await getLauncher(currentEntry).functions().getName();
@@ -1780,7 +1520,6 @@ async function rename_mod() {
         return;
     }
     if (value !== name && value.length !== 0) {
-
         let oldName = (await getLauncher(currentEntry).functions().getPath()) + fileTerminator + name;
         let newName = (await getLauncher(currentEntry).functions().getPath()) + fileTerminator + value;
 
@@ -1797,11 +1536,11 @@ async function rename_mod() {
         }
 
         try {
-            document.getElementById("loader").classList.remove("hide")
-            document.getElementById("main").classList.add("hide")
+            HTMLHelper.show("loader")
+            HTMLHelper.hide("main")
             document.getElementById("loadingsub").textContent = "Renaming Mod"
-            setLoadingBar(0, false)
-            setLoadingBar(100, true)
+            HTMLHelper.setLoadingBar(0, false)
+            HTMLHelper.setLoadingBar(100, true)
             await invoke("rename_dir", {
                 path: oldName,
                 newName: newName,
@@ -1822,7 +1561,7 @@ async function rename_mod() {
  * @returns {Promise<void>}
  */
 
-async function update_profiles(path) {
+async function updateProfiles(path) {
     const profiles_path = path + "--profiles";
     const current_info_path = profiles_path + fileTerminator + ".info.json";
 
@@ -1849,16 +1588,16 @@ async function update_profiles(path) {
     current_profile_data = profiles_data.profiles == null ? {"0": "Default"} : profiles_data.profiles;
     concurrent_profile_data = {}
 
-    if (!await isExist(get_profile_path(current_profile))) {
-        await writeTextFile(get_profile_path(current_profile), "{}");
+    if (!await isExist(getProfilePath(current_profile))) {
+        await writeTextFile(getProfilePath(current_profile), "{}");
     }
 
     const profile_files = await readDir(profiles_path);
     for (const profile of profile_files) {
         if (profile.name.includes(".ddmm.profile.json")) {
             const name = profile.name.replace(".ddmm.profile.json", "");
-            console.log(name)
-            console.log(current_profile_data)
+            Logger.log(name)
+            Logger.log(current_profile_data)
             let profile_spot = undefined;
             for (const key in current_profile_data) {
                 if (current_profile_data[key] === "profile-" + name) {
@@ -1866,24 +1605,24 @@ async function update_profiles(path) {
                     break
                 }
             }
-            console.log(profile_spot)
-            create_profile(name, profile_spot);
+            Logger.log(profile_spot)
+            createProfile(name, profile_spot);
         }
     }
-    document.getElementById("profile-bg").classList.remove("hide")
+    HTMLHelper.show("profile-bg")
 }
 
-function get_profile_path(name) {
+function getProfilePath(name) {
     if (name === null) {
         return profile_path + fileTerminator + "null"
     }
     return profile_path + fileTerminator + (name === undefined ? currentEntry : name).replace("profile-", "") + ".ddmm.profile.json"
 }
 
-async function save_profile_data() {
+async function saveProfileData() {
     for (const key in current_profile_data) {
-        const profile_path = get_profile_path(current_profile_data[key]);
-        console.log(profile_path)
+        const profile_path = getProfilePath(current_profile_data[key]);
+        Logger.log(profile_path)
         if (!await isExist(profile_path)) {
             current_profile_data[key] = undefined;
         }
@@ -1907,28 +1646,26 @@ async function save_profile_data() {
         "profiles": sorted
     }
 
-    console.log(profiles_data, sorted)
+    Logger.log(profiles_data, sorted)
 
     writeTextFile(profile_path + fileTerminator + ".info.json", JSON.stringify(profiles_data, null, "\t")).then(_ => {
     });
 }
 
-async function save_concurrent_profile_data() {
-    let active_profile_path = get_profile_path(original_profile);
+async function saveCurrentProfileData() {
+    let active_profile_path = getProfilePath(original_profile);
     if (!await isExist(active_profile_path)) {
         return;
     }
-    await writeTextFile(active_profile_path, JSON.stringify(await get_concurrent_game_data(), null, "\t"));
+    await writeTextFile(active_profile_path, JSON.stringify(await saveCurrentGamePath(), null, "\t"));
 }
 
-async function get_concurrent_game_data(path = undefined, recursive = false) {
+async function saveCurrentGamePath(path = undefined, recursive = false) {
     if (path === undefined) path = current_game_data_path;
     let data = {}
     for (const file of await readDir(path)) {
         if (file.isDirectory) {
-            console.log(path, file.name)
-            data[file.name] = await get_concurrent_game_data(path + fileTerminator + file.name, true)
-            console.log(data[file.name])
+            data[file.name] = await saveCurrentGamePath(path + fileTerminator + file.name, true)
         } else {
             data[file.name] = Base64.fromUint8Array(await readFile(path + fileTerminator + file.name));
         }
@@ -1936,14 +1673,12 @@ async function get_concurrent_game_data(path = undefined, recursive = false) {
 
     if (getLauncher(currentEntry) !== undefined && !recursive) {
         const data_path = getLauncher(currentEntry).functions().absolute_location + fileTerminator + "game" + fileTerminator + "saves"
-        console.log(data_path)
         if (await isExist(data_path)) {
-            let fdata = await readDir(data_path)
-            for (const file of fdata) {
-                const p = data_path + fileTerminator + file.name
+            const data_path_contents = await readDir(data_path)
+            for (const file of data_path_contents) {
+                const data_file_path = data_path + fileTerminator + file.name
                 if (!file.isDirectory) {
-                    console.log("saving " + p)
-                    data["mod_saves_folder:" + file.name] = Base64.fromUint8Array(await readFile(p));
+                    data["mod_saves_folder:" + file.name] = Base64.fromUint8Array(await readFile(data_file_path));
                 }
             }
         }
@@ -1952,18 +1687,7 @@ async function get_concurrent_game_data(path = undefined, recursive = false) {
     return data;
 }
 
-function get_formatted_date() {
-    const now = new Date();
-
-    return now.getFullYear() + "y_" +
-        String(now.getMonth() + 1).padStart(2, '0') + "m_" +
-        String(now.getDate()).padStart(2, '0') + "d_" +
-        String(now.getHours()).padStart(2, '0') + "hour_" +
-        String(now.getMinutes()).padStart(2, '0') + "min_" +
-        String(now.getSeconds()).padStart(2, '0') + "sec";
-}
-
-async function load_concurrent_profile_data(reload, reset_data) {
+async function loadCurrentProfileData(reload, reset_data) {
     if (reset_data !== true) {
         let profiles_data = JSON.parse(await readTextFile(profile_path + fileTerminator + ".info.json"));
         selected_name = profiles_data.selected == null ? "profile-Default" : "profile-" + profiles_data.selected;
@@ -1973,25 +1697,25 @@ async function load_concurrent_profile_data(reload, reset_data) {
         current_profile_data = Object.fromEntries(Object.entries(current_profile_data).sort((a, b) => parseInt(a[0]) - parseInt(b[0])));
         concurrent_profile_data = {}
     }
-    console.log(" should reload: " + reload + " file: " + current_profile)
+    Logger.log(" should reload: " + reload + " file: " + current_profile)
     if (reload) {
-        await delete_dir(current_game_data_path);
-        await delete_dir(getLauncher(currentEntry).functions().absolute_location + fileTerminator + "game" + fileTerminator + "saves");
+        await delDir(current_game_data_path);
+        await delDir(getLauncher(currentEntry).functions().absolute_location + fileTerminator + "game" + fileTerminator + "saves");
 
-        let data = await readTextFile(get_profile_path(current_profile));
+        let data = await readTextFile(getProfilePath(current_profile));
         const self_data = JSON.parse(data);
 
-        await load_data(self_data, current_game_data_path)
+        await loadProfileData(self_data, current_game_data_path)
     }
 }
 
-async function load_data(self_data, upstream) {
+async function loadProfileData(self_data, upstream) {
     for (const f in self_data) {
         const file = self_data[f]
-        console.log(typeof file)
+        Logger.log(typeof file)
         if (typeof file === "object") {
             await mkdir(upstream + fileTerminator + f);
-            await load_data(file, upstream + fileTerminator + f)
+            await loadProfileData(file, upstream + fileTerminator + f)
             continue;
         }
         let n = f.replaceAll(fileTerminator, "/");
@@ -2012,10 +1736,9 @@ async function load_data(self_data, upstream) {
                     await writeFile(global_path + fileTerminator + path,
                         Base64.toUint8Array(file));
                 } catch (e) {
-                    console.log(f + " is not encoded in base64!")
+                    Logger.log(f + " is not encoded in base64!")
                 }
             }
-
         } else {
             if (n.includes("/")) {
                 for (const dir of n.split("/")) {
@@ -2027,53 +1750,64 @@ async function load_data(self_data, upstream) {
                 await writeFile(upstream + fileTerminator + f,
                     Base64.toUint8Array(file));
             } catch (e) {
-                console.log(f + " is not encoded in base64!")
+                Logger.log(f + " is not encoded in base64!")
             }
         }
     }
 }
 
-async function set_pin(pinned) {
+async function setPinned(pinned) {
     document.getElementById("pin-holder").classList.toggle("pin-active", !pinned)
     document.getElementById("pin-pinned").classList.toggle("hide", !pinned)
     document.getElementById("pin-unpinned").classList.toggle("pin-unpinned-heart", !pinned)
     document.getElementById("pin-unpinned").classList.toggle("hide", pinned)
 }
 
-async function delete_dir(path) {
+async function delDir(path) {
     if (!await isExist(path)) {
-        console.log("Path does not exist: " + path)
+        Logger.log("Path does not exist: " + path)
         return;
     }
     for (const file of await readDir(path)) {
-        console.log(path, file.name)
+        Logger.log(path, file.name)
         if (file.isDirectory) {
-            await delete_dir(path + fileTerminator + file.name)
+            await delDir(path + fileTerminator + file.name)
         }
         await remove(path + fileTerminator + file.name);
     }
 }
 
-async function save_profile() {
-    let changed_profile = original_profile !== current_profile;
-    console.log(await get_concurrent_game_data())
-    await save_profile_data();
-    await save_concurrent_profile_data();
-    await load_concurrent_profile_data(changed_profile);
+async function saveProfile() {
+    const changed_profile = original_profile !== current_profile;
+    Logger.log(await saveCurrentGamePath())
+    await saveProfileData();
+    await saveCurrentProfileData();
+    await loadCurrentProfileData(changed_profile);
 }
 
-function create_profile(profile, position) {
+function createProfile(profile, position) {
     if (position === undefined) {
         position = 0;
         while (current_profile_data[position] !== undefined) {
             position++;
         }
     }
+
     const background = document.createElement("div");
     const name = document.createElement("header");
     const b_delete = document.createElement("button");
     const b_select = document.createElement("button");
     const b_drag = document.createElement("button");
+    const onClick = () => {
+        for (const elm of document.getElementsByClassName("profile-button")) {
+            if (elm.classList.contains("profile-button-active")) {
+                elm.classList.remove("profile-button-active")
+            }
+        }
+        selected_name = background.id;
+        current_profile = background.id.replace("profile-", "");
+        background.classList.add("profile-button-active")
+    }
 
     background.classList.add("profile-button")
     background.id = "profile-" + profile;
@@ -2099,26 +1833,15 @@ function create_profile(profile, position) {
         background.classList.add("profile-button-active")
     }
 
-    async function onClick() {
-        for (const elm of document.getElementsByClassName("profile-button")) {
-            if (elm.classList.contains("profile-button-active")) {
-                elm.classList.remove("profile-button-active")
-            }
-        }
-        selected_name = background.id;
-        current_profile = background.id.replace("profile-", "");
-        background.classList.add("profile-button-active")
-    }
-
     b_select.addEventListener("click", (_) => {
         if (profile === "Default") {
-            confirm(Translation.of("error-profile_setname")).then(() => {
+            confirm(TranslationUtil.of("error-profile_setname")).then(() => {
             })
             return;
         }
         rename_target = background.id.replace("profile-", "");
         document.getElementById("profile-bg").classList.add("profile-bg-covered")
-        document.getElementById("input-prompt").classList.remove("hide")
+        HTMLHelper.show("input-prompt")
         document.getElementById("input-prompt-box").value = background.id.replace("profile-", "");
         document.getElementById("input-prompt-box").focus();
     })
@@ -2144,7 +1867,7 @@ function create_profile(profile, position) {
 
     b_delete.addEventListener("mousedown", async (_) => {
         if (profile === "Default") {
-            await confirm(Translation.of("error-profile_delete"))
+            await confirm(TranslationUtil.of("error-profile_delete"))
             return;
         }
         await remove(profile_path + fileTerminator + background.id.replace("profile-", "") + ".ddmm.profile.json");
@@ -2166,8 +1889,8 @@ function create_profile(profile, position) {
         }
         document.getElementById("profile-Default").classList.add("profile-button-active")
 
-        await save_profile_data();
-        await load_concurrent_profile_data(true, true);
+        await saveProfileData();
+        await loadCurrentProfileData(true, true);
     })
 
     concurrent_profile_data[profile] = {
@@ -2175,11 +1898,11 @@ function create_profile(profile, position) {
     }
 
 
-    isExist(get_profile_path(profile)).then(r => {
-        console.log(profile, r)
+    isExist(getProfilePath(profile)).then(r => {
+        Logger.log(profile, r)
         if (!r) {
-            console.log("Creating Profile")
-            writeTextFile(get_profile_path(profile), JSON.stringify(concurrent_profile_data[profile], null, "\t")).then(_ => {
+            Logger.log("Creating Profile")
+            writeTextFile(getProfilePath(profile), JSON.stringify(concurrent_profile_data[profile], null, "\t")).then(_ => {
             });
         }
     })
@@ -2189,7 +1912,7 @@ function create_profile(profile, position) {
     return onClick;
 }
 
-function move_entries(obj, fromIndex, toIndex) {
+function moveEntries(obj, fromIndex, toIndex) {
     const values = Object.values(obj);
 
     if (fromIndex < 0 || fromIndex >= values.length ||
@@ -2210,26 +1933,26 @@ function move_entries(obj, fromIndex, toIndex) {
 
 // Save Profile Name
 
-function close_profile_rename() {
+function closeProfileRenamePrompt() {
     document.getElementById("profile-bg").classList.remove("profile-bg-covered")
-    document.getElementById("input-prompt").classList.add("hide")
+    HTMLHelper.hide("input-prompt")
 }
 
-async function save_profile_name() {
+async function saveProfileName() {
     const name = document.getElementById("input-prompt-box").value;
     if (name.includes("profile-") || name.toLowerCase() === "default") {
         await confirm("The Name '" + name + "' is already taken!")
         return;
     }
-    console.log("[MARKER] -> Rename")
+    Logger.log("[MARKER] -> Rename")
     if (name !== "") {
-        console.log(current_profile_data)
+        Logger.log(current_profile_data)
         for (const profile in current_profile_data) {
-            console.log(current_profile_data[profile])
+            Logger.log(current_profile_data[profile])
             if (current_profile_data[profile] === null || current_profile_data[profile] === undefined) continue;
             const comperator = (current_profile_data[profile] + "").toLowerCase().replace("profile-", "");
             const comperason = name.toLowerCase().replace("profile-", "");
-            console.log(comperator, comperason, comperator === comperason)
+            Logger.log(comperator, comperason, comperator === comperason)
             if (comperason === comperator || name.toLowerCase().includes("profile-")) {
                 await confirm("The Name '" + name + "' is already taken!")
                 return;
@@ -2241,7 +1964,7 @@ async function save_profile_name() {
         }
         for (const key in current_profile_data) {
             if (current_profile_data[key] === "profile-" + rename_target) {
-                console.log(concurrent_profile_data[rename_target], current_profile_data[key])
+                Logger.log(concurrent_profile_data[rename_target], current_profile_data[key])
                 document.getElementById("profile-" + rename_target).querySelector("header").textContent = name;
                 document.getElementById("profile-" + rename_target).id = "profile-" + name;
                 current_profile_data[key] = "profile-" + name;
@@ -2253,50 +1976,36 @@ async function save_profile_name() {
                     current_profile = name;
                 }
 
-                console.log(rename_target)
+                Logger.log(rename_target)
 
-                await writeTextFile(get_profile_path(name), await readTextFile(get_profile_path(rename_target)));
-                await remove(get_profile_path(rename_target));
+                await writeTextFile(getProfilePath(name), await readTextFile(getProfilePath(rename_target)));
+                await remove(getProfilePath(rename_target));
 
                 break
             }
         }
     }
-    await save_profile_data();
-    close_profile_rename()
+    await saveProfileData();
+    closeProfileRenamePrompt()
 
-}
-
-function linkify(inputText) {
-    let replacedText, replacePattern1, replacePattern2, replacePattern3;
-
-    replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
-    replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank" style="cursor: grab;">$1</a>');
-
-    replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
-    replacedText = replacedText.replace(replacePattern2, '$1<a href="http://$2" target="_blank" style="cursor: grab;">$2</a>');
-
-    replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
-    replacedText = replacedText.replace(replacePattern3, '<a href="mailto:$1" style="cursor: grab;">$1</a>');
-
-    return replacedText;
 }
 
 async function updateClient() {
     if (await shouldUpdate()) {
-        await send_event("update_launcher", {
+        await sendEvent("update_launcher", {
             from: CLIENT_VERSION
         })
-        document.getElementById("loadingsub").textContent = Translation.of("updating") + " Doki Doki Mod Manager"
+        document.getElementById("loadingsub").textContent = TranslationUtil.of("updating") + " Doki Doki Mod Manager"
         await invoke("update_exe")
     } else {
-        console.warn("Already Up To Date (" + CLIENT_VERSION + ")")
+        Logger.warn("Already Up To Date (" + CLIENT_VERSION + ")")
     }
 }
 
-async function launch_desktop() {
+async function launchDesktop() {
     previous_app = createApp(Desktop)
     previous_app.mount("#app");
+    const logs = Logger.instant()
 
     for (const log in logs) {
         const data = logs[log];
@@ -2345,7 +2054,7 @@ async function launch_desktop() {
     })
 }
 
-async function send_event(event_name = "event", options = {}) {
+async function sendEvent(event_name = "event", options = {}) {
     await invoke("tracker", {
         event: event_name,
         props: options
@@ -2363,15 +2072,13 @@ async function send_event(event_name = "event", options = {}) {
 async function onLoad() {
     let start = Date.now();
 
-    await globLog("[MARKER] Debugger Attached.");
-    await globLog("Loading Observers...");
+    Logger.log("Loading Observers");
 
-    await globLog("Running Field Tests");
-    os = getOS()
-    document.documentElement.setAttribute("os-type", os)
+    updateOSType()
 
-    if (os === "linux") {
-        fileTerminator = "/"
+    Logger.log("Running on OS.TYPE-" + getOSType().toUpperCase())
+
+    if (getOSType() === OS.TYPE.LINUX) {
         window.addEventListener('keydown', (e) => {
             if (e.key === "r" && e.ctrlKey) {
                 e.preventDefault();
@@ -2379,29 +2086,6 @@ async function onLoad() {
             }
         })
     }
-
-    // New HTML Escape Test - Thrown Out For Production
-    /*(function() {
-        const test_case = "<span style=\"font-family: Icon,serif;\">&#62038;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61966;</span> 60h 60m"
-        const escaped_case = htmlEscape(test_case)
-
-        const false_positive = "hello world!"
-        const false_case = htmlEscape(false_positive)
-
-        console.log(test_case, " | ", escaped_case, " | ", false_positive, " | ", false_case)
-
-        if (escaped_case === test_case) {
-            throw new Error("Test Case For HTML Escaping Failed - Expected Not " + test_case + "; Got " + escaped_case)
-        } else if (false_positive !== false_case) {
-            throw new Error("Test Case For HTML Escaping Failed - Expected " + false_positive + "; Got " + false_case)
-        }
-
-        if (SHOULD_ESCAPE_HTML_PATTERN.exec("hello world!") !== null) {
-            throw new Error("Should Escape HTML Pattern Is Invalid {expect = false, got true}")
-        } else if (SHOULD_ESCAPE_HTML_PATTERN.exec(test_case) === null) {
-            throw new Error("Should Escape HTML Pattern Is Invalid {expect = true, got false}")
-        }
-    })();*/
 
     await listen("import_done", async (event) => {
         if (alert_path.includes(fileTerminator + "Downloads" + fileTerminator)) {
@@ -2417,27 +2101,26 @@ async function onLoad() {
             }
         })
         let goal = event.payload.text;
-        console.log("Imported: " + alert_path + " AT: " + goal)
+        Logger.log("Imported: " + alert_path + " AT: " + goal)
 
-        await add_mod(goal)
-        document.getElementById("loader").classList.add("hide")
-        document.getElementById("main").classList.remove("hide")
+        await addMod(goal)
+        HTMLHelper.hide("loader")
+        HTMLHelper.show("main")
         if (getLauncher(goal)) {
             getLauncher(goal).functions().leftClick();
         } else {
-            await globWarn(goal + " Not Found!")
+            Logger.warn(goal + " Not Found!")
         }
         alert_path = undefined;
         showContainers(true)
-
     })
 
     await listen("download_start", async (e) => {
-        await globLog(e.payload.text)
+        Logger.log(e.payload.text)
         let components = e.payload.text.split(" | ");
         tracked_downloads.push(components[1])
-        await globLog(tracked_downloads)
-        document.getElementById("install-info").classList.remove("hide")
+        Logger.log(tracked_downloads)
+        HTMLHelper.show("install-info")
         confirm("Close Other Windows?").then(async (e) => {
             if (e) {
                 await invoke("goto_main")
@@ -2469,22 +2152,22 @@ async function onLoad() {
 
         if (tracked_downloads.includes(path)) {
             tracked_downloads.splice(tracked_downloads.indexOf(path), 1)
-            console.log(tracked_downloads + " | " + tracked_downloads.length)
+            Logger.log(tracked_downloads + " | " + tracked_downloads.length)
         }
 
         if (tracked_downloads.length === 0) {
-            document.getElementById("install-info").classList.add("hide")
+            HTMLHelper.hide("install-info")
             part_file_size = 0
             part_file = null
         }
 
         alert_path = path
 
-        await globLog("Download Finished - " + e.payload.text)
+        Logger.log("Download Finished - " + e.payload.text)
         const data = await metadata(path);
 
         showContainers(false)
-        document.getElementById("alert").classList.remove("hide")
+        HTMLHelper.show("alert")
         document.getElementById("alert-size").innerText = Math.floor(data.size / 1048600).toString() + "mb";
         document.getElementById("alert-pth").innerText = dir;
         document.getElementById("alert-name").textContent = file
@@ -2494,22 +2177,22 @@ async function onLoad() {
 
     await listen("set_bar", (event) => {
         let goal = event.payload.number_goal;
-        setLoadingBar(event.payload.number, false)
-        console.log(event.payload)
+        HTMLHelper.setLoadingBar(event.payload.number, false)
+        Logger.log(event.payload)
         if (goal > 0) {
-            setLoadingBar(goal, true)
+            HTMLHelper.setLoadingBar(goal, true)
         }
     })
 
     // This is what is received when you import a mod
     // This is also the first handshake handler that tells the frontend (this) to listen to the downloads folder
 
-    await globLog("Finished Loading Defaults (" + (Date.now() - start) + "ms).")
-    await globLog("Loading Observers2")
+    Logger.log("Finished Loading Defaults (" + (Date.now() - start) + "ms).")
+    Logger.log("Loading Listeners")
 
     await listen("pathRespond", async (event) => {
         if (!reset) {
-            await globLog("Start Loading Pt. 2 (" + (Date.now() - start) + "ms).")
+            Logger.log("Start Loading Pt. 2 (" + (Date.now() - start) + "ms).")
 
             let payloadPath = event.payload.path;
             let newest_version = await getLatest();
@@ -2517,22 +2200,22 @@ async function onLoad() {
             await loadConfig(event.payload.local_path)
             reset = true;
 
-            await globLog("Version Check (" + (Date.now() - start) + "ms).")
+            Logger.log("Version Check (" + (Date.now() - start) + "ms).")
 
             if (newest_version.split("\n")[0] !== CLIENT_VERSION) {
-                await globWarn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
+                Logger.warn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
                 if (navigator.onLine) {
-                    if (Translation.getLanguage() === "") {
+                    if (TranslationUtil.getLanguage() === "") {
                         escape_clause_language = true;
                     }
-                    loadTranslation(Translation.getLanguage(), true)
+                    loadTranslation(TranslationUtil.getLanguage(), true)
 
-                    document.getElementById("changelog").classList.remove("hide")
+                    HTMLHelper.show("changelog")
                     document.getElementById("changelog-title").textContent = "New Update! | " + newest_version.split("\n")[0]
                     document.getElementById("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\n/gi, "<br>")
-                    document.getElementById("changelog-update").textContent = Translation.of("update")
-                    document.getElementById("changelog-ignore").textContent = Translation.of("ignore")
+                    document.getElementById("changelog-update").textContent = TranslationUtil.of("update")
+                    document.getElementById("changelog-ignore").textContent = TranslationUtil.of("ignore")
                     document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
 
                     let response = await new Promise(resolve => {
@@ -2544,25 +2227,25 @@ async function onLoad() {
                         })
                     });
 
-                    document.getElementById("changelog").classList.add("hide")
+                    HTMLHelper.hide("changelog")
 
                     if (response) {
                         await updateClient()
                         return;
                     }
                 } else {
-                    await globWarn("You are currently offline. Update will not be requested.")
+                    Logger.warn("You are currently offline. Update will not be requested.")
                 }
             } else {
-                await globLog(CLIENT_VERSION, localConfig.config.version)
+                Logger.log(CLIENT_VERSION, localConfig.config.get("version"))
                 document.getElementById("version").textContent = `(${CLIENT_VERSION})`
-                if (localConfig.config.version !== CLIENT_VERSION) {
+                if (localConfig.config.get("version") !== CLIENT_VERSION) {
                     await saveConfig()
-                    document.getElementById("changelog").classList.remove("hide")
+                    HTMLHelper.show("changelog")
                     document.getElementById("changelog-title").textContent = "Update Complete! | " + newest_version.split("\n")[0]
                     document.getElementById("changelog-text").textContent = newest_version.split("\n").slice(1).join("\n")
-                    document.getElementById("changelog-ignore").classList.add("hide")
-                    document.getElementById("changelog-update").textContent = Translation.of("ignore")
+                    HTMLHelper.hide("changelog-ignore")
+                    document.getElementById("changelog-update").textContent = TranslationUtil.of("ignore")
                     document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
                     await new Promise(resolve => {
                         document.getElementById("changelog-update").addEventListener("mouseup", async () => {
@@ -2573,20 +2256,20 @@ async function onLoad() {
                         })
                     });
 
-                    document.getElementById("changelog").classList.add("hide")
+                    HTMLHelper.hide("changelog")
                 }
             }
 
-            await globLog("Language (" + (Date.now() - start) + "ms). Current=" + Translation.getLanguage() + " | Escaped=" + escape_clause_language)
+            Logger.log("Language (" + (Date.now() - start) + "ms). Current=" + TranslationUtil.getLanguage() + " | Escaped=" + escape_clause_language)
 
-            if (Translation.getLanguage() === "" || escape_clause_language) {
-                Translation.setLanguage("")
+            if (TranslationUtil.getLanguage() === "" || escape_clause_language) {
+                TranslationUtil.setLanguage("")
                 document.getElementById("language-list").classList.remove("language-list-hide")
                 document.getElementById("language-list").classList.add("language-list-force")
                 document.getElementById("loader").appendChild(document.getElementById("language-list"))
                 let interval;
                 await new Promise(resolve => interval = setInterval(() => {
-                    if (Translation.getLanguage() !== "") {
+                    if (TranslationUtil.getLanguage() !== "") {
                         resolve()
                         clearInterval(interval)
                     }
@@ -2596,14 +2279,14 @@ async function onLoad() {
                 document.getElementById("language-list").classList.add("language-list-hide")
                 document.getElementById("language-list").classList.remove("language-list-force")
             } else {
-                loadTranslation(Translation.getLanguage(), true)
+                loadTranslation(TranslationUtil.getLanguage(), true)
             }
 
-            await globLog("DDLC Check (" + (Date.now() - start) + "ms).")
+            Logger.log("DDLC Check (" + (Date.now() - start) + "ms).")
 
             if (!await isDir(local_path + fileTerminator + "store" + fileTerminator + "ddlc")) {
-                document.getElementById("loadingsub").textContent = Translation.of("select_zip")
-                document.getElementById("select-zip").classList.remove("hide")
+                document.getElementById("loadingsub").textContent = TranslationUtil.of("select_zip")
+                HTMLHelper.show("select-zip")
                 let listener = async () => {
                     await openUrl("https://ddlc.moe")
                 };
@@ -2618,14 +2301,14 @@ async function onLoad() {
 
             document.getElementById("select-zip").remove();
 
-            await globLog("Theme (" + (Date.now() - start) + "ms).")
+            Logger.log("Theme (" + (Date.now() - start) + "ms).")
 
-            await setTheme(localConfig.config.theme, true)
-            await globLog("Covers (" + (Date.now() - start) + "ms).")
-            await update_cover_images(true)
-            await globLog("Main (" + (Date.now() - start) + "ms).")
-            await home_main()
-            await globLog("Watcher (" + (Date.now() - start) + "ms).")
+            await setTheme(localConfig.config.get("theme"), true)
+            Logger.log("Covers (" + (Date.now() - start) + "ms).")
+            await updateCoverImages(true)
+            Logger.log("Main (" + (Date.now() - start) + "ms).")
+            await gotoHomePage()
+            Logger.log("Watcher (" + (Date.now() - start) + "ms).")
             await watch(
                 event.payload.path,
                 async (event) => {
@@ -2643,8 +2326,8 @@ async function onLoad() {
                                 part_file_size = 0
                                 part_file = null
 
-                                document.getElementById("install-info").classList.add("hide")
-                                document.getElementById("alert").classList.remove("hide")
+                                HTMLHelper.hide("install-info")
+                                HTMLHelper.show("alert")
 
                                 showContainers(false)
                                 alert_path = path
@@ -2671,7 +2354,7 @@ async function onLoad() {
                                     last_change = Date.now();
                                     part_file_size = (await metadata(path)).size
                                     document.getElementById("install-info").textContent = "Downloading " + part_file.split(fileTerminator).pop().split(".").reverse().pop()
-                                    document.getElementById("install-info").classList.remove("hide")
+                                    HTMLHelper.show("install-info")
                                 }
                             }
                         }, 1000)
@@ -2681,13 +2364,13 @@ async function onLoad() {
                 }
             )
 
-            await globLog("Finished Loading Core (" + (Date.now() - start) + "ms).")
+            Logger.log("Finished Loading Core (" + (Date.now() - start) + "ms).")
         }
         try {
             await requestDirectory(event.payload.final_data)
-            await home_main()
+            await gotoHomePage()
         } catch (e) {
-            console.log(e)
+            Logger.log(e)
         }
     })
 
@@ -2704,7 +2387,7 @@ async function onLoad() {
 
     await listen('substring', async (event) => {
         if (event.payload.text.startsWith("Extracting")) {
-            document.getElementById("loadingsub").textContent = event.payload.text.replace("Extracting", Translation.of("extracting"))
+            document.getElementById("loadingsub").textContent = event.payload.text.replace("Extracting", TranslationUtil.of("extracting"))
         } else {
             document.getElementById("loadingsub").textContent = event.payload.text
         }
@@ -2719,17 +2402,17 @@ async function onLoad() {
         while (document.getElementById("loader").classList.contains("hide")) {
         }
 
-        await globLog(value)
+        Logger.log(value)
         if (getLauncher(value)) {
             await getLauncher(value).functions().leftClick();
         }
     })
 
     document.getElementById("save-profile").addEventListener("click", async () => {
-        document.getElementById("profile-bg").classList.add("hide")
-        await save_profile();
-        document.getElementById("profile-blur").classList.add("hide")
-        document.getElementById("profile-bg").classList.add("hide")
+        HTMLHelper.hide("profile-bg")
+        await saveProfile();
+        HTMLHelper.hide("profile-blur")
+        HTMLHelper.hide("profile-bg")
     });
 
     document.getElementById("create-profile").addEventListener("click", async () => {
@@ -2737,7 +2420,7 @@ async function onLoad() {
         while (document.getElementById("profile-" + newProfile) !== null) {
             newProfile = "Default " + (parseInt(newProfile.split(" ")[1]) + 1);
         }
-        await create_profile(newProfile)()
+        createProfile(newProfile)()
         document.getElementById("profiles").scroll({
             top: document.getElementById("profiles").scrollHeight,
             behavior: "smooth"
@@ -2746,13 +2429,16 @@ async function onLoad() {
 
     document.getElementById("backup-profile").addEventListener("click", async () => {
 
-        document.getElementById("profile-bg").classList.add("hide")
-        await save_profile();
-        document.getElementById("profile-blur").classList.add("hide")
+        HTMLHelper.hide("profile-bg")
+        HTMLHelper.hide("profile-bg")
+        await saveProfile();
+
+        HTMLHelper.hide("profile-blur")
         if (!await isDir(local_path + fileTerminator + terminatePath("store\\backup"))) {
             await mkdir(local_path + fileTerminator + terminatePath("store\\backup"));
         }
-        await writeTextFile(local_path + fileTerminator + terminatePath("store\\backup") + fileTerminator + profile_path.replaceAll("\\\\", "").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path), null, "\t"));
+
+        await writeTextFile(local_path + fileTerminator + terminatePath("store\\backup") + fileTerminator + profile_path.replaceAll("\\\\", "").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profile_path), null, "\t"));
         await invoke("open_path", {
             path: local_path + fileTerminator + terminatePath("store\\backup")
         })
@@ -2770,8 +2456,8 @@ async function onLoad() {
             title: 'Select Backup File',
             defaultPath: local_path + fileTerminator + terminatePath("store\\backup") + fileTerminator
         });
-        document.getElementById("profile-bg").classList.add("hide")
-        await save_profile();
+        HTMLHelper.hide("profile-bg")
+        await saveProfile();
         if (backup_select !== null && backup_select !== undefined) {
             if (!await isDir(local_path + fileTerminator + terminatePath("store\\backup"))) {
                 await mkdir(local_path + fileTerminator + terminatePath("store\\backup"));
@@ -2779,14 +2465,14 @@ async function onLoad() {
             if (!await isDir(local_path + fileTerminator + terminatePath("store\\backup\\autosave"))) {
                 await mkdir(local_path + fileTerminator + terminatePath("store\\backup\\autosave"));
             }
-            await writeTextFile(local_path + fileTerminator + terminatePath("store\\backup\\autosave") + fileTerminator + profile_path.replaceAll("\\\\", "\\").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + get_formatted_date() + ".ddmm.backup.json", JSON.stringify(await get_concurrent_game_data(profile_path), null, "\t"));
-            await delete_dir(profile_path);
-            await load_data(JSON.parse(await readTextFile(backup_select)), profile_path);
-            console.log(current_game_data_path)
-            await update_profiles(current_game_data_path);
-            await load_concurrent_profile_data(true);
+            await writeTextFile(local_path + fileTerminator + terminatePath("store\\backup\\autosave") + fileTerminator + profile_path.replaceAll("\\\\", "\\").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profile_path), null, "\t"));
+            await delDir(profile_path);
+            await loadProfileData(JSON.parse(await readTextFile(backup_select)), profile_path);
+            Logger.log(current_game_data_path)
+            await updateProfiles(current_game_data_path);
+            await loadCurrentProfileData(true);
         }
-        document.getElementById("profile-blur").classList.add("hide")
+        HTMLHelper.hide("profile-blur")
     })
 
     /**
@@ -2824,9 +2510,9 @@ async function onLoad() {
     })
 
     document.getElementById("load-profile").addEventListener("click", async () => {
-        await load_concurrent_profile_data(true)
-        document.getElementById("profile-blur").classList.add("hide")
-        document.getElementById("profile-bg").classList.add("hide")
+        await loadCurrentProfileData(true)
+        HTMLHelper.hide("profile-blur")
+        HTMLHelper.hide("profile-bg")
     })
 
     // document.getElementById("copy-profile").addEventListener("click", async () => {
@@ -2845,14 +2531,14 @@ async function onLoad() {
 
     document.getElementById("input-prompt-box").addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
-            save_profile_name();
+            saveProfileName();
         }
     })
 
     document.getElementById("profile-blur").addEventListener("mouseup", (e) => {
         if (document.getElementById("image-picker-bg").classList.contains("image-picker-visible")) {
             document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
-            document.getElementById("profile-blur").classList.add("hide")
+            HTMLHelper.hide("profile-blur")
         }
         if (selected_button !== null) {
             let is_hovering = null;
@@ -2876,15 +2562,15 @@ async function onLoad() {
                     }
                 }
 
-                console.log(current_profile_data)
+                Logger.log(current_profile_data)
 
-                console.log("moving " + old_index + " to " + moveNext)
-                current_profile_data = move_entries(current_profile_data, old_index, moveNext);
-                console.log(current_profile_data)
+                Logger.log("moving " + old_index + " to " + moveNext)
+                current_profile_data = moveEntries(current_profile_data, old_index, moveNext);
+                Logger.log(current_profile_data)
                 for (const index in current_profile_data) {
                     const data = current_profile_data[index];
                     if (data === undefined || data === null || document.getElementById(data) == null) continue;
-                    console.log(data, index)
+                    Logger.log(data, index)
                     document.getElementById(data).style.order = index;
                 }
                 selected_button.style.top = is_hovering.getBoundingClientRect().y + "px";
@@ -2972,8 +2658,8 @@ async function onLoad() {
         }
     })
 
-    document.getElementById("input-prompt-agree").addEventListener("mouseup", save_profile_name)
-    document.getElementById("input-prompt-cancel").addEventListener("mouseup", close_profile_rename)
+    document.getElementById("input-prompt-agree").addEventListener("mouseup", saveProfileName)
+    document.getElementById("input-prompt-cancel").addEventListener("mouseup", closeProfileRenamePrompt)
 
     // Opens Up A Spreadsheet Full Of DDLC Mods
 
@@ -3000,16 +2686,16 @@ async function onLoad() {
             title: 'Select DDLC Zip File'
         });
         try {
-            document.getElementById("loadingsub").textContent = Translation.of("importing_zip")
-            document.getElementById("select-zip").classList.add("hide")
-            setLoadingBar(100, true)
+            document.getElementById("loadingsub").textContent = TranslationUtil.of("importing_zip")
+            HTMLHelper.hide("select-zip")
+            HTMLHelper.setLoadingBar(100, true)
             await invoke("set_ddlc_zip", {
                 path: p
             })
             document.getElementById("loadingsub").textContent = "Done!"
         } catch (Exception) {
-            document.getElementById("select-zip").classList.remove("hide")
-            document.getElementById("loadingsub").textContent = Translation.of("select_zip")
+            HTMLHelper.show("select-zip")
+            document.getElementById("loadingsub").textContent = TranslationUtil.of("select_zip")
         }
     })
 
@@ -3026,7 +2712,7 @@ async function onLoad() {
         play(sound_beep)
         showContainers(true)
         alert_path = undefined;
-        document.getElementById("alert").classList.add("hide")
+        HTMLHelper.hide("alert")
     })
 
     // Opens Up Path Of The Mod That Is Installing
@@ -3042,22 +2728,22 @@ async function onLoad() {
     document.getElementById("download").addEventListener("mouseup", async () => {
         if (alert_path !== undefined) {
             play(sound_beep)
-            document.getElementById("alert").classList.add("hide")
-            await send_event("auto_download", {
+            HTMLHelper.hide("alert")
+            await sendEvent("auto_download", {
                 name: alert_path.split(fileTerminator).pop()
             })
-            await import_mod(alert_path)
+            await importMod(alert_path)
         }
     })
 
-    await globLog("Finished Loading Observers. Took " + (Date.now() - start) + "ms.")
-    await globLog("Loading Defaults...")
+    Logger.log("Finished Loading Observers. Took " + (Date.now() - start) + "ms.")
+    Logger.log("Loading Loading Screen")
 
-    document.getElementById("loader").classList.remove("hide")
-    document.getElementById("main").classList.add("hide")
+    HTMLHelper.show("loader")
+    HTMLHelper.hide("main")
     document.getElementById("loadingsub").textContent = "Installing DDLC-Vanilla (If nothing happens after 20s, please restart the program)"
 
-    await globLog("Loading Drag/Drop")
+    Logger.log("Loading Drag/Drop")
 
     // Drag Drop Handling
     // This is for dragging and dropping images and mods
@@ -3066,8 +2752,8 @@ async function onLoad() {
         let paths = event.payload.paths;
         for (const path of paths) {
             if (path.endsWith(".zip") || path.endsWith(".rar") || path.endsWith(".rpa")) {
-                await send_event("manual_download")
-                await import_mod(path)
+                await sendEvent("manual_download")
+                await importMod(path)
             } else if ((/\.(gif|jpe?g|tiff?|png|webp|bmp)$/i).test(path)) {
                 let dir = await readDir(local_path + fileTerminator + terminatePath("store\\images") + fileTerminator)
                 await writeFile(local_path + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
@@ -3076,13 +2762,13 @@ async function onLoad() {
             }
         }
         setTimeout(async () => {
-            await update_cover_images()
+            await updateCoverImages()
         }, 1000)
     });
 
     document.getElementById("update").addEventListener("mouseup", async () => {
         play(sound_beep)
-        await launch_desktop()
+        await launchDesktop()
     })
 
     document.getElementById("play").addEventListener("mouseup", async () => {
@@ -3092,7 +2778,7 @@ async function onLoad() {
     })
 
     document.getElementById("version").addEventListener("mouseup", async _ => {
-        await launch_desktop()
+        await launchDesktop()
     })
 
     document.getElementById("cover-last").addEventListener("mouseenter", () => {
@@ -3105,7 +2791,7 @@ async function onLoad() {
 
     document.getElementById("image-picker-cancel").addEventListener("mouseup", async () => {
         play(sound_boop)
-        document.getElementById("profile-blur").classList.add("hide")
+        HTMLHelper.hide("profile-blur")
         document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
     })
 
@@ -3126,7 +2812,7 @@ async function onLoad() {
                 getLauncher(currentEntry).functions().item.remove();
                 delete getLauncher(currentEntry).functions();
                 showContainers(true)
-                await home_main()
+                await gotoHomePage()
 
             }
         }
@@ -3151,7 +2837,7 @@ async function onLoad() {
             if (!await isExist(path)) {
                 path = final + fileTerminator + terminatePath(terminatePath("game\\options.rpyc"));
                 if (!await isExist(path)) {
-                    await globWarn("No save found!")
+                    Logger.warn("No save found!")
                     await confirm("No save found!")
                     return;
                 }
@@ -3166,7 +2852,7 @@ async function onLoad() {
                 data = (await readDir(loc2)).length !== 0
             }
             if (loc !== "" || data) {
-                document.getElementById("delete-prompt").classList.remove("hide")
+                HTMLHelper.show("delete-prompt")
                 document.getElementById("delete-context").textContent = "Are you sure you want to delete\n" + loc + (data ? " & " + loc2 : "") + "?"
                 save_path = loc + "|" + (data ? loc2 : "");
             } else {
@@ -3179,14 +2865,14 @@ async function onLoad() {
 
     document.getElementById("delete-save").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
-            document.getElementById("profile-blur").classList.remove("hide")
+            HTMLHelper.show("profile-blur")
 
             let final = getLauncher(currentEntry).functions().absolute_location;
             let path = final + fileTerminator + terminatePath("game\\scripts.rpa");
             if (!await isExist(path)) {
                 path = final + fileTerminator + terminatePath("game\\options.rpyc");
                 if (!await isExist(path)) {
-                    await globWarn("No save found!")
+                    Logger.warn("No save found!")
                     await confirm("No save found!")
                     return;
                 }
@@ -3206,7 +2892,7 @@ async function onLoad() {
             let secondary = dat === "" ? loc3 + fileTerminator + currentEntry : dat + "_DDMM_data"
             let data = false
 
-            console.log(loc2, loc3, loc, dat)
+            Logger.log(loc2, loc3, loc, dat)
 
             if (loc === "") {
                 let secondary_name = secondary.split(fileTerminator).pop()
@@ -3218,7 +2904,7 @@ async function onLoad() {
                     secondary = comps.join(fileTerminator) + fileTerminator + secondary_name
                 }
 
-                await globWarn(secondary)
+                Logger.warn(secondary)
                 data = await isExist(secondary)
 
                 if (!await isExist(loc3)) {
@@ -3236,17 +2922,17 @@ async function onLoad() {
                 }
             }
 
-            console.log(loc, data)
+            Logger.log(loc, data)
 
             if (loc !== "" || data) {
                 const name = loc === "" ? secondary : loc
                 if (!await isExist(name)) {
                     await mkdir(name)
                 }
-                document.getElementById("profile-blur").classList.remove("hide")
-                await update_profiles(name)
+                HTMLHelper.show("profile-blur")
+                await updateProfiles(name)
             } else {
-                document.getElementById("profile-blur").classList.add("hide")
+                HTMLHelper.hide("profile-blur")
                 await confirm("Unknown Save Data Location!")
             }
 
@@ -3257,10 +2943,10 @@ async function onLoad() {
     document.getElementById("extract").addEventListener("mouseup", async () => {
         if (currentEntry !== "") {
             let final = getLauncher(currentEntry).functions().absolute_location + fileTerminator + terminatePath("game\\scripts.rpa");
-            console.log(final)
+            Logger.log(final)
             document.getElementById("loadingsub").textContent = "Extracting (This will take 20-40s)"
-            document.getElementById("loader").classList.remove("hide")
-            document.getElementById("main").classList.add("hide")
+            HTMLHelper.show("loader")
+            HTMLHelper.hide("main")
             if (await isExist(final)) {
                 await invoke("extract_game_script", {
                     path: final,
@@ -3274,13 +2960,13 @@ async function onLoad() {
             }
 
             await getLauncher(currentEntry).functions().leftClick()
-            document.getElementById("loader").classList.add("hide")
-            document.getElementById("main").classList.remove("hide")
+            HTMLHelper.hide("loader")
+            HTMLHelper.show("main")
         }
     })
 
     document.getElementById("delete-yes").addEventListener("mouseup", async () => {
-        document.getElementById("delete-prompt").classList.add("hide")
+        HTMLHelper.hide("delete-prompt")
         if (save_path === "") return;
         for (const p of save_path.split("|")) {
             if (p === "") continue
@@ -3292,7 +2978,7 @@ async function onLoad() {
 
     document.getElementById("delete-no").addEventListener("mouseup", async () => {
         save_path = "";
-        document.getElementById("delete-prompt").classList.add("hide")
+        HTMLHelper.hide("delete-prompt")
     })
 
     document.getElementById("modtitle").addEventListener("focusin", async () => {
@@ -3318,64 +3004,64 @@ async function onLoad() {
             left: 0
         });
         if (currentEntry !== "") {
-            await rename_mod()
+            await renameMod()
         } else {
             const name = document.getElementById("modtitle").value;
-            if (name.includes(Translation.of("greet")) || name === "") {
-                await home_main()
+            if (name.includes(TranslationUtil.of("greet")) || name === "") {
+                await gotoHomePage()
                 return;
             }
             user_name = name
-            await send_event("set_user_name", {
+            await sendEvent("set_user_name", {
                 name: user_name
             })
             await saveConfig()
-            await home_main()
+            await gotoHomePage()
         }
     })
 
     document.getElementById("options").addEventListener("mouseup", async () => {
         play(sound_beep)
-        await home_main()
+        await gotoHomePage()
     })
 
     document.getElementById("report-open").addEventListener("mouseup", async () => {
-        document.getElementById("profile-blur").classList.remove("hide")
-        document.getElementById("report-bg").classList.remove("hide")
+        HTMLHelper.show("profile-blur")
+        HTMLHelper.show("report-bg")
         document.getElementById("report-textc").focus()
     })
 
     document.getElementById("report-close").addEventListener("mouseup", async () => {
-        document.getElementById("profile-blur").classList.add("hide")
-        document.getElementById("report-bg").classList.add("hide")
+        HTMLHelper.hide("profile-blur")
+        HTMLHelper.hide("report-bg")
     })
 
     document.getElementById("report-send").addEventListener("mouseup", async () => {
         if (document.getElementById("report-textc").value !== "") {
-            await send_event("issue", {
+            await sendEvent("issue", {
                 issue: document.getElementById("report-textc").value
             })
-            console.log(document.getElementById("report-textc").value)
+            Logger.log(document.getElementById("report-textc").value)
         }
         document.getElementById("report-textc").value = ""
-        document.getElementById("profile-blur").classList.add("hide")
-        document.getElementById("report-bg").classList.add("hide")
+        HTMLHelper.hide("profile-blur")
+        HTMLHelper.hide("report-bg")
     })
 
     document.getElementById("cover-last").addEventListener("mouseup", async () => {
         play(sound_beep)
-        document.getElementById("image-picker-cancel").textContent = Translation.of("cancel");
-        document.getElementById("profile-blur").classList.remove("hide")
+        document.getElementById("image-picker-cancel").textContent = TranslationUtil.of("cancel");
+        HTMLHelper.show("profile-blur")
         document.getElementById("image-picker-bg").classList.add("image-picker-visible")
     })
 
     document.getElementById("close").addEventListener("mouseup", async () => {
-        exit_program()
+        exitProgram()
     })
 
     document.getElementById("view-background").addEventListener("mouseup", async () => {
         document.getElementById("view-image").classList.remove("zoom")
-        document.getElementById("view-background").classList.add("hide")
+        HTMLHelper.hide("view-background")
     })
 
     document.getElementById("min").addEventListener("mouseup", async () => {
@@ -3428,7 +3114,7 @@ async function onLoad() {
     })
 
     document.getElementById("english").addEventListener("mouseup", async () => {
-        let old = Translation.getLanguage();
+        let old = TranslationUtil.getLanguage();
         loadTranslation("en", (old === ""))
         if (old !== "") {
             saveConfig().then(_ => {
@@ -3437,7 +3123,7 @@ async function onLoad() {
     })
 
     document.getElementById("russian").addEventListener("mouseup", async () => {
-        let old = Translation.getLanguage();
+        let old = TranslationUtil.getLanguage();
         loadTranslation("ru", (old === ""))
         if (old !== "") {
             saveConfig().then(_ => {
@@ -3446,7 +3132,7 @@ async function onLoad() {
     })
 
     document.getElementById("pt").addEventListener("mouseup", async () => {
-        let old = Translation.getLanguage();
+        let old = TranslationUtil.getLanguage();
         loadTranslation("pt", (old === ""))
         if (old !== "") {
             saveConfig().then(_ => {
@@ -3455,7 +3141,7 @@ async function onLoad() {
     })
 
     document.getElementById("spanish").addEventListener("mouseup", async () => {
-        let old = Translation.getLanguage();
+        let old = TranslationUtil.getLanguage();
         loadTranslation("es", (old === ""))
         if (old !== "") {
             saveConfig().then(_ => {
@@ -3464,7 +3150,7 @@ async function onLoad() {
     })
 
     document.getElementById("japan").addEventListener("mouseup", async () => {
-        let old = Translation.getLanguage();
+        let old = TranslationUtil.getLanguage();
         loadTranslation("jp", (old === ""))
         if (old !== "") {
             saveConfig().then(_ => {
@@ -3473,7 +3159,7 @@ async function onLoad() {
     })
 
     document.getElementById("french").addEventListener("mouseup", async () => {
-        let old = Translation.getLanguage();
+        let old = TranslationUtil.getLanguage();
         loadTranslation("fr", (old === ""))
         if (old !== "") {
             saveConfig().then(_ => {
@@ -3482,7 +3168,7 @@ async function onLoad() {
     })
 
     document.getElementById("cantonese").addEventListener("mouseup", async () => {
-        let old = Translation.getLanguage();
+        let old = TranslationUtil.getLanguage();
         loadTranslation("zh-HK", (old === ""))
         if (old !== "") {
             saveConfig().then(_ => {
@@ -3506,8 +3192,8 @@ async function onLoad() {
 
     document.getElementById("tutorial").addEventListener("mouseup", async () => {
         document.getElementById("warn").classList.add("tutorial-active")
-        document.getElementById("tutorial").textContent = Translation.of("next")
-        document.getElementById("tutorial-no").textContent = Translation.of("cancel")
+        document.getElementById("tutorial").textContent = TranslationUtil.of("next")
+        document.getElementById("tutorial-no").textContent = TranslationUtil.of("cancel")
         if (tutorial_step >= 4 && currentEntry === "") {
             if (tutorial_pointer == null) {
                 tutorial_pointer = document.createElement("div")
@@ -3519,16 +3205,16 @@ async function onLoad() {
             tutorial_pointer.style.borderRadius = "10px"
             tutorial_pointer.style.top = (document.getElementById("modlist").getBoundingClientRect().y + (document.getElementById("modlist").getBoundingClientRect().height / 2)) + "px"
             tutorial_pointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width / 2)) + "px"
-            document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(4).of("title");
-            document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(4).of("context");
-            await confirm(Translation.sub("tutorial").of("select"))
+            document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(4).of("title");
+            document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(4).of("context");
+            await confirm(TranslationUtil.sub("tutorial").of("select"))
             return
         }
         tutorial_step++;
         switch (tutorial_step) {
             case 1:
-                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(1).of("title");
-                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(1).of("context");
+                document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(1).of("title");
+                document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(1).of("context");
                 break;
             case 2:
                 if (tutorial_pointer == null) {
@@ -3539,8 +3225,8 @@ async function onLoad() {
 
                     document.getElementById("main").appendChild(tutorial_pointer)
                 }
-                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(2).of("title");
-                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(2).of("context");
+                document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(2).of("title");
+                document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(2).of("context");
                 break;
             case 3:
                 if (tutorial_pointer == null) {
@@ -3553,8 +3239,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("covers").getBoundingClientRect().y + (document.getElementById("covers").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("covers").getBoundingClientRect().x + (document.getElementById("covers").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(3).of("title");
-                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(3).of("context");
+                document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(3).of("title");
+                document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(3).of("context");
                 break;
             case 4:
                 if (tutorial_pointer == null) {
@@ -3567,8 +3253,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("reddit").getBoundingClientRect().y + (document.getElementById("reddit").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("reddit").getBoundingClientRect().x + (document.getElementById("reddit").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(4).of("title");
-                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(4).of("context");
+                document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(4).of("title");
+                document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(4).of("context");
                 break;
             case 5:
                 if (tutorial_pointer == null) {
@@ -3581,8 +3267,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("cove").getBoundingClientRect().y + (document.getElementById("cove").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("cove").getBoundingClientRect().x + (document.getElementById("cove").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(5).of("title");
-                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(5).of("context");
+                document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(5).of("title");
+                document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(5).of("context");
                 break;
             case 6:
                 if (tutorial_pointer == null) {
@@ -3595,8 +3281,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("modtitle").getBoundingClientRect().y + (document.getElementById("modtitle").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("modtitle").getBoundingClientRect().x + (document.getElementById("modtitle").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(6).of("title");
-                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(6).of("context");
+                document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(6).of("title");
+                document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(6).of("context");
                 break;
             case 7:
                 if (tutorial_pointer == null) {
@@ -3609,8 +3295,8 @@ async function onLoad() {
                 tutorial_pointer.style.borderRadius = "10px"
                 tutorial_pointer.style.top = (document.getElementById("modinfo").getBoundingClientRect().y + (document.getElementById("modinfo").getBoundingClientRect().height / 2)) + "px"
                 tutorial_pointer.style.left = (document.getElementById("modinfo").getBoundingClientRect().x + (document.getElementById("modinfo").getBoundingClientRect().width / 2)) + "px"
-                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(7).of("title");
-                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(7).of("context");
+                document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(7).of("title");
+                document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(7).of("context");
                 break;
             default:
                 if (tutorial_pointer != null) {
@@ -3619,13 +3305,12 @@ async function onLoad() {
                 }
                 document.getElementById("tutorial").remove()
                 document.getElementById("tutorial-no").style.width = "85%"
-                document.getElementById("tutorial-no").textContent = Translation.of("end")
-                document.getElementById("tutorial-title").textContent = Translation.sub("tutorial").sub(8).of("title");
-                document.getElementById("tutorial-context").textContent = Translation.sub("tutorial").sub(8).of("context");
+                document.getElementById("tutorial-no").textContent = TranslationUtil.of("end")
+                document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(8).of("title");
+                document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(8).of("context");
                 break;
         }
     })
-
 
     // Prevent Find
 
@@ -3636,7 +3321,7 @@ async function onLoad() {
     });
 
     document.getElementById("themeselect").addEventListener("mouseup", async (e) => {
-        let next = CLIENT_THEME_ENUM.indexOf(localConfig.config.theme) + (e.button === 0 ? 1 : -1);
+        let next = CLIENT_THEME_ENUM.indexOf(localConfig.config.get("theme")) + (e.button === 0 ? 1 : -1);
         if (next > CLIENT_THEME_ENUM.length - 1) {
             next = 0;
         }
@@ -3655,15 +3340,15 @@ async function onLoad() {
 
     document.getElementById("import").addEventListener("mouseup", async () => {
         play(sound_beep)
-        await import_mod();
+        await importMod();
     })
 
-    await globLog("Finished Loading Observers2 (" + (Date.now() - start) + "ms).")
-    await globLog("Loading Intervals.")
+    Logger.log("Finished Loading Listeners (" + (Date.now() - start) + "ms).")
+    Logger.log("Loading Intervals.")
 
     // setInterval(snowflake, 100)
-    setInterval(update_concurrent_game, 1000)
-    setInterval(keepAlive, 300_000)
+    setInterval(keepaliveTicker, 1000)
+    setInterval(sendKeepAlive, 300_000)
 
     // getCurrentWindow().onFocusChanged(({
     //     payload: isfocused
@@ -3683,12 +3368,14 @@ async function onLoad() {
     // Setup SVG
     let dragging = false;
     let dragStart = 0;
+
     document.getElementById("pin-holder").addEventListener("mousedown", async () => {
         if (getLauncher(currentEntry)) {
             dragging = true;
             dragStart = Date.now();
         }
     })
+
     document.getElementById("pin-holder").addEventListener("mousemove", async (x) => {
         if (currentEntry !== "" && dragging) {
             const absx = document.getElementById("container").getBoundingClientRect().x;
@@ -3696,11 +3383,12 @@ async function onLoad() {
             document.getElementById("pin-holder").style.left = x.clientX - absx + "px";
             document.getElementById("pin-holder").style.top = x.clientY - absy + "px";
             document.getElementById("pin-holder").classList.add("pin-holder-drag")
-            document.getElementById("pin-pinned").classList.add("hide")
+            HTMLHelper.hide("pin-pinned")
             document.getElementById("pin-unpinned").classList.add("pin-unpinned-heart")
-            document.getElementById("pin-unpinned").classList.remove("hide")
+            HTMLHelper.show("pin-unpinned")
         }
     })
+
     document.getElementById("pin-holder").addEventListener("mouseup", async (mouse) => {
         dragging = false;
         document.getElementById("pin-holder").classList.remove("pin-holder-drag")
@@ -3727,20 +3415,17 @@ async function onLoad() {
         }
     })
 
-    await globLog("Finished Loading PT. 1 (" + (Date.now() - start) + "ms).")
+    Logger.log("Finished Loading PT. 1 (" + (Date.now() - start) + "ms).")
     await invoke("request_path")
 
     let loop = setInterval(async () => {
         if (!reset) {
             await invoke("request_path")
         } else {
-            await globLog("pt. b2 started")
+            Logger.log("Loading Part 2 Started.")
             clearInterval(loop)
         }
     }, 2000)
-
-
-
 }
 
 createApp(App).mount("#app");

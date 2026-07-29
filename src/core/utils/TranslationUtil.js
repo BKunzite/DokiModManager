@@ -1,10 +1,10 @@
 let language = "";
 
 /**
- * Translation table for strings used.
+ * TranslationUtil table for strings used.
  * @type {Object.<string, Object.<string, string>>}
  */
-export const TRANSLATION_TABLE = import.meta.glob('../assets/Translations/*.json', {eager: true})["../assets/Translations/Translations.json"].default;
+export const TRANSLATION_TABLE = import.meta.glob('../../assets/Translations/*.json', {eager: true})["../../assets/Translations/Translations.json"].default;
 
 /**
  * Map that binds translations and elements together
@@ -16,9 +16,9 @@ export const TRANSLATION_TABLE = import.meta.glob('../assets/Translations/*.json
  * ```
  * @type {Array<{id: string, key: string, type: string}>}
  */
-export const TRANSLATION_ELEMENT_MAP = import.meta.glob('../assets/Translations/*.json', {eager: true})["../assets/Translations/TranslationTable.json"].default;
+export const TRANSLATION_ELEMENT_MAP = import.meta.glob('../../assets/Translations/*.json', {eager: true})["../../assets/Translations/TranslationTable.json"].default;
 
-export const Translation = {
+export const TranslationUtil = {
     /**
      * Sets Current Language
      * @param {string} lang (ex. en, fr)
@@ -40,22 +40,22 @@ export const Translation = {
      */
     of: (text) => {
         if (TRANSLATION_TABLE[language] === undefined) throw new NoTranslationError("Language '" + language + "' not found in translation table!")
-        if (TRANSLATION_TABLE[language][text] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' not found in language '" + language + "'!")
+        if (TRANSLATION_TABLE[language][text] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' not found in language '" + language + "'!")
         return TRANSLATION_TABLE[language][text]
     },
     sub: (text) => {
         if (TRANSLATION_TABLE[language] === undefined) throw new NoTranslationError("Language '" + language + "' not found in translation table!")
-        if (TRANSLATION_TABLE[language][text] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' not found in language '" + language + "'!")
+        if (TRANSLATION_TABLE[language][text] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' not found in language '" + language + "'!")
         return {
             of: (t) => {
-                if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
+                if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
                 return TRANSLATION_TABLE[language][text][t]
             },
             sub: (t) => {
-                if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
+                if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
                 return {
                     of: (t2) => {
-                        if (TRANSLATION_TABLE[language][text][t][t2] === undefined) throw new NoTranslationIndexError("Translation for '" + text + "' sub '" + t + "' sub2 '" + t2 + "' not found in language '" + language + "'!")
+                        if (TRANSLATION_TABLE[language][text][t][t2] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' sub '" + t + "' sub2 '" + t2 + "' not found in language '" + language + "'!")
                         return TRANSLATION_TABLE[language][text][t][t2]
                     }
                 }

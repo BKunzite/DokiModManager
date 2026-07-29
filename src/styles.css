@@ -1261,7 +1261,7 @@ body {
     top: 0%;
     left: 50%;
     transform: translateX(-50%);
-    background-image: url("assets/house.webp");
+    background-image: url("assets/DefaultCovers/house.webp");
     background-size: cover;
     background-position-x: center;
     background-position-y: -500px;
@@ -1483,7 +1483,7 @@ body {
 }
 
 .cover {
-    background-image: url("assets/natsuki.jpg");
+    background-image: url("assets/DefaultCovers/natsuki.jpg");
     background-size: cover;
     background-position: center;
     width: 15vw;
@@ -2320,7 +2320,7 @@ body {
     border-radius: 1rem;
 }
 
-.sidebutton.favorite:hover::before.sidebutton.favorite:hover::after {
+.favorite:hover::before, .favorite:hover::after {
     height: 4vw;
     filter: blur(5px) saturate(150%);
 }

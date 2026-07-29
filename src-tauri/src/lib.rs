@@ -40,25 +40,30 @@ mod extractor;
 mod hash;
 mod simple_logger;
 
-static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
-static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/dokimodmanager.exe";
+#[cfg(target_os = "linux")]
 static LATEST_ARTIFACT_LINUX_DEB: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/DEB/dokimodmanager.deb";
+#[cfg(target_os = "linux")]
 static LATEST_ARTIFACT_LINUX_APP: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/APP/dokimodmanager.AppImage";
+#[cfg(target_os = "linux")]
 static LATEST_ARTIFACT_LINUX_RPM: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/RPM/dokimodmanager.rpm";
-
-static UN_RPYC: &str =
-    "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
+#[cfg(target_os = "linux")]
+static UN_RPYC_LINUX_HASH: &str = "b74b408f748bf45fe8a8023525ba728d25fac6a677b711c77dc8aa8d7e4a25f6";
+#[cfg(target_os = "linux")]
 static UN_RPYC_LINUX: &str =
     "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.sh";
 
+static UN_RPYC: &str =
+    "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
 static UN_RPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
-static UN_RPYC_LINUX_HASH: &str = "b74b408f748bf45fe8a8023525ba728d25fac6a677b711c77dc8aa8d7e4a25f6";
+
+static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
+static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/dokimodmanager.exe";
 static SCRIPTS_RPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
-
 static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
 static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
 
+#[cfg(target_os = "linux")]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum InstallType {
@@ -68,6 +73,7 @@ enum InstallType {
     Unknown,
 }
 
+#[cfg(target_os = "linux")]
 #[derive(Debug, Serialize, Deserialize)]
 struct InstallData {
     kind: InstallType,
@@ -182,7 +188,7 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
             final_data: &final_data.directory,
             local_path: &get_current_dir()
                 .to_string_lossy(),
-            path: dirs::home_dir()
+            path: home_dir()
                 .unwrap()
                 .join("Downloads")
                 .to_str()
@@ -1334,6 +1340,7 @@ async fn update_exe() {
     update_linux_binary().await;
 }
 
+#[cfg(target_os = "linux")]
 fn command_succeeds(program: &str, args: &[&str]) -> bool {
     Command::new(program)
         .args(args)
@@ -1622,13 +1629,16 @@ pub async fn run() {
             let clone_handle2 = app.handle().clone();
             let downloads_dir = get_current_dir().join("store").join("downloads");
             app.track_event("app_started", None).unwrap();
-            let _ = window.set_size(Size::Physical(PhysicalSize::new(1200, 600)));
-            window.set_size_constraints(WindowSizeConstraints {
-                min_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
-                max_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
-                min_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
-                max_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
-            }).ok();
+            #[cfg(target_os = "linux")]
+            {
+                let _ = window.set_size(Size::Physical(PhysicalSize::new(1200, 600)));
+                window.set_size_constraints(WindowSizeConstraints {
+                    min_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
+                    max_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
+                    min_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
+                    max_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
+                }).ok();
+            }
 
             #[cfg(target_os = "windows")]
             apply_acrylic(&window, Some((0, 0, 0, 10)))

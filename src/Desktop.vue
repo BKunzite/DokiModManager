@@ -27,14 +27,17 @@
     </div>
   </div>
   <div class="updates">
-    <div class="update-version" id="desktop-version">Version 1.6.0-release</div>
+    <div class="update-version" id="desktop-version">Version 1.7.0-release</div>
     <div class="update-heaader">Bug Fixes & UI</div>
     <div class="update-text">Polished UI</div>
-    <div class="update-text">Added Cards</div>
-    <div class="update-text">Added Download Indicator</div>
+    <div class="update-text">Fixed "The Good Ending"</div>
+    <div class="update-heaader">Pins!</div>
+    <div class="update-text">Pinned mods will be on top</div>
     <div class="update-heaader">Performance</div>
     <div class="update-text">Memory Optimization</div>
-    <div class="update-text">Memory Leak Fix</div>
+    <div class="update-heaader">OS</div>
+    <div class="update-text">Beta Linux Support</div>
+    <div class="update-text">MacOS Support Coming</div>
     <div class="update-heaader">Codebase</div>
     <div class="update-text">Several Cleanups/Refactors</div>
   </div>
