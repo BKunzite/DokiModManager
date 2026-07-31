@@ -3,6 +3,9 @@
  * @type {RegExp}
  */
 const SHOULD_ESCAPE_HTML_PATTERN = /["&'<>]/;
+const replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+const replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
+const replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
 
 /**
  * Escapes HTML To Prevent Potential XSS Attacks
@@ -85,10 +88,6 @@ export function getTextWidth(text, font) {
 export function formatModName(text) {
     return text.replace(/\b(ddlc|renpy7mod|renpy8mod)\b/gi, "").replace(/-/g, " ").trim()
 }
-
-const replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
-const replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
-const replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
 
 export function linkify(inputText) {
     let replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank" style="cursor: grab;">$1</a>');

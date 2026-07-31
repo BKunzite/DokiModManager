@@ -2212,7 +2212,7 @@ async function onLoad() {
 
                     HTMLHelper.show("changelog")
                     document.getElementById("changelog-title").textContent = "New Update! | " + newest_version.split("\n")[0]
-                    document.getElementById("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/i, "<br>")
+                    document.getElementById("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
                     document.getElementById("changelog-update").textContent = TranslationUtil.of("update")
                     document.getElementById("changelog-ignore").textContent = TranslationUtil.of("ignore")
                     document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
