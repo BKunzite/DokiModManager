@@ -2242,7 +2242,7 @@ async function onLoad() {
                     await saveConfig()
                     HTMLHelper.show("changelog")
                     document.getElementById("changelog-title").textContent = "Update Complete! | " + newest_version.split("\n")[0]
-                    document.getElementById("changelog-text").textContent = newest_version.split("\n").slice(1).join("\n")
+                    document.getElementById("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
                     HTMLHelper.hide("changelog-ignore")
                     document.getElementById("changelog-update").textContent = TranslationUtil.of("ignore")
                     document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
