@@ -34,6 +34,9 @@ use zip::ZipArchive;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 mod discord_rpc;
 mod downloader;
 mod extractor;
@@ -390,6 +393,10 @@ fn rpa_archive_option(path_out: &Path, cmain: &str, option: &str) -> String {
             .to_str()
             .unwrap(),
     );
+    #[cfg(windows)]
+    {
+        exchild.creation_flags(0x08000000);
+    }
     println!("{:?}", exchild);
 
     let rput = exchild
@@ -526,7 +533,6 @@ fn decrypt_rpa_dir(app: &AppHandle, root_path: &Path) {
 
         #[cfg(windows)]
         {
-            use std::os::windows::process::CommandExt;
             cmd.creation_flags(0x08000000);
         }
 

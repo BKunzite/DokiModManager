@@ -46,4 +46,5 @@ esac
 echo "${bold}Update Success! Launching...${normal} (5s)"
 sleep 5
 cd ~/
-/usr/bin/dokimodmanager &
+setsid /usr/bin/dokimodmanager &
+sleep 5

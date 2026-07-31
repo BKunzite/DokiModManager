@@ -41,7 +41,7 @@ export class ProgramData {
      * @returns {ProgramData}
      */
     map(map) {
-        for (const key of map) {
+        for (const key in map) {
             this.#unmappedData[key] = map[key]
         }
         return this

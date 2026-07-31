@@ -26,7 +26,7 @@ import Desktop from "./Desktop.vue";
 
 //// Utils
 // ----- INTERNAL ------- //
-import {deref, getImage, lazy_deref, covers, preloadCovers, preloadImage} from "./core/utils/ImageUtils";
+import {deref, getImage, lazy_deref, covers, preloadCovers, preloadImageObject} from "./core/utils/ImageUtils";
 import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
 import {TranslationUtil, TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE} from "./core/utils/TranslationUtil"
 import {addLauncher, clearLaunchers, getLauncher, getLaunchers, LauncherAbstract} from "./core/Launchers"
@@ -193,7 +193,7 @@ async function syncCovers() {
     preloadCovers.reset()
 
     for (const cover of covers.asList()) {
-        preloadCovers.set(cover, await preloadImage(cover))
+        preloadCovers.set(cover, await preloadImageObject(cover))
     }
 
     if (await isDir(local_path + imageLocation)) {
@@ -201,7 +201,7 @@ async function syncCovers() {
             if (image.name.endsWith(".png") || image.name.endsWith(".jpg") || image.name.endsWith(".jpeg") || image.name.endsWith(".webp")) {
                 const path = local_path + imageLocation + fileTerminator + image.name;
                 covers.add(path)
-                preloadCovers.set(path, await preloadImage(path))
+                preloadCovers.set(path, await preloadImageObject(path))
             }
         }
     }
@@ -625,30 +625,30 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
  * Set Install Location Directory
  * OR Loads Mods
  *
- * @param {string} path Location Of Mods To Load
+ * @param {string} directoryPath Location Of Mods To Load
  * @returns {Promise<void>}
  */
 
-async function requestDirectory(path = undefined) {
-    let ppath = undefined;
-    if (path === undefined || !await isExist(path)) {
-        while (ppath === null || ppath === undefined || !await isDir(ppath)) {
-            ppath = await open({
+async function requestDirectory(directoryPath = undefined) {
+    let chosenPath = undefined;
+    if (directoryPath === undefined || !await isExist(directoryPath)) {
+        while (chosenPath === null || chosenPath === undefined || !await isDir(chosenPath)) {
+            chosenPath = await open({
                 directory: true,
                 multiple: false,
                 title: 'Select Your DDLC Directory'
             });
         }
-        selectedPath = ppath;
+        selectedPath = chosenPath;
         await invoke("path_select", {
             path: selectedPath
         })
     } else {
-        selectedPath = path;
+        selectedPath = directoryPath;
     }
-    if (ppath !== undefined || selectedPath !== undefined) {
-        if (ppath !== undefined) {
-            selectedPath = ppath;
+    if (chosenPath !== undefined || selectedPath !== undefined) {
+        if (chosenPath !== undefined) {
+            selectedPath = chosenPath;
         }
 
         for (const element in getLaunchers()) {
@@ -727,11 +727,12 @@ async function addMod(name) {
         Logger.warn("Mod " + name + " Does Not Exist! (path: " + selectedPath + fileTerminator + name + ")")
         return
     }
-    const localFiles = await readDir(selectedPath + fileTerminator + name);
     // Find Correct Directory
 
     let dir = selectedPath + fileTerminator + name;
     let isInDir = false;
+    const localFiles = await readDir(dir);
+
     for (const localEntry of localFiles) {
         if (localEntry.name === OS.EXECUTABLE.WINDOWS || localEntry.name === "renpy") {
             isInDir = true;
@@ -939,16 +940,16 @@ async function addMod(name) {
         resetOrder: () => {
             sidetext.style.order = getLauncher(name).functions().getOrder()
         },
-        setPinned: async (b) => {
-            if (b === undefined) {
+        setPinned: async (pinnedState) => {
+            if (pinnedState === undefined) {
                 if (configData.pinned === undefined || configData.pinned == null) {
-                    b = false
+                    pinnedState = false
                 } else {
-                    b = !configData.pinned;
+                    pinnedState = !configData.pinned;
                 }
             }
 
-            configData.pinned = b;
+            configData.pinned = pinnedState;
             if (configData.pinned) {
                 sidetext.innerHTML = pinnedText
             } else if (configData.favorite) {
@@ -1276,7 +1277,7 @@ function showContainers(show) {
     if (show) {
         if (tutorial_pointer != null) {
             HTMLHelper.show("warn")
-            tutorial_pointer.classList.remove("hide")
+            HTMLHelper.show("tutorial_pointer")
             document.getElementById("tutorial").dispatchEvent(new MouseEvent("mouseup", {}))
         }
         HTMLHelper.show("modlist")
@@ -1284,18 +1285,18 @@ function showContainers(show) {
         HTMLHelper.show("container-shadow")
         HTMLHelper.show("search")
         HTMLHelper.show("container")
-
     } else {
         if (tutorial_pointer != null) {
             HTMLHelper.hide("warn")
-            tutorial_pointer.classList.add("hide")
+            HTMLHelper.hideElement(tutorial_pointer)
         }
-        if (!document.getElementById("pill").classList.contains("hide")) {
+
+        if (!HTMLHelper.isHidden("pill")) {
             HTMLHelper.hide("pill")
             HTMLHelper.hide("pill-files")
             HTMLHelper.hide("pill-contains")
-
         }
+
         HTMLHelper.hide("modlist")
         HTMLHelper.hide("container-boarder")
         HTMLHelper.hide("container-shadow")
@@ -1443,22 +1444,20 @@ async function sendKeepAlive() {
 async function keepaliveTicker() {
     HTMLHelper.tick()
 
-    if (!document.getElementById("loader").classList.contains("hide")) return;
-    if (!document.getElementById("modlist").classList.contains("hide") || alert_path !== undefined) {
-        if (!document.getElementById("pill").classList.contains("hide")) {
+    if (!HTMLHelper.isHidden("loader")) return;
+    if (!HTMLHelper.isHidden("modlist") || alert_path !== undefined) {
+        if (!HTMLHelper.isHidden("pill")) {
             HTMLHelper.hide("pill")
             HTMLHelper.hide("pill-files")
             HTMLHelper.hide("pill-contains")
-
         }
         return
     }
 
-    if (document.getElementById("pill").classList.contains("hide")) {
+    if (HTMLHelper.isHidden("pill")) {
         HTMLHelper.show("pill")
         HTMLHelper.show("pill-files")
         HTMLHelper.show("pill-contains")
-
     }
 
     const playTime = await getLauncher(currentEntry).functions().get_time();
@@ -1757,10 +1756,10 @@ async function loadProfileData(self_data, upstream) {
 }
 
 async function setPinned(pinned) {
+    HTMLHelper.toggle("pin-pinned", !pinned)
+    HTMLHelper.toggle("pin-unpinned", pinned)
     document.getElementById("pin-holder").classList.toggle("pin-active", !pinned)
-    document.getElementById("pin-pinned").classList.toggle("hide", !pinned)
     document.getElementById("pin-unpinned").classList.toggle("pin-unpinned-heart", !pinned)
-    document.getElementById("pin-unpinned").classList.toggle("hide", pinned)
 }
 
 async function delDir(path) {
@@ -2302,7 +2301,6 @@ async function onLoad() {
             document.getElementById("select-zip").remove();
 
             Logger.log("Theme (" + (Date.now() - start) + "ms).")
-
             await setTheme(localConfig.config.get("theme"), true)
             Logger.log("Covers (" + (Date.now() - start) + "ms).")
             await updateCoverImages(true)
@@ -2399,7 +2397,7 @@ async function onLoad() {
         const value = event.payload.text;
 
         await requestDirectory(selectedPath);
-        while (document.getElementById("loader").classList.contains("hide")) {
+        while (HTMLHelper.isHidden("loader")) {
         }
 
         Logger.log(value)
@@ -2456,6 +2454,7 @@ async function onLoad() {
             title: 'Select Backup File',
             defaultPath: local_path + fileTerminator + terminatePath("store\\backup") + fileTerminator
         });
+
         HTMLHelper.hide("profile-bg")
         await saveProfile();
         if (backup_select !== null && backup_select !== undefined) {
@@ -2472,6 +2471,7 @@ async function onLoad() {
             await updateProfiles(current_game_data_path);
             await loadCurrentProfileData(true);
         }
+
         HTMLHelper.hide("profile-blur")
     })
 
@@ -2514,20 +2514,6 @@ async function onLoad() {
         HTMLHelper.hide("profile-blur")
         HTMLHelper.hide("profile-bg")
     })
-
-    // document.getElementById("copy-profile").addEventListener("click", async () => {
-    //     let newProfile = "Default 0";
-    //     while (document.getElementById("profile-" + newProfile) !== null) {
-    //         newProfile = "Default " + (parseInt(newProfile.split(" ")[1]) + 1);
-    //     }
-    //     concurrent_profile_data[newProfile] = concurrent_profile_data[original_profile];
-    //     await create_profile(newProfile)()
-    //     await writeTextFile(get_profile_path(newProfile), JSON.stringify(await get_concurrent_game_data(), null, "\t"));
-    //     document.getElementById("profiles").scroll({
-    //         top: document.getElementById("profiles").scrollHeight,
-    //         behavior: "smooth"
-    //     })
-    // })
 
     document.getElementById("input-prompt-box").addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -2772,7 +2758,7 @@ async function onLoad() {
     })
 
     document.getElementById("play").addEventListener("mouseup", async () => {
-        if (currentEntry !== "" && document.getElementById("delete-prompt").classList.contains("hide")) {
+        if (currentEntry !== "" && HTMLHelper.isHidden("delete-prompt")) {
             await getLauncher(currentEntry).functions().open();
         }
     })

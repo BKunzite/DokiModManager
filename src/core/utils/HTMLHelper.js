@@ -21,6 +21,43 @@ class HTMLHelperObject {
     }
 
     /**
+     * Adds 'Hide' From ClassList
+     * @param {HTMLElement} elementId
+     */
+    hideElement(element) {
+        element.classList.add("hide")
+    }
+
+    /**
+     * Removes 'Hide' From ClassList
+     * @param {string} elementId
+     */
+    showElement(element) {
+        element.classList.remove("hide")
+    }
+
+    /**
+     * Adds 'Hide' From ClassList
+     * @param {String} elementId
+     * @returns {boolean}
+     */
+    isHidden(elementId) {
+        return document.getElementById(elementId).classList.contains("hide")
+    }
+
+    /**
+     * Toggle Whether A Element Is Visible
+     * @param {string} elementId
+     */
+    toggle(elementId, visible= undefined) {
+        if ((document.getElementById(elementId).classList.contains("hide") && visible === undefined) || visible === false) {
+            this.show(elementId)
+        } else {
+            this.hide(elementId)
+        }
+    }
+
+    /**
      * Sets Current Loading Bar Percent
      * @param {number} percent Percent Of The Bar From 0 to 100
      * @param {boolean} isSlowMode Should Slowly Lerp To Value

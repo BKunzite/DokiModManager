@@ -1,5 +1,7 @@
 import {getOSType, OS} from "./OSUtil";
 
+export let fileTerminator = getOSType() === OS.TYPE.WINDOWS ? "\\" : "/"
+
 /**
  * Replaces \\\\ with operating-system-specific terminator.
  * @param {string} path
@@ -10,4 +12,3 @@ export function terminatePath(path) {
     return path.replace(/\\/g, fileTerminator);
 }
 
-export let fileTerminator = getOSType() === OS.TYPE.WINDOWS ? "\\" : "/"

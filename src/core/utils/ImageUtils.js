@@ -187,7 +187,7 @@ export function deref(url) {
  * @returns {Promise<void>}
  */
 
-export function preloadImage(src) {
+export function preloadImageObject(src) {
     return new Promise(async (resolve, reject) => {
         const img = new Image();
         img.decoding = 'async';
