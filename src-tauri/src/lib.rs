@@ -50,7 +50,7 @@ static LATEST_ARTIFACT_LINUX_APP: &str = "https://github.com/BKunzite/DokiModMan
 #[cfg(target_os = "linux")]
 static LATEST_ARTIFACT_LINUX_RPM: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/RPM/dokimodmanager.rpm";
 #[cfg(target_os = "linux")]
-static UN_RPYC_LINUX_HASH: &str = "b74b408f748bf45fe8a8023525ba728d25fac6a677b711c77dc8aa8d7e4a25f6";
+static UN_RPYC_LINUX_HASH: &str = "ff33e7c27d4456ad5baf09c86bdd1051c3ce2abfe458504c2e13f06e11a11983";
 #[cfg(target_os = "linux")]
 static UN_RPYC_LINUX: &str =
     "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.sh";
@@ -1600,8 +1600,8 @@ pub async fn run() {
 
     #[cfg(target_os = "windows")]
     {
-        if !exists("./unrpyc.exe").unwrap()
-            || crate::hash::get_file_hash("./unrpyc.exe").expect("Unable to get hash on UNRPYC") != crate::UN_RPYC_HASH
+        if !exists(get_current_dir().join("unrpyc.exe")).unwrap()
+            || get_file_hash(&get_current_dir().join("unrpyc.exe").display().to_string()).expect("Unable to get hash on UNRPYC") != crate::UN_RPYC_HASH
         {
             crate::update_unrpyc().await;
         }
@@ -1609,8 +1609,8 @@ pub async fn run() {
 
     #[cfg(target_os = "linux")]
     {
-        if !exists("./unrpyc.sh").unwrap()
-            || get_file_hash("./unrpyc.sh").expect("Unable to get hash on UNRPYC") != UN_RPYC_LINUX_HASH
+        if !exists(get_current_dir().join("unrpyc.sh")).unwrap()
+            || get_file_hash(&get_current_dir().join("unrpyc.sh").display().to_string()).expect("Unable to get hash on UNRPYC") != UN_RPYC_LINUX_HASH
         {
             update_unrpyc().await;
         }
