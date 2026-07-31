@@ -95,6 +95,8 @@ LINUX BETA SUPPORT IS HERE!
 Known Issues:
  - WebGTK rendering artifacts
  - Downloads Randomly Not Starting (WebGTK Issue)
+   - You might have to just import the mod ZIP file
+   downloaded from your browser
  - Current Update System May Be Broken, If So, Update Manually Via GitHub
  - Some Mods May Not Load (Not all mods support linux)
  - Non-Resizeable Window (A full UI update would have to be done)

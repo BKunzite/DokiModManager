@@ -1568,6 +1568,10 @@ async fn update_unrpyc() {
     }
     out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
         .unwrap();
+    #[cfg(target_os = "linux")]
+    {
+        chmod_x_file(&get_current_dir().join("unrpyc.sh").display().to_string());
+    }
 }
 
 pub fn get_current_dir() -> PathBuf {
