@@ -86,16 +86,13 @@ export function formatModName(text) {
     return text.replace(/\b(ddlc|renpy7mod|renpy8mod)\b/gi, "").replace(/-/g, " ").trim()
 }
 
+const replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+const replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
+const replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
+
 export function linkify(inputText) {
-    let replacedText, replacePattern1, replacePattern2, replacePattern3;
-
-    replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
-    replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank" style="cursor: grab;">$1</a>');
-
-    replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
+    let replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank" style="cursor: grab;">$1</a>');
     replacedText = replacedText.replace(replacePattern2, '$1<a href="http://$2" target="_blank" style="cursor: grab;">$2</a>');
-
-    replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
     replacedText = replacedText.replace(replacePattern3, '<a href="mailto:$1" style="cursor: grab;">$1</a>');
 
     return replacedText;
