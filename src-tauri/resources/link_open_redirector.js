@@ -9,8 +9,11 @@ window.__TAURI__ = null;
  */
 
 (() => {
-    const isLinux = navigator.userAgent.toLowerCase().includes('linux');
-    const AD_DOMAINS = [
+    console.log("LINK REDIRECT - DOKI DOKI MOD MANAGER - INJECTED")
+    const isLinux = navigator.userAgent.toLowerCase().includes("linux");
+
+    const AD_DOMAINS = []
+        let r = [
         "doubleclick.net",
         "googlesyndication.com",
         "adservice.google.com",
@@ -36,117 +39,120 @@ window.__TAURI__ = null;
         "connect.facebook.net"
     ];
 
-    const IS_URL_BLOCKED = (url) => {
-        if (url === null || url === undefined) {
-            return false;
-        }
-        return AD_DOMAINS.some(domain => url.includes(domain));
-    };
+    function isUrlBlocked(value) {
+        console.log(value)
+        if (value == null) return false;
 
-    const OLD_FETCH = window.fetch;
-    const OLD_OPEN = XMLHttpRequest.prototype.open;
-    const OLD_SEND = XMLHttpRequest.prototype.send;
-
-    window.fetch = async function (input, init) {
-        const url = typeof input === 'string' ? input : input.url;
-        if (IS_URL_BLOCKED(url)) {
-            return Promise.reject(new Error('Blocked'))
-        }
-        return OLD_FETCH.apply(this, arguments)
-    };
-
-    XMLHttpRequest.prototype.open = function (method, url) {
-        if (IS_URL_BLOCKED(url)) {
-            this._blocked = true;
-            return;
-        }
-        return OLD_OPEN.apply(this, arguments);
-    };
-
-    XMLHttpRequest.prototype.send = function () {
-        if (this._blocked) return;
-        return OLD_SEND.apply(this, arguments);
-    };
-
-    if (!isLinux) {
-        return;
+        const url = typeof value === "string" ? value : String(value);
+        return AD_DOMAINS.some((domain) => url.includes(domain));
     }
 
-    const blobMap = new Map();
-    const originalCreateObjectURL = URL.createObjectURL;
+    const originalFetch = window.fetch;
+    const originalOpen = XMLHttpRequest.prototype.open;
+    const originalSend = XMLHttpRequest.prototype.send;
 
-    URL.createObjectURL = function (obj) {
-        const url = originalCreateObjectURL.call(this, obj);
-        if (obj instanceof Blob && !(obj instanceof MediaSource)) {
-            blobMap.set(url, obj);
+    window.fetch = function (input, init) {
+        const url = typeof input === "string" ? input : input?.url;
+
+        if (isUrlBlocked(url)) {
+            return Promise.reject(new Error(`Blocked request: ${url}`));
         }
-        return url;
+
+        return originalFetch.call(this, input, init);
     };
 
-    const originalRevoke = URL.revokeObjectURL;
-    URL.revokeObjectURL = function (url) {
-        blobMap.delete(url);
-        originalRevoke.call(this, url);
-    };
+    XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+        this._blockedByScript = isUrlBlocked(url);
 
-    const originalClick = HTMLAnchorElement.prototype.click;
-    HTMLAnchorElement.prototype.click = function () {
-        if (this.hasAttribute('download') || this.href?.startsWith('blob:')) {
-            const filename = this.getAttribute('download') || getFilenameFromUrl(this.href);
-            triggerDownload(this.href, filename);
+        if (this._blockedByScript) {
             return;
         }
-        return originalClick.call(this);
+
+        return originalOpen.call(this, method, url, ...rest);
     };
 
-    navigator.msSaveBlob = async function (blob, filename) {
-        const name = filename || getFilenameFromBlob(blob);
-        await saveBlob(blob, name);
-        return true;
+    XMLHttpRequest.prototype.send = function (...args) {
+        if (this._blockedByScript) {
+            queueMicrotask(() => {
+                this.dispatchEvent(new Event("error"));
+                this.dispatchEvent(new Event("loadend"));
+            });
+            return;
+        }
+
+        return originalSend.apply(this, args);
     };
 
-    const requestDownload = (file_name, bytes) => {
-        __TAURI__APP.event.emit("request_download", {
-            file_name: file_name,
-            url: bytes
-        })
-        return Promise.reject(new Error('Tauri internals not available'));
-    };
+    if (!isLinux) return;
 
     function getFilenameFromUrl(url) {
         try {
-            const u = new URL(url, window.location.href);
-            const name = u.pathname.split('/').pop();
-            if (name && name.includes('.')) return decodeURIComponent(name);
-            return 'download.bin';
+            const parsed = new URL(url, window.location.href);
+            const name = parsed.pathname.split("/").pop();
+
+            return name && name.includes(".")
+                ? decodeURIComponent(name)
+                : "download.bin";
         } catch {
-            return url.split('/').pop()?.split('?')[0] || 'download.bin';
+            return url.split("/").pop()?.split("?")[0] || "download.bin";
         }
     }
 
     function getFilenameFromBlob(blob) {
-        const ext = blob.type.split('/')[1]?.split(';')[0] || 'bin';
-        return `download.${ext}`;
+        const subtype = blob.type.split("/")[1]?.split(";")[0] || "bin";
+        return `download.${subtype}`;
+    }
+
+    async function requestDownload(fileName, url) {
+        __TAURI__APP.event.emit("request_download", {
+            file_name: fileName,
+            url: url
+        })
     }
 
     async function saveBlob(blob, filename) {
         try {
             const path = await requestDownload(filename, blob);
+
+            if (path) {
+                console.log(`[downloads] Saved "${filename}" to ${path}`);
+            }
+        } catch (error) {
+            console.error(`[downloads] Failed to save "${filename}":`, error);
+        }
+    }
+
+    async function triggerDownload(url, filename) {
+        try {
+            const path = await requestDownload(filename, url);
             console.log(`[downloads] Saved "${filename}" to ${path}`);
         } catch (err) {
             console.error(`[downloads] Failed to save "${filename}":`, err);
         }
     }
 
-    async function triggerDownload(url, filename) {
-        try {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            await saveBlob(blob, filename);
-        } catch (err) {
-            console.error(`[downloads] Fetch failed for ${url}:`, err);
+    const originalClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () {
+        const url = this.href;
+        const shouldIntercept =
+            this.hasAttribute("download") ||
+            url?.startsWith("http://") ||
+            url?.startsWith("https://");
+
+        if (!shouldIntercept) {
+            return originalClick.call(this);
         }
-    }
+
+        const filename =
+            this.getAttribute("download") ||
+            getFilenameFromUrl(url);
+
+        void triggerDownload(url, filename);
+    };
+    navigator.msSaveBlob = async function (blob, filename) {
+        await saveBlob(blob, filename || getFilenameFromBlob(blob));
+        return true;
+    };
 })();
 
 /**
@@ -176,7 +182,7 @@ document.addEventListener("click", (e) => {
 window.open = function (url, _target, _features) {
     __TAURI__APP.event.emit("open_webview", {
         url: url,
-        name: "external_webview"
+        name: "external_webview_" + Date.now()
     })
 
     return null;

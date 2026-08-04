@@ -1,4 +1,5 @@
 use crate::hash::get_file_hash;
+use dirs::home_dir;
 use futures_util::TryStreamExt;
 use include_dir::{include_dir, Dir};
 use jwalk::WalkDir;
@@ -8,31 +9,39 @@ use rayon::{ThreadPool, ThreadPoolBuilder};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::collections::{hash_map::Entry, HashMap};
+use std::ffi::OsStr;
+use std::fmt::format;
 use std::fs::{create_dir_all, exists, remove_dir_all, remove_file, File};
 #[allow(unused_imports)]
 use std::io::{Read, Write};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::OnceLock;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex, OnceLock
+};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
-use std::fmt::format;
-use dirs::home_dir;
 use sysinfo::{ProcessesToUpdate, System};
 use tauri::webview::{DownloadEvent, NewWindowResponse};
-use tauri::{AppHandle, Emitter, Listener, Manager, PhysicalSize, PixelUnit, Size, Url, WebviewUrl, WebviewWindowBuilder, WindowSizeConstraints};
 use tauri::window::Color;
+use tauri::{
+    AppHandle, Emitter, Listener, Manager, PhysicalSize, PixelUnit, Size, Url, WebviewUrl,
+    WebviewWindowBuilder, WindowSizeConstraints,
+};
 use tauri_plugin_aptabase::EventTracker;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_fs_pro::{is_dir, is_file};
 use tokio::fs::File as TokioFile;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::oneshot;
 use tokio::task;
 use unrar::Archive;
 use window_vibrancy::{apply_acrylic, apply_vibrancy, NSVisualEffectMaterial};
 use zip::ZipArchive;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -50,7 +59,8 @@ static LATEST_ARTIFACT_LINUX_APP: &str = "https://github.com/BKunzite/DokiModMan
 #[cfg(target_os = "linux")]
 static LATEST_ARTIFACT_LINUX_RPM: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/RPM/dokimodmanager.rpm";
 #[cfg(target_os = "linux")]
-static UN_RPYC_LINUX_HASH: &str = "ff33e7c27d4456ad5baf09c86bdd1051c3ce2abfe458504c2e13f06e11a11983";
+static UN_RPYC_LINUX_HASH: &str =
+    "ff33e7c27d4456ad5baf09c86bdd1051c3ce2abfe458504c2e13f06e11a11983";
 #[cfg(target_os = "linux")]
 static UN_RPYC_LINUX: &str =
     "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.sh";
@@ -65,6 +75,9 @@ static SCRIPTS_RPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
 static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
+
+static DOWNLOAD_STATE: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
+static PENDING_FALLBACKS: OnceLock<Mutex<HashMap<String, oneshot::Sender<()>>>> = OnceLock::new();
 
 #[cfg(target_os = "linux")]
 #[derive(Debug, Serialize, Deserialize)]
@@ -158,10 +171,11 @@ async fn path_select(path: &str) -> Result<(), String> {
 #[tauri::command]
 async fn request_path(app: AppHandle) -> Result<(), String> {
     let default_config_data: ConfigData = ConfigData {
-        directory: get_current_dir()
-            .display()
-            .to_string()
-            + std::path::MAIN_SEPARATOR_STR + "store" + std::path::MAIN_SEPARATOR_STR + "mods",
+        directory: get_current_dir().display().to_string()
+            + std::path::MAIN_SEPARATOR_STR
+            + "store"
+            + std::path::MAIN_SEPARATOR_STR
+            + "mods",
     };
     let mut contents = String::new();
 
@@ -189,13 +203,8 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
         "pathRespond",
         ReturnPath {
             final_data: &final_data.directory,
-            local_path: &get_current_dir()
-                .to_string_lossy(),
-            path: home_dir()
-                .unwrap()
-                .join("Downloads")
-                .to_str()
-                .unwrap(),
+            local_path: &get_current_dir().to_string_lossy(),
+            path: home_dir().unwrap().join("Downloads").to_str().unwrap(),
             reinstall: false,
         },
     )
@@ -250,11 +259,7 @@ async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
         return;
     }
 
-    let file_size = File::open(&scriptsrpa)
-        .unwrap()
-        .metadata()
-        .unwrap()
-        .len();
+    let file_size = File::open(&scriptsrpa).unwrap().metadata().unwrap().len();
 
     println!("File Size: {}", file_size);
     if file_size > 280_0000 {
@@ -294,7 +299,11 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
                 println!(
                     "{}",
                     path_out
-                        .join(format!("ddmm-temp-options{}{}",std::path::MAIN_SEPARATOR, ""))
+                        .join(format!(
+                            "ddmm-temp-options{}{}",
+                            std::path::MAIN_SEPARATOR,
+                            ""
+                        ))
                         .to_str()
                         .unwrap()
                 );
@@ -318,16 +327,15 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
     let mut rpa_archive = warpalib::RenpyArchive::open(binding.as_path()).unwrap();
 
     create_dir_all(path_out.as_path()).unwrap();
-    let early_path = path_out.join(format!("ddmm-temp-options{}options.rpy", std::path::MAIN_SEPARATOR));
-    println!("path - {}", early_path.to_str().unwrap() );
+    let early_path = path_out.join(format!(
+        "ddmm-temp-options{}options.rpy",
+        std::path::MAIN_SEPARATOR
+    ));
+    println!("path - {}", early_path.to_str().unwrap());
     if exists(&early_path).unwrap() {
         println!("Found Options File! (EARLY ESCAPE)");
 
-        return parse_source(
-            &fs::read_to_string(early_path).unwrap(),
-            option,
-        )
-        .unwrap_or_default();
+        return parse_source(&fs::read_to_string(early_path).unwrap(), option).unwrap_or_default();
     }
     for (output, content) in rpa_archive.content.iter() {
         if output.as_path().to_str().unwrap().contains("option") {
@@ -339,13 +347,21 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
             println!(
                 "{}",
                 path_out
-                    .join(format!("ddmm-temp-options{}{}",std::path::MAIN_SEPARATOR, cmain))
+                    .join(format!(
+                        "ddmm-temp-options{}{}",
+                        std::path::MAIN_SEPARATOR,
+                        cmain
+                    ))
                     .to_str()
                     .unwrap()
             );
             let mut file = File::create(
                 path_out
-                    .join(format!("ddmm-temp-options{}{}",std::path::MAIN_SEPARATOR, cmain))
+                    .join(format!(
+                        "ddmm-temp-options{}{}",
+                        std::path::MAIN_SEPARATOR,
+                        cmain
+                    ))
                     .as_path()
                     .to_str()
                     .unwrap(),
@@ -388,7 +404,11 @@ fn rpa_archive_option(path_out: &Path, cmain: &str, option: &str) -> String {
     }
     exchild.arg(
         path_out
-            .join(format!("ddmm-temp-options{}{}",std::path::MAIN_SEPARATOR, cmain))
+            .join(format!(
+                "ddmm-temp-options{}{}",
+                std::path::MAIN_SEPARATOR,
+                cmain
+            ))
             .as_path()
             .to_str()
             .unwrap(),
@@ -574,8 +594,26 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     #[cfg(target_os = "linux")]
     if path.ends_with(".sh") {
         chmod_x_file(path);
-        let execs = PathBuf::from(&path).parent().unwrap().join("lib").join("py2-linux-x86_64");
-        if is_dir(PathBuf::from(&path).parent().unwrap().join("lib").join("py2-linux-x86_64")).await {
+        let execs = PathBuf::from(&path)
+            .parent()
+            .unwrap()
+            .join("lib")
+            .join("py2-linux-x86_64");
+        let execs2 = PathBuf::from(&path)
+            .parent()
+            .unwrap()
+            .join("lib")
+            .join("linux-x86_64");
+
+        if is_dir(
+            PathBuf::from(&path)
+                .parent()
+                .unwrap()
+                .join("lib")
+                .join("py2-linux-x86_64"),
+        )
+        .await
+        {
             for entry in WalkDir::new(&execs)
                 .skip_hidden(false)
                 .into_iter()
@@ -591,6 +629,31 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         } else {
             println!("No Execs Found! path={}", &execs.to_str().unwrap());
         }
+
+        if is_dir(
+            PathBuf::from(&path)
+                .parent()
+                .unwrap()
+                .join("lib")
+                .join("linux-x86_64"),
+        )
+        .await
+        {
+            for entry in WalkDir::new(&execs2)
+                .skip_hidden(false)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
+                let path = entry.path();
+                if !path.is_file() {
+                    continue;
+                }
+                let file_name = path.file_name().unwrap().to_str().unwrap();
+                chmod_x_file(path.to_str().unwrap());
+            }
+        } else {
+            println!("No Execs Found! path2={}", &execs.to_str().unwrap());
+        }
     }
 
     let mut launch_result = Command::new(path)
@@ -598,7 +661,6 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn();
-
 
     match launch_result {
         Ok(process) => {
@@ -838,7 +900,8 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     )
     .unwrap();
 
-    copy_dir_recursive(&get_current_dir().join("store").join("ddlc"), &target_dir).expect("Failed to copy ddlc!");
+    copy_dir_recursive(&get_current_dir().join("store").join("ddlc"), &target_dir)
+        .expect("Failed to copy ddlc!");
 
     logger.log(String::from("I/O Copy DDLC Files Finished"));
 
@@ -927,8 +990,12 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
                 let p = &PathBuf::from(nested);
                 for file in p.read_dir().unwrap() {
                     let path = file.unwrap().path();
-                    let close_dir = path.to_str().unwrap().replace(&format!("{}{}", nested, std::path::MAIN_SEPARATOR), "");
-                    if is_game_folder(&close_dir) && !close_dir.contains(std::path::MAIN_SEPARATOR) {
+                    let close_dir = path
+                        .to_str()
+                        .unwrap()
+                        .replace(&format!("{}{}", nested, std::path::MAIN_SEPARATOR), "");
+                    if is_game_folder(&close_dir) && !close_dir.contains(std::path::MAIN_SEPARATOR)
+                    {
                         is_game = true;
                         break;
                     }
@@ -1093,7 +1160,12 @@ fn import_game_rar(archive_path: &Path) -> bool {
             header.skip().expect("Failed to skip header")
         } else if header.entry().is_file() {
             if is_game_folder(header.entry().filename.to_str().unwrap())
-                && !header.entry().filename.to_str().unwrap().contains(std::path::MAIN_SEPARATOR)
+                && !header
+                    .entry()
+                    .filename
+                    .to_str()
+                    .unwrap()
+                    .contains(std::path::MAIN_SEPARATOR)
             {
                 found = true;
                 break;
@@ -1157,69 +1229,226 @@ async fn download_file(app: &AppHandle, url: String, save_path: String) -> Resul
     Ok(())
 }
 
+fn file_name_from_url(url: &Url) -> String {
+    url.path_segments()
+        .and_then(|segments| segments.filter(|segment| !segment.is_empty()).last())
+        .unwrap_or("download")
+        .to_owned()
+}
+
+fn is_archive_url(url: &Url) -> bool {
+    url.path().rsplit_once('.').is_some_and(|(_, extension)| {
+        matches!(extension.to_ascii_lowercase().as_str(), "zip" | "rar")
+    })
+}
+async fn run_download(app: AppHandle, url: String, path: PathBuf) {
+    let path_string = path.to_string_lossy().into_owned();
+    println!("downloading;");
+    app.emit(
+        "download_start",
+        StringData {
+            text: &format!("{} | {}", url, path_string),
+        },
+    )
+    .unwrap();
+
+    let _ = download_file(&app, url.clone(), path_string.clone()).await;
+
+    app.emit(
+        "download_end",
+        StringData {
+            text: &format!("{} | {} | {}", url, path_string, true),
+        },
+    )
+    .unwrap();
+}
+fn download_state() -> &'static Mutex<HashMap<String, bool>> {
+    DOWNLOAD_STATE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn pending_fallbacks() -> &'static Mutex<HashMap<String, oneshot::Sender<()>>> {
+    PENDING_FALLBACKS.get_or_init(|| Mutex::new(HashMap::new()))
+}
 #[tauri::command]
 async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), String> {
-    let script_path = RESOURCES
+    let external_url = Url::parse(url).map_err(|error| error.to_string())?;
+
+    let script = RESOURCES
         .get_file("link_open_redirector.js")
-        .expect("Failed to get script path");
-    let script = script_path.contents_utf8().unwrap();
-    let downloads_dir = get_current_dir()
-        .join("store")
-        .join("downloads")
-        .display()
-        .to_string();
-    let cache_dir = get_current_dir().join("store").join("cache");
+        .and_then(|file| file.contents_utf8())
+        .ok_or_else(|| "Failed to load link_open_redirector.js".to_string())?;
 
-    create_dir_all(&downloads_dir).expect("FS Error: Failed To Create Store/Mods");
-    create_dir_all(&cache_dir).expect("FS Error: Failed To Create Store/Cache");
+    let store_dir = get_current_dir().join("store");
+    let downloads_dir = store_dir.join("downloads");
+    let cache_dir = store_dir.join("cache");
 
-    let _window =
-        WebviewWindowBuilder::new(&app.clone(), format!("external-{}_{}",name, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()), WebviewUrl::External(Url::parse(url).unwrap()))
-            .inner_size(1200f64, 600f64)
-            .title(name.split("_").collect::<Vec<&str>>().join(" "))
-            .initialization_script(script)
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36")
-            .on_navigation(move |_| {
-                true
-            })
-            .data_directory(
-                cache_dir.clone()
-            )
-            .on_new_window(move |e, _| {
-                if e.domain().unwrap().eq("econventa.com") {
-                    return NewWindowResponse::Deny;
+    create_dir_all(&downloads_dir)
+        .map_err(|error| format!("Failed to create downloads directory: {error}"))?;
+
+    create_dir_all(&cache_dir)
+        .map_err(|error| format!("Failed to create cache directory: {error}"))?;
+
+    let navigation_app = app.clone();
+    let navigation_downloads_dir = downloads_dir.clone();
+    let download_downloads_dir = downloads_dir.clone();
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_secs();
+
+    let window_label = format!("external-{}_{}", name, timestamp);
+
+    WebviewWindowBuilder::new(&app, window_label, WebviewUrl::External(external_url))
+        .inner_size(1200.0, 600.0)
+        .title(name.replace('_', " "))
+        .initialization_script(script)
+        .user_agent(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
+             AppleWebKit/537.36 (KHTML, like Gecko) \
+             Chrome/146.0.0.0 Safari/537.36",
+        )
+        .on_navigation(move |navigation_url| {
+            println!("Navigation received: {navigation_url}");
+
+            if navigation_url.domain() == Some("econventa.com") {
+                return false;
+            }
+
+            #[cfg(target_os = "linux")]
+            {
+                if is_archive_url(navigation_url) {
+                    let url = navigation_url.to_string();
+
+                    let already_downloading = download_state()
+                        .lock()
+                        .expect("download_state mutex poisoned")
+                        .get(&url)
+                        .copied()
+                        .unwrap_or(false);
+
+                    if already_downloading {
+                        println!("Fallback not scheduled; already downloading: {url}");
+                        return true;
+                    }
+
+                    let file_name = file_name_from_url(navigation_url);
+                    let app = navigation_app.clone();
+                    let downloads_dir = navigation_downloads_dir.clone();
+
+                    let (cancel_sender, mut cancel_receiver) = oneshot::channel::<()>();
+
+                    {
+                        let mut fallbacks = pending_fallbacks()
+                            .lock()
+                            .expect("pending_fallbacks mutex poisoned");
+
+                        if let Some(previous_sender) = fallbacks.insert(url.clone(), cancel_sender) {
+                            let _ = previous_sender.send(());
+                        }
+                    }
+
+                    println!("Fallback scheduled: {url}");
+
+                    let fallback_url = url.clone();
+
+                    tauri::async_runtime::spawn(async move {
+                        tokio::select! {
+                            _ = &mut cancel_receiver => {
+                                println!("Fallback cancelled: {fallback_url}");
+                            }
+
+                            _ = tokio::time::sleep(Duration::from_secs(10)) => {
+                                pending_fallbacks()
+                                    .lock()
+                                    .expect("pending_fallbacks mutex poisoned")
+                                    .remove(&fallback_url);
+
+                                let already_downloading = download_state()
+                                    .lock()
+                                    .expect("download_state mutex poisoned")
+                                    .get(&fallback_url)
+                                    .copied()
+                                    .unwrap_or(false);
+
+                                if already_downloading {
+                                    println!("Fallback skipped after timer: {fallback_url}");
+                                    return;
+                                }
+
+                                download_state()
+                                    .lock()
+                                    .expect("download_state mutex poisoned")
+                                    .insert(fallback_url.clone(), true);
+
+                                println!("Fallback downloading: {fallback_url}");
+
+                                let path = downloads_dir.join(file_name);
+
+                                run_download(app, fallback_url, path).await;
+                            }
+                        }
+                    });
                 }
+            }
+
+            true
+        })
+        .data_directory(cache_dir)
+        .on_new_window(move |event, _| {
+            if event.domain() == Some("econventa.com") {
+                NewWindowResponse::Deny
+            } else {
                 NewWindowResponse::Allow
-            })
-            .on_download(move |webview, event| {
-                match event {
-                    DownloadEvent::Requested { url, destination } => {
-                        let url = url.to_string();
-                        let path = PathBuf::from(downloads_dir.clone()).join(destination.file_name().unwrap());
-                        let app = webview.app_handle().clone();
+            }
+        })
+        .on_download(move |webview, event| match event {
+            DownloadEvent::Requested { url, destination } => {
+                let url = url.to_string();
 
-                        tauri::async_runtime::spawn(async move {
-                            app.emit("download_start",
-                                     StringData {
-                                              text: &format!("{} | {}", url, path.to_str().expect("Failed to get path")),
-                                          }).unwrap();
-                            let _ = download_file(&app, url.clone(), path.to_str().expect("Failed to get path").to_string()).await.unwrap();
-                            app.emit("download_end",
-                                             StringData {
-                                                 text: &format!("{} | {} | {}", url, path.to_str().expect("Failed to get path"), true),
-                                             }).unwrap();
-                        });
+                download_state()
+                    .lock()
+                    .expect("download_state mutex poisoned")
+                    .insert(url.clone(), true);
 
-                        false
+                #[cfg(target_os = "linux")]
+                {
+                    if let Some(cancel_sender) = pending_fallbacks()
+                        .lock()
+                        .expect("pending_fallbacks mutex poisoned")
+                        .remove(&url)
+                    {
+                        let _ = cancel_sender.send(());
+                        println!("Fallback cancellation sent: {url}");
+                    } else {
+                        println!("No pending fallback to cancel: {url}");
                     }
-                    DownloadEvent::Finished { .. } => {
-                        true
-                    }
-                    _ => false,
                 }
-            })
-            .build()
-            .expect("Failed to build webview");
+
+                let app = webview.app_handle().clone();
+
+                let file_name = destination
+                    .file_name()
+                    .unwrap_or_else(|| OsStr::new("download"));
+
+                let path = download_downloads_dir.join(file_name);
+
+                println!("Download event received: {url}");
+
+                tauri::async_runtime::spawn(async move {
+                    run_download(app, url, path).await;
+                });
+
+                false
+            }
+
+            DownloadEvent::Finished { .. } => true,
+
+            _ => false,
+        })
+        .build()
+        .map_err(|error| error.to_string())?;
+
     Ok(())
 }
 
@@ -1319,7 +1548,7 @@ async fn set_ddlc_zip(path: &str) -> Result<(), bool> {
 
     fs::copy(
         PathBuf::from(path),
-        get_current_dir().join("store").join("ddlc.zip")
+        get_current_dir().join("store").join("ddlc.zip"),
     )
     .unwrap();
 
@@ -1401,8 +1630,16 @@ async fn update_linux_binary() {
     }
 
     let mut update_script_path = File::create(get_current_dir().join("update.sh")).unwrap();
-    update_script_path.write_all(update_script.as_bytes()).unwrap();
-    chmod_x_file(get_current_dir().join("update.sh").display().to_string().as_str());
+    update_script_path
+        .write_all(update_script.as_bytes())
+        .unwrap();
+    chmod_x_file(
+        get_current_dir()
+            .join("update.sh")
+            .display()
+            .to_string()
+            .as_str(),
+    );
 
     match install_info.kind {
         InstallType::Appimage => {
@@ -1413,7 +1650,8 @@ async fn update_linux_binary() {
             if exists(get_current_dir().join("dokimodmanager-new.AppImage")).unwrap() {
                 remove_file(get_current_dir().join("dokimodmanager-new.AppImage")).unwrap();
             }
-            let mut out = File::create("dokimodmanager-new.AppImage").expect("Failed to create file");
+            let mut out =
+                File::create("dokimodmanager-new.AppImage").expect("Failed to create file");
             out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
                 .unwrap();
 
@@ -1425,9 +1663,17 @@ async fn update_linux_binary() {
             if exists(get_current_dir().join("update_app.sh")).unwrap() {
                 remove_file(get_current_dir().join("update_app.sh")).unwrap();
             }
-            let mut update_script_path2 = File::create(get_current_dir().join("update_app.sh")).unwrap();
-            update_script_path2.write_all(update_script.as_bytes()).unwrap();
-            run_solo_proc_linux(get_current_dir().join("update_app.sh").display().to_string());
+            let mut update_script_path2 =
+                File::create(get_current_dir().join("update_app.sh")).unwrap();
+            update_script_path2
+                .write_all(update_script.as_bytes())
+                .unwrap();
+            run_solo_proc_linux(
+                get_current_dir()
+                    .join("update_app.sh")
+                    .display()
+                    .to_string(),
+            );
         }
         InstallType::Deb => {
             println!("Updating DokimodManager - Debian");
@@ -1437,11 +1683,18 @@ async fn update_linux_binary() {
             if exists(get_current_dir().join("dokimodmanager.deb")).unwrap() {
                 remove_file(get_current_dir().join("dokimodmanager.deb")).unwrap();
             }
-            let mut out = File::create(get_current_dir().join("dokimodmanager.deb")).expect("Failed to create file");
+            let mut out = File::create(get_current_dir().join("dokimodmanager.deb"))
+                .expect("Failed to create file");
             out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
                 .unwrap();
 
-            run_proc_linux(get_current_dir().join("update.sh").display().to_string(), get_current_dir().join("dokimodmanager.deb").display().to_string());
+            run_proc_linux(
+                get_current_dir().join("update.sh").display().to_string(),
+                get_current_dir()
+                    .join("dokimodmanager.deb")
+                    .display()
+                    .to_string(),
+            );
         }
         InstallType::Rpm => {
             println!("Updating DokimodManager - RPM");
@@ -1451,10 +1704,17 @@ async fn update_linux_binary() {
             if exists(get_current_dir().join("dokimodmanager.rpm")).unwrap() {
                 remove_file(get_current_dir().join("dokimodmanager.rpm")).unwrap();
             }
-            let mut out = File::create(get_current_dir().join("dokimodmanager.rpm")).expect("Failed to create file");
+            let mut out = File::create(get_current_dir().join("dokimodmanager.rpm"))
+                .expect("Failed to create file");
             out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
                 .unwrap();
-            run_proc_linux(get_current_dir().join("update.sh").display().to_string(), get_current_dir().join("dokimodmanager.rpm").display().to_string());
+            run_proc_linux(
+                get_current_dir().join("update.sh").display().to_string(),
+                get_current_dir()
+                    .join("dokimodmanager.rpm")
+                    .display()
+                    .to_string(),
+            );
         }
         InstallType::Unknown => {
             println!("Unknown Install Type");
@@ -1473,7 +1733,8 @@ fn run_proc_linux(executor: String, path: String) {
         .arg(executor)
         .arg(path)
         .spawn()
-        .map_err(|e| e.to_string()).expect("Failed to run script");
+        .map_err(|e| e.to_string())
+        .expect("Failed to run script");
 }
 
 #[cfg(target_os = "linux")]
@@ -1484,7 +1745,8 @@ fn run_solo_proc_linux(executor: String) {
         .arg("-e")
         .arg(executor)
         .spawn()
-        .map_err(|e| e.to_string()).expect("Failed to run script");
+        .map_err(|e| e.to_string())
+        .expect("Failed to run script");
 }
 #[cfg(target_os = "windows")]
 async fn update_windows_binary() {
@@ -1523,7 +1785,6 @@ fn open_path(path: &str) {
             opener::reveal(path).expect("Failed to open path");
         }
     }
-
 }
 
 #[tauri::command]
@@ -1538,7 +1799,11 @@ fn track(app: &AppHandle, event: String, props: Option<serde_json::Value>) {
 
 async fn make_config() {
     let default_config_data: ConfigData = ConfigData {
-        directory: get_current_dir().display().to_string() + std::path::MAIN_SEPARATOR_STR + "store" + std::path::MAIN_SEPARATOR_STR + "mods",
+        directory: get_current_dir().display().to_string()
+            + std::path::MAIN_SEPARATOR_STR
+            + "store"
+            + std::path::MAIN_SEPARATOR_STR
+            + "mods",
     };
 
     let json_data = serde_json::to_string_pretty(&default_config_data).unwrap();
@@ -1554,9 +1819,7 @@ async fn update_unrpyc() {
     {
         rpyc = UN_RPYC_LINUX;
     }
-    let resp = reqwest::get(rpyc)
-        .await
-        .expect("Failed to download latest");
+    let resp = reqwest::get(rpyc).await.expect("Failed to download latest");
     let mut out;
     #[cfg(target_os = "windows")]
     {
@@ -1581,31 +1844,25 @@ pub fn get_current_dir() -> PathBuf {
     }
     #[cfg(target_os = "linux")]
     {
-        return env::current_dir().expect("Could Not Get Current Directory").join(".dokimodmanager");
+        return env::current_dir()
+            .expect("Could Not Get Current Directory")
+            .join(".dokimodmanager");
     }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
-    create_dir_all(
-        get_current_dir()
-            .join("store/mods")
-            .display()
-            .to_string(),
-    )
-    .expect("FS Error: Failed To Create Store/Mods");
-    create_dir_all(
-        get_current_dir()
-            .join("store/images")
-            .display()
-            .to_string(),
-    )
-    .expect("FS Error: Failed To Create Store/Mods");
+    create_dir_all(get_current_dir().join("store/mods").display().to_string())
+        .expect("FS Error: Failed To Create Store/Mods");
+    create_dir_all(get_current_dir().join("store/images").display().to_string())
+        .expect("FS Error: Failed To Create Store/Mods");
 
     #[cfg(target_os = "windows")]
     {
         if !exists(get_current_dir().join("unrpyc.exe")).unwrap()
-            || get_file_hash(&get_current_dir().join("unrpyc.exe").display().to_string()).expect("Unable to get hash on UNRPYC") != crate::UN_RPYC_HASH
+            || get_file_hash(&get_current_dir().join("unrpyc.exe").display().to_string())
+                .expect("Unable to get hash on UNRPYC")
+                != crate::UN_RPYC_HASH
         {
             crate::update_unrpyc().await;
         }
@@ -1614,7 +1871,9 @@ pub async fn run() {
     #[cfg(target_os = "linux")]
     {
         if !exists(get_current_dir().join("unrpyc.sh")).unwrap()
-            || get_file_hash(&get_current_dir().join("unrpyc.sh").display().to_string()).expect("Unable to get hash on UNRPYC") != UN_RPYC_LINUX_HASH
+            || get_file_hash(&get_current_dir().join("unrpyc.sh").display().to_string())
+                .expect("Unable to get hash on UNRPYC")
+                != UN_RPYC_LINUX_HASH
         {
             update_unrpyc().await;
         }
@@ -1642,12 +1901,14 @@ pub async fn run() {
             #[cfg(target_os = "linux")]
             {
                 let _ = window.set_size(Size::Physical(PhysicalSize::new(1200, 600)));
-                window.set_size_constraints(WindowSizeConstraints {
-                    min_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
-                    max_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
-                    min_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
-                    max_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
-                }).ok();
+                window
+                    .set_size_constraints(WindowSizeConstraints {
+                        min_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
+                        max_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
+                        min_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
+                        max_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
+                    })
+                    .ok();
             }
 
             #[cfg(target_os = "windows")]
@@ -1660,7 +1921,7 @@ pub async fn run() {
 
             #[cfg(target_os = "linux")]
             {
-                let _ = window.set_background_color(Some(Color(50,50,50,255)));
+                let _ = window.set_background_color(Some(Color(50, 50, 50, 255)));
             }
 
             // Track App Closed
@@ -1680,10 +1941,9 @@ pub async fn run() {
                 let value = clone_handle2.clone();
 
                 task::spawn(async move {
-                    let data: DownloadRequest = serde_json::from_str(&payload).expect("Failed to read download request");
-                    let downloads_dir = get_current_dir()
-                        .join("store")
-                        .join("downloads");
+                    let data: DownloadRequest =
+                        serde_json::from_str(&payload).expect("Failed to read download request");
+                    let downloads_dir = get_current_dir().join("store").join("downloads");
                     let confirmed = value
                         .dialog()
                         .message(format!("Do you want to download \"{}\"?", data.file_name))
@@ -1691,7 +1951,12 @@ pub async fn run() {
                         .buttons(MessageDialogButtons::YesNo)
                         .blocking_show();
                     if confirmed {
-                        let _ = download_file(&value, data.url.to_string(), downloads_dir.join(data.file_name).display().to_string()).await;
+                        let _ = download_file(
+                            &value,
+                            data.url.to_string(),
+                            downloads_dir.join(data.file_name).display().to_string(),
+                        )
+                        .await;
                     }
                 });
             });

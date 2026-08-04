@@ -2240,6 +2240,11 @@ async function onLoad() {
                 document.getElementById("version").textContent = `(${CLIENT_VERSION})`
                 if (localConfig.config.get("version") !== CLIENT_VERSION) {
                     await saveConfig()
+                    if (TranslationUtil.getLanguage() === "") {
+                        escape_clause_language = true;
+                    }
+                    loadTranslation(TranslationUtil.getLanguage(), true)
+
                     HTMLHelper.show("changelog")
                     document.getElementById("changelog-title").textContent = "Update Complete! | " + newest_version.split("\n")[0]
                     document.getElementById("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
