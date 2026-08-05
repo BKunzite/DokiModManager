@@ -1,3 +1,5 @@
+import Logger from "./Logger";
+
 let os_type;
 
 export const OS = {
@@ -16,15 +18,28 @@ export const OS = {
 export function getOSType() {
     if (os_type !== undefined) return os_type;
     if (navigator.userAgent.toLowerCase().includes('linux')) {
-        os_type = "linux";
+        os_type = OS.TYPE.LINUX;
     } else if (navigator.userAgent.toLowerCase().includes('mac')) {
-        os_type = "mac";
+        os_type = OS.TYPE.MAC;
     } else {
-        os_type = "windows";
+        os_type = OS.TYPE.WINDOWS;
     }
     return os_type;
 }
 
-export function updateOSType() {
-    document.documentElement.setAttribute("os-type", getOSType())
+class DefaultClass {
+    Init() {
+        document.documentElement.setAttribute("os-type", getOSType())
+        Logger.log("Running on OS.TYPE-" + getOSType().toUpperCase())
+        if (getOSType() === OS.TYPE.LINUX) {
+            window.addEventListener('keydown', (e) => {
+                if (e.key === "r" && e.ctrlKey) {
+                    e.preventDefault();
+                    location.reload()
+                }
+            })
+        }
+    }
 }
+
+export default new DefaultClass()

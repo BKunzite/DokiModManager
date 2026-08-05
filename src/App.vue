@@ -106,52 +106,31 @@
       </div>
 
     </div>
-    <header class="install-info hide smooth-hide" id="install-info">Downloading ........ at 10mb/s</header>
-    <button class="report-open" id="report-open">
+    <button class="report-open grab" id="report-open">
       <span class="report-icon">&#59936;</span>
       <span id="report-text" class="report-text">Report Issue</span>
     </button>
     <button class="language" id="language">
-      <img src="./assets/spain.png" class="language-flag" id="language-flag">
+      <img src="./assets/Flags/spain.png" class="language-flag" id="language-flag">
       <span id="language-text" class="language-text">es</span>
     </button>
     <div class="language-list language-list-hide" id="language-list">
-      <button class="language-button-list" id="english">
-        <img src="./assets/english.png" class="language-flag-list">
-        <span class="language-text-list">English</span>
-      </button>
-      <button class="language-button-list" id="spanish">
-        <img src="./assets/spain.png" class="language-flag-list">
-        <span class="language-text-list">Español</span>
-      </button>
-      <button class="language-button-list" id="french">
-        <img src="./assets/france.png" class="language-flag-list">
-        <span class="language-text-list">Français</span>
-      </button>
-      <button class="language-button-list" id="russian">
-        <img src="./assets/russia.svg" class="language-flag-list">
-        <span class="language-text-list">Россия</span>
-      </button>
-      <button class="language-button-list" id="cantonese">
-        <img src="./assets/hong-kong.png" class="language-flag-list">
-        <span class="language-text-list">粵語</span>
-      </button>
-      <button class="language-button-list" id="japan">
-        <img src="./assets/japan.png" class="language-flag-list">
-        <span class="language-text-list">日本語</span>
-      </button>
-      <button class="language-button-list" id="pt">
-        <img src="./assets/pt.png" class="language-flag-list">
-        <span class="language-text-list">Português</span>
-      </button>
+
     </div>
-    <button class="close" id="close">&#60313;</button>
-    <button class="minimize" id="min">&#61870;</button>
+    <button class="close grab" id="close">&#60313;</button>
+    <button class="minimize grab" id="min">&#61870;</button>
+    <button class="downloads-show grab" id="downloads-show">&#60502;</button>
+    <div class="downloads-list smooth-hide hide" id="downloads-list">
+      <header class="downloads-header" id="downloads-header">Downloads</header>
+      <div class="inner-downloads-list" id="downloads-list-inner">
+        <header class="downloads-none" id="downloads-none">No Downloads</header>
+      </div>
+    </div>
     <div class="alert smooth-hide hide" id="alert">
       <header class="alert-title">Download Watcher</header>
       <header class="alert-subtitle" id="download-watcher">Allow this mod to be extracted and imported?</header>
       <header class="alert-subtitle2"><span style="font-family: Icon;">&#60807;</span> <span id="alert-name"
-                                                                                             style="font-weight: bold; position: absolute; font-size: 1rem; padding-top: 10px; padding-left: 10px;">BrokenPoet.zip</span>
+                                                                                              style="font-weight: bold; position: absolute; font-size: 1rem; padding-top: 10px; padding-left: 10px;">BrokenPoet.zip</span>
       </header>
       <header class="alert-subtitle3" id="sub3"><span style="font-family: Icon;">&#60766;</span> Size: <span
           id="alert-size" style="color: rgb(var(--primary-color))">800mb</span><br><span style="font-family: Icon;">&#60901;</span>

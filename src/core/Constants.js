@@ -1,3 +1,10 @@
+import SeasonsManager from "./seasonal/SeasonsManager";
+
+export const CURRENT = {
+    SEASON: SeasonsManager.SEASON.NONE
+
+}
+
 export const WARN_GENERIC_DATA_PATHS = [
     "DDLC-1454445547",
     "DDLCModTemplateTwo-Py3"
@@ -64,6 +71,7 @@ export const CLIENT_THEMES = {
         image: "Other_Theme_Icons/hacker-svgrepo-com.svg"
     }
 }
+
 export const USE_CACHED_IMAGING = true;
 export const HEART_EMPTY = "&#62920;";
 export const HEART_FULL = "&#62919;";

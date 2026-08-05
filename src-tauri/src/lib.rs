@@ -1,5 +1,5 @@
 use crate::hash::get_file_hash;
-use dirs::home_dir;
+use dirs::{download_dir, home_dir};
 use futures_util::TryStreamExt;
 use include_dir::{include_dir, Dir};
 use jwalk::WalkDir;
@@ -122,6 +122,12 @@ struct StringData<'a> {
     text: &'a str,
 }
 
+#[derive(Clone, Serialize)]
+struct DoubleStringData<'a> {
+    text: &'a str,
+    text2: &'a str
+}
+
 #[derive(serde::Deserialize)]
 struct WebviewOpen<'a> {
     url: &'a str,
@@ -135,9 +141,10 @@ struct DownloadRequest<'a> {
 }
 
 #[derive(Clone, Serialize)]
-struct IntData {
+struct IntData<'a> {
     number: u16,
     number_goal: u16,
+    path: &'a str
 }
 
 #[derive(Clone, Serialize)]
@@ -823,6 +830,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         IntData {
             number: 10,
             number_goal: 0,
+            path
         },
     )
     .unwrap();
@@ -886,8 +894,8 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     post_status(
         &app,
         &format!(
-            "Extracting - Duplicating DDLC's Files Into '{}'",
-            target_dir.display()
+            "Extracting - Cloning DDLC|ppathIdentifier|{}",
+            path
         ),
     );
 
@@ -896,6 +904,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         IntData {
             number: 40,
             number_goal: 80,
+            path
         },
     )
     .unwrap();
@@ -905,13 +914,14 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
     logger.log(String::from("I/O Copy DDLC Files Finished"));
 
-    post_status(&app, &format!("Extracting '{}'", source_name_no_ext));
+    post_status(&app, &format!("Extracting '{}'|ppathIdentifier|{}", source_name_no_ext, path));
 
     app.emit(
         "set_bar",
         IntData {
             number: 80,
             number_goal: 95,
+            path
         },
     )
     .unwrap();
@@ -963,6 +973,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         IntData {
             number: 95,
             number_goal: 0,
+            path
         },
     )
     .unwrap();
@@ -984,7 +995,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
             post_status(
                 &app,
-                &format!("Fixing Nested Zip File... Try {}", loop_time),
+                &format!("Fixing Nested Zip File... Try {}|ppathIdentifier|{}", loop_time, path),
             );
             if !is_game {
                 let p = &PathBuf::from(nested);
@@ -1021,17 +1032,19 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         IntData {
             number: 100,
             number_goal: 0,
+            path
         },
     )
     .unwrap();
     app.emit(
         "import_done",
-        StringData {
+        DoubleStringData {
             text: PathBuf::from(&initial_target_dir)
                 .file_name()
                 .expect("Could not get file name")
                 .to_str()
                 .unwrap(),
+            text2: path
         },
     )
     .unwrap();
@@ -1193,8 +1206,10 @@ fn goto_main(app: AppHandle) {
 }
 
 async fn download_file(app: &AppHandle, url: String, save_path: String) -> Result<(), String> {
-    let response = reqwest::get(url).await.unwrap();
+    let response = reqwest::get(url.clone()).await.unwrap();
     let total = response.content_length().unwrap_or(0);
+    let cloned_save_path = save_path.clone();
+    let url_clone = url.clone();
     let mut file = tokio::fs::File::create(save_path).await.unwrap();
     let mut stream = response.bytes_stream();
     let mut start = Instant::now();
@@ -1207,15 +1222,18 @@ async fn download_file(app: &AppHandle, url: String, save_path: String) -> Resul
         downloaded += chunk.len() as u64;
 
         if start.elapsed().as_secs() >= 1 {
+            let download_percent = (downloaded as f64 / total as f64) * 100f64;
             app.emit(
                 "download_percent",
                 StringData {
                     text: &format!(
-                        "{:.1}% ({:.1} MB/s)",
-                        (downloaded as f64 / total as f64) * 100f64,
+                        "{} | {:.1}% ({:.1} MB/s) | {}",
+                        url_clone,
+                        download_percent,
                         (downloaded - last_downloaded) as f64
                             / start.elapsed().as_millis().max(1) as f64
-                            / 1024f64
+                            / 1024f64,
+                        download_percent
                     ),
                 },
             )
@@ -1289,6 +1307,7 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
         .map_err(|error| format!("Failed to create cache directory: {error}"))?;
 
     let navigation_app = app.clone();
+    let downloads_app = app.clone();
     let navigation_downloads_dir = downloads_dir.clone();
     let download_downloads_dir = downloads_dir.clone();
 
@@ -1319,6 +1338,18 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
             {
                 if is_archive_url(navigation_url) {
                     let url = navigation_url.to_string();
+                    let app = navigation_app.clone();
+
+                    if url.starts_with("blob") {
+                        let confirmed = app
+                            .dialog()
+                            .message("Mega.NZ downloads are not natively supported, running fallback".to_string())
+                            .title("Download Request")
+                            .buttons(MessageDialogButtons::Ok)
+                            .blocking_show();
+                        *destination = download_dir().unwrap();
+                        return true;
+                    }
 
                     let already_downloading = download_state()
                         .lock()
@@ -1333,7 +1364,6 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
                     }
 
                     let file_name = file_name_from_url(navigation_url);
-                    let app = navigation_app.clone();
                     let downloads_dir = navigation_downloads_dir.clone();
 
                     let (cancel_sender, mut cancel_receiver) = oneshot::channel::<()>();
@@ -1405,6 +1435,17 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
         .on_download(move |webview, event| match event {
             DownloadEvent::Requested { url, destination } => {
                 let url = url.to_string();
+
+                if url.starts_with("blob") {
+                    let confirmed = downloads_app
+                        .dialog()
+                        .message("Mega.NZ downloads are not natively supported, running fallback".to_string())
+                        .title("Download Request")
+                        .buttons(MessageDialogButtons::Ok)
+                        .blocking_show();
+                    *destination = download_dir().unwrap();
+                    return true;
+                }
 
                 download_state()
                     .lock()

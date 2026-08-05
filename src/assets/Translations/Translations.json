@@ -1,8 +1,11 @@
 {
   "en": {
     "data": {
-      "flag": "english.png"
+      "flag": "english.png",
+      "name": "English"
     },
+    "downloads": "Downloads",
+    "no-downloads": "No Downloads",
     "yes": "Yes",
     "no": "No",
     "play": "Play",
@@ -85,8 +88,11 @@
   },
   "ru": {
     "data": {
-      "flag": "russia.svg"
+      "flag": "russia.svg",
+      "name": "Русский"
     },
+    "downloads": "Загрузки",
+    "no-downloads": "Нет загрузок",
     "yes": "Да",
     "no": "Нет",
     "play": "Играть",
@@ -160,7 +166,8 @@
     },
     "send-report": "Сообщить о проблеме",
     "message": "Сообщение",
-    "report-box-message": "Подробно опишите проблему, с которой вы столкнулись. Укажите, с каким модом возникла проблема, что вы делали, как вы это делали и так далее.",    "send": "Отправить",
+    "report-box-message": "Подробно опишите проблему, с которой вы столкнулись. Укажите, с каким модом возникла проблема, что вы делали, как вы это делали и так далее.",
+    "send": "Отправить",
     "extracting": "[Извлечение]",
     "delete-mod": "Удалить мод",
     "reset-data": "Сбросить данные текущего профиля",
@@ -168,8 +175,11 @@
   },
   "pt": {
     "data": {
-      "flag": "pt.png"
+      "flag": "pt.png",
+      "name": "Português"
     },
+    "downloads": "Downloads",
+    "no-downloads": "Sem downloads",
     "yes": "Sim",
     "no": "Não",
     "play": "Jogar",
@@ -243,7 +253,8 @@
     },
     "send-report": "Reportar problema",
     "message": "Mensagem",
-    "report-box-message": "Explique em detalhes o problema que você está enfrentando. Informe com qual mod o problema pode estar ocorrendo, o que você estava fazendo, como estava fazendo e assim por diante.",    "send": "Enviar",
+    "report-box-message": "Explique em detalhes o problema que você está enfrentando. Informe com qual mod o problema pode estar ocorrendo, o que você estava fazendo, como estava fazendo e assim por diante.",
+    "send": "Enviar",
     "extracting": "[Extraindo]",
     "delete-mod": "Excluir Mod",
     "reset-data": "Redefinir dados do perfil atual",
@@ -251,8 +262,11 @@
   },
   "es": {
     "data": {
-      "flag": "spain.png"
+      "flag": "spain.png",
+      "name": "Español"
     },
+    "downloads": "Descargas",
+    "no-downloads": "Sin descargas",
     "yes": "Sí",
     "no": "No",
     "play": "Jugar",
@@ -326,7 +340,8 @@
     },
     "send-report": "Reportar problema",
     "message": "Mensaje",
-    "report-box-message": "Explica detalladamente el problema que estás teniendo. Indica con qué mod podrías estar teniendo el problema, qué estabas haciendo, cómo lo estabas haciendo, etc.",    "send": "Enviar",
+    "report-box-message": "Explica detalladamente el problema que estás teniendo. Indica con qué mod podrías estar teniendo el problema, qué estabas haciendo, cómo lo estabas haciendo, etc.",
+    "send": "Enviar",
     "extracting": "[Extrayendo]",
     "delete-mod": "Eliminar Mod",
     "reset-data": "Restablecer datos del perfil actual",
@@ -334,8 +349,11 @@
   },
   "fr": {
     "data": {
-      "flag": "france.png"
+      "flag": "france.png",
+      "name": "Français"
     },
+    "downloads": "Téléchargements",
+    "no-downloads": "Aucun téléchargement",
     "yes": "Oui",
     "no": "Non",
     "play": "Jouer",
@@ -409,7 +427,8 @@
     },
     "send-report": "Signaler un problème",
     "message": "Message",
-    "report-box-message": "Expliquez en détail le problème que vous rencontrez. Indiquez le mod concerné, ce que vous faisiez, comment vous le faisiez, etc.",    "send": "Envoyer",
+    "report-box-message": "Expliquez en détail le problème que vous rencontrez. Indiquez le mod concerné, ce que vous faisiez, comment vous le faisiez, etc.",
+    "send": "Envoyer",
     "extracting": "[Extraction]",
     "delete-mod": "Supprimer le Mod",
     "reset-data": "Réinitialiser les données du profil",
@@ -417,8 +436,11 @@
   },
   "zh-HK": {
     "data": {
-      "flag": "hong-kong.png"
+      "flag": "hong-kong.png",
+      "name": "繁中"
     },
+    "downloads": "下載",
+    "no-downloads": "無下載",
     "yes": "係",
     "no": "唔係",
     "play": "玩",
@@ -501,8 +523,11 @@
   },
   "jp": {
     "data": {
-      "flag": "japan.png"
+      "flag": "japan.png",
+      "name": "日本語"
     },
+    "downloads": "ダウンロード",
+    "no-downloads": "ダウンロードなし",
     "yes": "はい",
     "no": "いいえ",
     "play": "プレイ",
@@ -582,5 +607,179 @@
     "delete-mod": "Modを削除",
     "reset-data": "現在のプロファイルデータをリセット",
     "unknown": "不明"
+  },
+  "it": {
+    "data": {
+      "flag": "italy.svg",
+      "name": "Italiano"
+    },
+    "downloads": "Download",
+    "no-downloads": "Nessun download",
+    "yes": "Sì",
+    "no": "No",
+    "play": "Gioca",
+    "download-watcher": "Vuoi estrarre e importare questa mod?",
+    "main": "Principale",
+    "mods": "Mod",
+    "search": "Cerca",
+    "import": "Importa mod",
+    "greet": "Ciao",
+    "install": "Imposta posizione di installazione",
+    "select_zip": "Seleziona il file ZIP contenente DDLC. Puoi scaricarlo da [https://ddlc.moe](https://ddlc.moe). (Fai clic per aprire)",
+    "select_zip_button": "Importa ZIP",
+    "importing_zip": "Importazione di DDLC",
+    "import_image": "Importa immagine",
+    "home": "Home",
+    "theme": "Imposta tema",
+    "update-text": "Aggiornamenti (Desktop)",
+    "loading": "Caricamento della mod",
+    "description": "Descrizione",
+    "screenshot": "Screenshot",
+    "tutorial-text": "Tutorial",
+    "tutorial-context": "Sembra che tu non abbia ancora completato il tutorial. Vuoi iniziarlo?",
+    "cancel": "Annulla",
+    "next": "Avanti",
+    "end": "Fine",
+    "updating": "Aggiornamento in corso",
+    "update": "Aggiorna",
+    "ignore": "Ignora",
+    "error-profile_setname": "Non puoi rinominare il profilo predefinito!",
+    "error-profile_delete": "Non puoi eliminare il profilo predefinito!",
+    "yesterday": "Ieri",
+    "just-now": "Proprio ora",
+    "never": "Mai",
+    "ago": "fa",
+    "m": "min",
+    "h": "h",
+    "tutorial": {
+      "select": "Seleziona una mod o scaricane una prima di continuare!",
+      "1": {
+        "title": "Benvenuto!",
+        "context": "Questa è una guida all'uso di Doki Doki Mod Manager. Premi “Avanti” per continuare."
+      },
+      "2": {
+        "title": "Tema",
+        "context": "Prima di tutto, scegliamo un tema. Fai clic sul pulsante evidenziato finché non appare il tuo personaggio preferito."
+      },
+      "3": {
+        "title": "Sfondo",
+        "context": "Poi, fai clic sullo sfondo che desideri usare oppure trascina qui un'immagine per impostarla come sfondo."
+      },
+      "4": {
+        "title": "Download",
+        "context": "Ora scarica una mod tramite Reddit. Puoi anche trascinare qui un file ZIP. Ricorda di salvarlo nella cartella Download!"
+      },
+      "5": {
+        "title": "Copertine",
+        "context": "Usa le frecce nella parte inferiore dell'area selezionata per cambiare la copertina."
+      },
+      "6": {
+        "title": "Nome",
+        "context": "Fai clic sul titolo della mod per rinominarla. Premi Invio per salvare."
+      },
+      "7": {
+        "title": "Autore",
+        "context": "Fai clic sull'autore (testo sottolineato) per impostarlo. Premi Invio per salvare."
+      },
+      "8": {
+        "title": "Fine",
+        "context": "E questo è tutto! Premi “Gioca” per avviare la mod. Premi “Fine” per terminare il tutorial."
+      }
+    },
+    "send-report": "Segnala un problema",
+    "message": "Messaggio",
+    "report-box-message": "Spiega dettagliatamente il problema che stai riscontrando. Indica, ad esempio, con quale mod potrebbe verificarsi, cosa stavi facendo e come lo stavi facendo.",
+    "send": "Invia",
+    "extracting": "[Estrazione in corso]",
+    "delete-mod": "Elimina mod",
+    "reset-data": "Reimposta i dati del profilo corrente",
+    "unknown": "Sconosciuto"
+  },
+  "pl": {
+    "data": {
+      "flag": "poland.svg",
+      "name": "Polski"
+    },
+    "downloads": "Pobrane",
+    "no-downloads": "Brak pobranych",
+    "yes": "Tak",
+    "no": "Nie",
+    "play": "Graj",
+    "download-watcher": "Czy chcesz wypakować i zaimportować tego moda?",
+    "main": "Główna",
+    "mods": "Mody",
+    "search": "Szukaj",
+    "import": "Importuj moda",
+    "greet": "Cześć",
+    "install": "Ustaw lokalizację instalacji",
+    "select_zip": "Wybierz plik ZIP zawierający DDLC. Możesz go pobrać ze strony [https://ddlc.moe](https://ddlc.moe). (Kliknij, aby otworzyć)",
+    "select_zip_button": "Importuj ZIP",
+    "importing_zip": "Importowanie DDLC",
+    "import_image": "Importuj obraz",
+    "home": "Strona główna",
+    "theme": "Ustaw motyw",
+    "update-text": "Aktualizacje (Desktop)",
+    "loading": "Wczytywanie moda",
+    "description": "Opis",
+    "screenshot": "Zrzut ekranu",
+    "tutorial-text": "Samouczek",
+    "tutorial-context": "Wygląda na to, że nie ukończono jeszcze samouczka. Czy chcesz go rozpocząć?",
+    "cancel": "Anuluj",
+    "next": "Dalej",
+    "end": "Zakończ",
+    "updating": "Aktualizowanie",
+    "update": "Aktualizuj",
+    "ignore": "Ignoruj",
+    "error-profile_setname": "Nie możesz zmienić nazwy domyślnego profilu!",
+    "error-profile_delete": "Nie możesz usunąć domyślnego profilu!",
+    "yesterday": "Wczoraj",
+    "just-now": "Przed chwilą",
+    "never": "Nigdy",
+    "ago": "temu",
+    "m": "min",
+    "h": "godz.",
+    "tutorial": {
+      "select": "Wybierz moda lub pobierz go przed kontynuowaniem!",
+      "1": {
+        "title": "Witamy!",
+        "context": "To będzie przewodnik po obsłudze Doki Doki Mod Manager. Naciśnij „Dalej”, aby kontynuować."
+      },
+      "2": {
+        "title": "Motyw",
+        "context": "Najpierw wybierzmy motyw. Klikaj wyróżniony przycisk, aż pojawi się twoja ulubiona postać."
+      },
+      "3": {
+        "title": "Tło",
+        "context": "Następnie kliknij tło, którego chcesz użyć, lub przeciągnij tutaj obraz, aby ustawić go jako tło."
+      },
+      "4": {
+        "title": "Pobrane",
+        "context": "Teraz pobierz moda przez Reddit. Możesz też przeciągnąć tutaj plik ZIP. Pamiętaj, aby zapisać go w folderze Pobrane!"
+      },
+      "5": {
+        "title": "Okładki",
+        "context": "Użyj strzałek na dole wybranego obszaru, aby zmienić okładkę."
+      },
+      "6": {
+        "title": "Nazwa",
+        "context": "Kliknij tytuł moda, aby zmienić jego nazwę. Naciśnij Enter, aby zapisać."
+      },
+      "7": {
+        "title": "Autor",
+        "context": "Kliknij autora (podkreślony tekst), aby go ustawić. Naciśnij Enter, aby zapisać."
+      },
+      "8": {
+        "title": "Gotowe",
+        "context": "To wszystko! Naciśnij „Graj”, aby uruchomić moda. Naciśnij „Zakończ”, aby ukończyć samouczek."
+      }
+    },
+    "send-report": "Zgłoś problem",
+    "message": "Wiadomość",
+    "report-box-message": "Opisz szczegółowo problem, który występuje. Podaj informacje takie jak mod, którego może dotyczyć problem, co robiłeś i w jaki sposób.",
+    "send": "Wyślij",
+    "extracting": "[Wypakowywanie]",
+    "delete-mod": "Usuń moda",
+    "reset-data": "Zresetuj dane bieżącego profilu",
+    "unknown": "Nieznane"
   }
 }

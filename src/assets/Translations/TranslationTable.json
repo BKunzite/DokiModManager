@@ -20,5 +20,7 @@
   {"id": "report-title", "key": "send-report", "type": "textContent"},
   {"id": "report-send", "key": "send", "type": "textContent"},
   {"id": "report-close", "key": "cancel", "type": "textContent"},
-  {"id": "download-watcher", "key": "download-watcher", "type": "textContent"}
+  {"id": "download-watcher", "key": "download-watcher", "type": "textContent"},
+  {"id": "downloads-none", "key": "no-downloads", "type": "textContent"},
+  {"id": "downloads-header", "key": "downloads", "type": "textContent"}
 ]

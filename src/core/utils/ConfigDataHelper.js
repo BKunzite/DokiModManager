@@ -1,11 +1,9 @@
-import {invoke} from "@tauri-apps/api/core";
 import {CLIENT_THEME_ENUM} from "../Constants"
-import {type} from "@tauri-apps/plugin-os";
 
 export class ProgramData {
     #unmappedData = {}
 
-    constructor() {
+    constructor(username = "") {
         this.#unmappedData = {
             coverId: 0,
             totalTime: 0,
@@ -14,7 +12,7 @@ export class ProgramData {
             language: "",
             version: "0.0.0-release",
             bg_offset: 0,
-            user_name: ""
+            user_name: username
         }
     }
 

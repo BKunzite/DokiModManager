@@ -1,5 +1,3 @@
-import {covers} from "./ImageUtils";
-
 let logs = []
 let Logger = {}
 const oldLog = console.log;

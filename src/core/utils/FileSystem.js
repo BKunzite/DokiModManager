@@ -12,3 +12,7 @@ export function terminatePath(path) {
     return path.replace(/\\/g, fileTerminator);
 }
 
+export function supportedModPackage(selectedPath) {
+    return selectedPath.endsWith(".zip") || selectedPath.endsWith(".rar") || selectedPath.endsWith("scripts.rpa")
+}
+

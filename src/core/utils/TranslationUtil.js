@@ -44,19 +44,22 @@ export const TranslationUtil = {
         return TRANSLATION_TABLE[language][text]
     },
     sub: (text) => {
-        if (TRANSLATION_TABLE[language] === undefined) throw new NoTranslationError("Language '" + language + "' not found in translation table!")
-        if (TRANSLATION_TABLE[language][text] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' not found in language '" + language + "'!")
+        let topLevel1 = TRANSLATION_TABLE[language]
+        if (topLevel1 === undefined) throw new NoTranslationError("Language '" + language + "' not found in translation table!")
+        if (topLevel1[text] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' not found in language '" + language + "'!")
+        topLevel1 = topLevel1[text]
         return {
-            of: (t) => {
-                if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
-                return TRANSLATION_TABLE[language][text][t]
+            of: (text) => {
+                if (topLevel1[text] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' sub '" + text + "' not found in language '" + language + "'!")
+                return topLevel1[text]
             },
-            sub: (t) => {
-                if (TRANSLATION_TABLE[language][text][t] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' sub '" + t + "' not found in language '" + language + "'!")
+            sub: (title) => {
+                let topLevel2 = topLevel1[title]
+                if (topLevel2 === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' sub '" + title + "' not found in language '" + language + "'!")
                 return {
-                    of: (t2) => {
-                        if (TRANSLATION_TABLE[language][text][t][t2] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' sub '" + t + "' sub2 '" + t2 + "' not found in language '" + language + "'!")
-                        return TRANSLATION_TABLE[language][text][t][t2]
+                    of: (text) => {
+                        if (topLevel2[text] === undefined) throw new NoTranslationIndexError("TranslationUtil for '" + text + "' sub '" + title + "' sub2 '" + text + "' not found in language '" + language + "'!")
+                        return topLevel2[text]
                     }
                 }
             }

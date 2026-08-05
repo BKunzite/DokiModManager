@@ -15,6 +15,7 @@ let cache_events = {
     hit: 0
 }
 let cache_clear_interval;
+const imageRegex = /\.(gif|jpe?g|tiff?|png|webp|bmp|svg)$/i;
 
 class ImageCover {
     reset() {
@@ -220,6 +221,15 @@ export async function getImage(id, eager = false) {
     }
 }
 
-export function lazy_deref(url) {
+export function lazyDeref(url) {
     _internal_deref(url)
+}
+
+/**
+ * Returns whether name matches the image extention regex
+ * @param name
+ * @returns {boolean}
+ */
+export function regexImageName(name) {
+    return imageRegex.test(name)
 }

@@ -1306,7 +1306,7 @@ body {
 .language {
     position: absolute;
     font-size: 1rem;
-    right: 5.25rem;
+    right: 7.5rem;
     top: 1.5vh;
     width: 8rem;
     height: 2rem;
@@ -1347,10 +1347,14 @@ body {
     cursor: grab;
 }
 
+.grab {
+    cursor: grab;
+}
+
 .language-list {
     position: absolute;
     font-size: 1rem;
-    right: 5.25rem;
+    right: 7.5rem;
     top: 8vh;
     width: 8rem;
     height: 10rem;
@@ -1427,8 +1431,8 @@ body {
     font-weight: bold;
     color: white;
     font-size: 1rem;
-    left: 0.5rem;
-    top: 1vh;
+    left: 0.55rem;
+    top: 0.4rem;
     width: 1.25rem;
     height: 1.25rem;
     background: none;
@@ -1442,6 +1446,7 @@ body {
     left: 2.25rem;
     top: 1.25vh;
     text-shadow: 0 0 2px rgba(0, 0, 0, 1);
+    line-height: 1rem;
 }
 
 .close:hover {
@@ -1450,6 +1455,31 @@ body {
     top: 0.5vh;
     scale: 1.1;
 
+}
+
+.downloads-show {
+    position: absolute;
+    font-family: "Icon", sans-serif;
+    font-weight: bold;
+    color: white;
+    font-size: 1rem;
+    right: 5.25rem;
+    width: 2rem;
+    height: 2rem;
+    top: 1.5vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 1rem;
+    border: none;
+    corner-shape: squircle;
+    overflow: scroll;
+    scrollbar-width: none;
+    transition: all ease-out 0.1s, scale 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
+}
+
+[os-type="linux"] .minimize {
+    border-radius: 0.5rem;
 }
 
 .minimize {
@@ -1471,7 +1501,6 @@ body {
     scrollbar-width: none;
     transition: all ease-out 0.1s, scale 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
-
 }
 
 [os-type="linux"] .minimize {
@@ -1554,6 +1583,159 @@ body {
     box-shadow: rgba(255, 150, 0, 0.6) 0 0 5px;
     top: 0.5vh;
     scale: 1.1;
+}
+
+.downloads-show:hover {
+    background-color: rgb(0 208 255 / 0.6);
+    box-shadow: rgba(0 208 255 / 0.6) 0 0 5px;
+    top: 0.5vh;
+    scale: 1.1;
+}
+
+.downloads-list {
+    position: absolute;
+    top: 9.25vh;
+    right: 3vh;
+    width: 20rem;
+    height: 19rem;
+    background-color: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px) saturate(20%);
+    border-radius: 0.75rem;
+    box-shadow: rgba(0, 0, 0, 0.75) 0 0 20px;
+    padding: 1rem 0.5rem;
+    overflow: hidden;
+}
+
+.downloads-list::before {
+    content: "";
+    width: 21rem;
+    height: 21rem;
+    border-radius: 0.5rem;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: rgba(var(--primary-color-saturated), 0.15);
+}
+
+.downloads-list::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 1rem;
+    padding: 2px;
+    background: linear-gradient(45deg, rgba(var(--primary-color-saturated), 0) 0%, rgb(var(--primary-color), 0.75) 50%, rgba(var(--primary-color-saturated), 0) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+.downloads-header {
+    position: absolute;
+    font-family: "Aller", sans-serif;
+    font-weight: bold;
+    color: white;
+    font-size: 1rem;
+    top: 1rem;
+    left: 1rem;
+}
+
+.downloads-bar {
+    position: relative;
+    background-color: rgba(0,0,0,0.25);
+    width: 17rem;
+    height: 0.5rem;
+    border-radius: 1rem;
+    top: 1.75rem;
+    left: 1rem;
+}
+
+.downloads-bar-fill {
+    position: relative;
+    background-color: rgb(var(--primary-color-saturated));
+    width: 0rem;
+    height: 0.5rem;
+    border-radius: 1rem;
+    transition: width linear 1s;
+}
+
+.downloads-element-cancel {
+    position: absolute;
+    font-family: "Icon", sans-serif;
+    color: rgb(200,200,200);
+    font-size: 2rem;
+    right: 2.5rem;
+    top: 1rem;
+    width: 1rem;
+    height: 1rem;
+    background: transparent;
+    outline: none;
+    border: none;
+    cursor: grab;
+    transition: all ease-out 0.25s;
+}
+
+.downloads-element-cancel:hover {
+    color: white;
+    font-weight: bold;
+}
+
+.inner-downloads-list {
+    top: 3rem;
+    right: 1rem;
+    width: 19rem;
+    height: 17rem;
+    position: absolute;
+    border-radius: 0.75rem;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    scrollbar-width: none;
+    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.downloads-element {
+    flex-shrink: 0;
+    width: 19rem;
+    height: 5rem;
+    border-radius: 0.5rem;
+    background-color: rgba(var(--primary-color-saturated), 0.15);
+    right: 0.5rem;
+}
+
+.downloads-element-name {
+    position: relative;
+    font-family: "Aller", sans-serif;
+    font-weight: bold;
+    color: white;
+    font-size: 0.75rem;
+    top: 1rem;
+    left: 1rem;
+    text-overflow: clip;
+    text-align: left;
+    text-wrap: nowrap;
+    mask-image: linear-gradient(90deg, rgb(255, 255, 255) 10rem, rgba(255, 255, 255, 0) 17rem);
+}
+
+.downloads-none {
+    font-family: "Aller", sans-serif;
+    color: white;
+}
+
+.downloads-element-percent {
+    position: relative;
+    font-family: "Aller", sans-serif;
+    color: rgb(200,200,200);
+    font-size: 0.65rem;
+    top: 1.25rem;
+    left: 1rem;
+    text-overflow: clip;
+    text-align: left;
+    text-wrap: nowrap;
+    mask-image: linear-gradient(90deg, rgb(255, 255, 255) 10rem, rgba(255, 255, 255, 0) 17rem);
 }
 
 .sidetext {
@@ -2554,21 +2736,6 @@ li:not(.sticky):not(.favorite) {
     vertical-align: text-top;
 }
 
-.report-text {
-    text-wrap: nowrap;
-    overflow: hidden;
-    line-height: 1;
-    width: 6.1rem;
-    position: inherit;
-    font-weight: bold;
-    color: white;
-    text-align: left;
-    font-size: 1rem;
-    left: 2.25rem;
-    top: 1.25vh;
-    text-shadow: 0 0 2px rgba(0, 0, 0, 1);
-}
-
 .report-textbox {
     font-family: "Aller", sans-serif;
     position: absolute;
@@ -2619,29 +2786,12 @@ li:not(.sticky):not(.favorite) {
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.install-info {
-    position: absolute;
-    font-size: 1rem;
-    right: 23rem;
-    top: 1.5vh;
-    width: 30rem;
-    height: 1.5rem;
-    border: none;
-    text-align: right;
-    padding-top: 0.5rem;
-    overflow: hidden;
-    font-family: Aller, sans-serif;
-    color: white;
-    pointer-events: none;
-    text-wrap: nowrap;
-}
-
 .report-open {
     position: absolute;
     font-size: 1rem;
-    right: 13.5rem;
+    right: 15.75rem;
     top: 1.5vh;
-    width: 9rem;
+    width: auto;
     height: 2rem;
     background-color: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(10px);
@@ -2652,7 +2802,21 @@ li:not(.sticky):not(.favorite) {
     box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
     corner-shape: squircle;
     cursor: grab;
+}
 
+.report-text {
+    text-wrap: nowrap;
+    overflow: hidden;
+    line-height: 1;
+    width: 6.1rem;
+    font-weight: bold;
+    color: white;
+    text-align: left;
+    font-size: 1rem;
+    left: 2.25rem;
+    top: 1.25vh;
+    padding-right: 0.25rem;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 1);
 }
 
 [os-type="linux"] .report-open {
@@ -2665,12 +2829,14 @@ li:not(.sticky):not(.favorite) {
 }
 
 .report-icon {
-    position: inherit;
     font-family: "Icon", sans-serif;
     color: white;
     font-size: 1rem;
     left: 0.75rem;
     top: 1.25vh;
+    width: 1rem;
+    padding-left: 0.25rem;
+    padding-right: 0.5rem;
     text-shadow: 0 0 2px rgba(0, 0, 0, 1);
 }
 

@@ -26,16 +26,38 @@ import Desktop from "./Desktop.vue";
 
 //// Utils
 // ----- INTERNAL ------- //
-import {deref, getImage, lazy_deref, covers, preloadCovers, preloadImageObject} from "./core/utils/ImageUtils";
+import {
+    deref,
+    getImage,
+    lazyDeref,
+    covers,
+    preloadCovers,
+    preloadImageObject,
+    regexImageName
+} from "./core/utils/ImageUtils";
 import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
 import {TranslationUtil, TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE} from "./core/utils/TranslationUtil"
 import {addLauncher, clearLaunchers, getLauncher, getLaunchers, LauncherAbstract} from "./core/Launchers"
 import {openWebview} from "./core/utils/WebviewWindowUtil";
-import {htmlEscape, formatModName, getTextWidth, linkify, getFormattedDate} from "./core/utils/TextUtil";
-import {HEART_FULL, HEART_EMPTY, CLIENT_THEMES, CLIENT_THEME_ENUM, WARN_GENERIC_DATA_PATHS} from "./core/Constants";
-import {getOSType, OS, updateOSType} from "./core/utils/OSUtil";
+import {htmlEscape, formatModName, getTextWidth, linkify, getFormattedDate, STRINGS} from "./core/utils/TextUtil";
+import {
+    HEART_FULL,
+    HEART_EMPTY,
+    CLIENT_THEMES,
+    CLIENT_THEME_ENUM,
+    WARN_GENERIC_DATA_PATHS,
+    CURRENT
+} from "./core/Constants";
+import {getOSType, OS} from "./core/utils/OSUtil";
+import {fileTerminator, supportedModPackage, terminatePath} from "./core/utils/FileSystem";
+import OSUtil from "./core/utils/OSUtil";
 import Logger from "./core/utils/Logger";
-import {fileTerminator, terminatePath} from "./core/utils/FileSystem";
+import DownloadsManager from "./core/download/DownloadsManager"
+import PreventDefaults from "./core/utils/PreventDefaults";
+import Hud from "./core/utils/HTMLHelper";
+import Units from "./core/utils/Units";
+import SeasonsManager from "./core/seasonal/SeasonsManager";
+import {ProgramData} from "./core/utils/ConfigDataHelper";
 
 // ----- EXTERNAL ------- //
 import {Base64} from 'js-base64';
@@ -46,69 +68,57 @@ import sound_beep from './assets/select.ogg';
 import sound_boop from './assets/hover.ogg';
 import sound_click from './assets/pageflip.ogg';
 import dart_sfx from './assets/dart_sfx.mp3';
-import {ProgramData} from "./core/utils/ConfigDataHelper";
-import HTMLHelper from "./core/utils/HTMLHelper";
-import Units from "./core/utils/Units";
 
 //// Profile Data
 
-let selected_button = null;
-let selected_name = ""
-let current_profile = ""
-let current_profile_data = {}
-let concurrent_profile_data = {}
-let profile_path = "";
-let original_profile = "";
-let current_game_data_path = "";
-let rename_target = "";
+let selectedProfileButton = null;
+let selectedProfileName = STRINGS.EMPTY
+let currentProfile = STRINGS.EMPTY
+let currentProfileData = {}
+let concurrentProfileData = {}
+let profilePath = STRINGS.EMPTY;
+let originalProfile = STRINGS.EMPTY;
+let currentGameDataPath = STRINGS.EMPTY;
+let renameProfileTarget = STRINGS.EMPTY;
 
 //// Tutorial
 
-let tutorial_complete = false;
-let tutorial_step = 0;
-let tutorial_pointer = null
+let isTutorialComplete = false;
+let tutorialStep = 0;
+let tutorialPointer = null
 
 //// Config Variables
 
-let bg_offset = 0;
-let current_bg_max = 0;
+let currentBackgroundOffset = 0;
+let currentBackgroundMaxOffset = 0;
 /**
  * @type {{path: string, config: ProgramData}}
  */
 let localConfig = {
-    path: "",
+    path: STRINGS.EMPTY,
     config: null
 }
-let save_path = "";
-let user_name = "";
+let currentSavePath = STRINGS.EMPTY;
+let currentUserName = STRINGS.EMPTY;
 
 //// Misc
 
 let lastInputLength = 0
 let start = Date.now();
-let currentEntry = ""
-let background_cover = 0
-let total_time = 0;
-let mouse_cover_available = false;
-let alert_path = undefined
+let currentEntry = STRINGS.EMPTY
+let currentBackgroundCover = 0
+let totalPlayTime = 0;
+let mouseCoverAvailable = false;
+let alertPath = undefined
 let selectedPath;
-let local_path;
+let localPath;
 let observer;
 let reset = false;
-let focused = true;
 let previous_app = null
 let tracked_downloads = []
 let observer_await = false;
-
-//// Downloads Detector
-
-let part_file_size = 0;
-let last_change = 0;
-let part_file = null;
-
-// Event Variables (Save for when next season arrives)
-
-// --CHRISTMAS MUSIC-- let jingle_audio = new Audio(jingle);
+let dragging = false;
+let dragStart = 0;
 
 /**
  * Initialize Translations
@@ -128,11 +138,11 @@ function loadTranslation(lang, first) {
 
     TranslationUtil.setLanguage(lang);
 
-    if (!tutorial_complete) {
-        document.getElementById("tutorial-title").textContent = tutorial_step === 0 ? TranslationUtil.of("tutorial-text") : TranslationUtil.sub("tutorial").of(tutorial_step).title;
-        document.getElementById("tutorial-context").textContent = tutorial_step === 0 ? TranslationUtil.of("tutorial-context") : TranslationUtil.sub("tutorial").of(tutorial_step).context;
-        if (tutorial_pointer == null) {
-            if (tutorial_step === 8) {
+    if (!isTutorialComplete) {
+        document.getElementById("tutorial-title").textContent = tutorialStep === 0 ? TranslationUtil.of("tutorial-text") : TranslationUtil.sub("tutorial").of(tutorialStep).title;
+        document.getElementById("tutorial-context").textContent = tutorialStep === 0 ? TranslationUtil.of("tutorial-context") : TranslationUtil.sub("tutorial").of(tutorialStep).context;
+        if (tutorialPointer == null) {
+            if (tutorialStep === 8) {
                 document.getElementById("tutorial-no").textContent = TranslationUtil.of("end")
             } else {
                 document.getElementById("tutorial").textContent = TranslationUtil.of("next")
@@ -151,26 +161,19 @@ function loadTranslation(lang, first) {
         }
     }
 
-    getImage(TranslationUtil.sub("data").of("flag")).then(url => {
+    getImage("Flags/" + TranslationUtil.sub("data").of("flag")).then(url => {
         document.getElementById("language-flag").src = url
     });
-    document.getElementById("language-text").textContent = lang;
+    document.getElementById("language-text").textContent = TranslationUtil.sub("data").of("name");
 
-    if (currentEntry === "") {
+    if (currentEntry === STRINGS.EMPTY) {
         if (!first) {
-            gotoHomePage().then(_ => {
-            })
+            gotoHomePage()
         }
     } else {
-        getLauncher(currentEntry).functions().leftClick().then(_ => {
+        getLauncher(currentEntry).getFunctions().leftClick().then(_ => {
         });
     }
-}
-
-// Removes Right Click Menu
-
-document.oncontextmenu = document.body.oncontextmenu = function () {
-    return false;
 }
 
 /**
@@ -196,10 +199,10 @@ async function syncCovers() {
         preloadCovers.set(cover, await preloadImageObject(cover))
     }
 
-    if (await isDir(local_path + imageLocation)) {
-        for (const image of await readDir(local_path + imageLocation)) {
-            if (image.name.endsWith(".png") || image.name.endsWith(".jpg") || image.name.endsWith(".jpeg") || image.name.endsWith(".webp")) {
-                const path = local_path + imageLocation + fileTerminator + image.name;
+    if (await isDir(localPath + imageLocation)) {
+        for (const image of await readDir(localPath + imageLocation)) {
+            if (regexImageName(image.name)) {
+                const path = localPath + imageLocation + fileTerminator + image.name;
                 covers.add(path)
                 preloadCovers.set(path, await preloadImageObject(path))
             }
@@ -220,11 +223,11 @@ async function loadConfig(path) {
     let configPath = path + fileTerminator + "client-config.json";
     let hasConfig = await isExist(configPath)
     let hostname = await invoke("get_host_name", {})
-    let configData = await new ProgramData().set("user_name", hostname);
+    let configData = await new ProgramData(hostname);
 
     Logger.log("Local Path: " + path)
 
-    local_path = path;
+    localPath = path;
 
     // Detects Config
 
@@ -238,7 +241,7 @@ async function loadConfig(path) {
         } catch (e) {
             console.error("Failed to parse config file: " + e);
 
-            HTMLHelper.show("changelog")
+            Hud.show("changelog")
             document.getElementById("changelog-title").textContent = "Critical Error | Cannot Load Config"
             document.getElementById("changelog-text").textContent = "File: " + configPath + "\n\n" + e + "\n\nData:\n" + (await readTextFile(configPath)).split("\n").map((line, index) => index + "|  " + line).join("\n")
             document.getElementById("changelog-update").textContent = TranslationUtil.of("update")
@@ -254,7 +257,7 @@ async function loadConfig(path) {
                 })
             });
 
-            HTMLHelper.hide("changelog")
+            Hud.hide("changelog")
 
             if (response) {
                 await invoke("open_path", {
@@ -273,7 +276,7 @@ async function loadConfig(path) {
         .default("totalTime", 0)
         .default("tutorial", false)
         .default("version", "0.0.0-release")
-        .default("language", "")
+        .default("language", STRINGS.EMPTY)
         .default("bg_offset", 0)
         .default("user_name", hostname)
         .post()
@@ -285,15 +288,15 @@ async function loadConfig(path) {
         config: configData
     }
 
-    total_time = configData.get("totalTime");
-    background_cover = configData.get("coverId");
-    tutorial_complete = configData.get("tutorial");
-    bg_offset = configData.get("bg_offset");
-    user_name = configData.get("user_name");
+    totalPlayTime = configData.get("totalTime");
+    currentBackgroundCover = configData.get("coverId");
+    isTutorialComplete = configData.get("tutorial");
+    currentBackgroundOffset = configData.get("bg_offset");
+    currentUserName = configData.get("user_name");
 
     TranslationUtil.setLanguage(configData.get("language"));
 
-    if (tutorial_complete) {
+    if (isTutorialComplete) {
         document.getElementById("warn").remove()
     }
 }
@@ -349,14 +352,14 @@ async function updateCoverImages(first_time = false) {
         }
 
         img.addEventListener("mouseup", async (e) => {
-            if (currentEntry !== "" && e.button === 0) {
-                await getLauncher(currentEntry).functions().setCover(covers.indexOf(cover));
+            if (currentEntry !== STRINGS.EMPTY && e.button === 0) {
+                await getLauncher(currentEntry).getFunctions().setCover(covers.indexOf(cover));
             } else if (e.button === 0) {
-                background_cover = covers.indexOf(cover)
-                await setCover(background_cover)
+                currentBackgroundCover = covers.indexOf(cover)
+                await setCover(currentBackgroundCover)
             }
             play(sound_beep)
-            HTMLHelper.hide("profile-blur")
+            Hud.hide("profile-blur")
             document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
         })
 
@@ -384,8 +387,8 @@ async function updateCoverImages(first_time = false) {
         cover_text.innerHTML = "&#60450;"
 
         cover_img.addEventListener("mouseup", () => {
-            background_cover = i;
-            setCover(background_cover)
+            currentBackgroundCover = i;
+            setCover(currentBackgroundCover)
         })
 
         if (i > 5) {
@@ -395,7 +398,7 @@ async function updateCoverImages(first_time = false) {
                 setTimeout(async () => {
                     let scroll = images.scrollLeft;
                     await updateCoverImages()
-                    await setCover(background_cover);
+                    await setCover(currentBackgroundCover);
                     images.scrollTo({
                         left: scroll
                     })
@@ -421,13 +424,13 @@ async function updateCoverImages(first_time = false) {
 async function saveConfig() {
     await writeTextFile(localConfig.path,
         localConfig.config.map({
-            coverId: background_cover,
-            totalTime: total_time,
+            coverId: currentBackgroundCover,
+            totalTime: totalPlayTime,
             version: CLIENT_VERSION,
-            tutorial: tutorial_complete,
+            tutorial: isTutorialComplete,
             language: TranslationUtil.getLanguage(),
-            bg_offset: bg_offset,
-            user_name: user_name
+            bg_offset: currentBackgroundOffset,
+            user_name: currentUserName
         }).getJSON()
     )
 }
@@ -463,24 +466,20 @@ async function importMod(path) {
         await sendEvent("manual_download", {
             name: selectedPath.split(fileTerminator).pop()
         })
+        DownloadsManager.startDownload(selectedPath, selectedPath)
+        Hud.show("downloads-list")
     }
     if (selectedPath != null) {
-        if (selectedPath.endsWith(".zip") || selectedPath.endsWith(".rar") || selectedPath.endsWith("scripts.rpa")) {
-            HTMLHelper.setLoadingBar(0);
-            HTMLHelper.show("loader")
-            HTMLHelper.hide("main")
-            document.getElementById("loadingsub").textContent = "Importing Mod " + selectedPath
-            alert_path = selectedPath;
-            showContainers(false)
+        if (supportedModPackage(selectedPath)) {
             await invoke("import_mod", {
                 path: selectedPath
             })
         } else {
-            HTMLHelper.hide("loader")
-            HTMLHelper.show("main")
-            alert_path = undefined;
+            Hud.hide("loader")
+            Hud.show("main")
+            alertPath = undefined;
             showContainers(true)
-            HTMLHelper.hide("alert")
+            Hud.hide("alert")
 
             await confirm("Unsupported Format! {Supported: .zip, .rar, .rpa}")
         }
@@ -504,15 +503,15 @@ async function setCover(id) {
 
     document.getElementById("cove").style.backgroundImage = 'url("' + image + '")';
 
-    if (currentEntry === "") {
+    if (currentEntry === STRINGS.EMPTY) {
         document.getElementById("bg").style.backgroundImage = 'url("' + image + '")';
         const img = new Image();
         img.src = image;
 
         img.onload = () => {
-            current_bg_max = img.naturalHeight * (1200 / img.naturalWidth);
-            document.getElementById("bg").style.height = (current_bg_max) + "px";
-            document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
+            currentBackgroundMaxOffset = img.naturalHeight * (1200 / img.naturalWidth);
+            document.getElementById("bg").style.height = (currentBackgroundMaxOffset) + "px";
+            document.getElementById("bg").style.backgroundPositionY = ((600 - currentBackgroundMaxOffset) * (currentBackgroundOffset / 100)) + "px";
             img.remove()
         };
         await saveConfig()
@@ -546,12 +545,12 @@ async function setTheme(name, first) {
  */
 
 function exitProgram() {
-    HTMLHelper.show("loader")
-    HTMLHelper.hide("main")
+    Hud.show("loader")
+    Hud.hide("main")
     document.getElementById("loadinghead").textContent = "Closing..."
     document.getElementById("loadingsub").textContent = "Saving Data..."
-    HTMLHelper.setLoadingBar(0, false)
-    HTMLHelper.setLoadingBar(100, true)
+    Hud.setLoadingBar(0, false)
+    Hud.setLoadingBar(100, true)
 
     setTimeout(async () => {
         await invoke("close");
@@ -584,7 +583,7 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
         newScreenshot.loading = "lazy"
     } else {
         newScreenshot.onload = () => {
-            lazy_deref(src)
+            lazyDeref(src)
         }
     }
 
@@ -594,20 +593,20 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
     newScreenshot.addEventListener("mouseup", async () => {
         document.getElementById("view-image").src = await getImage(dir + fileTerminator + image);
         document.getElementById("view-image").classList.add("zoom")
-        HTMLHelper.show("view-background")
+        Hud.show("view-background")
     })
 
     cover_text.addEventListener("click", async () => {
         await remove(dir + fileTerminator + image);
-        await getLauncher(entryName).functions().leftClick();
+        await getLauncher(entryName).getFunctions().leftClick();
 
-        if (getLauncher(entry).functions().preload[image]) {
-            await getLauncher(entry).functions().preloadImages()
+        if (getLauncher(entry).getFunctions().preload[image]) {
+            await getLauncher(entry).getFunctions().preloadImages()
         }
     })
 
     path_text.addEventListener("click", async () => {
-        await getLauncher(entryName).functions().path();
+        await getLauncher(entryName).getFunctions().path();
     })
 
     path_text.classList.add("screenshots-path");
@@ -632,7 +631,7 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
 async function requestDirectory(directoryPath = undefined) {
     let chosenPath = undefined;
     if (directoryPath === undefined || !await isExist(directoryPath)) {
-        while (chosenPath === null || chosenPath === undefined || !await isDir(chosenPath)) {
+        while (Hud.isVoid(chosenPath) || !await isDir(chosenPath)) {
             chosenPath = await open({
                 directory: true,
                 multiple: false,
@@ -652,15 +651,15 @@ async function requestDirectory(directoryPath = undefined) {
         }
 
         for (const element in getLaunchers()) {
-            getLauncher(element).functions()["item"].remove();
+            getLauncher(element).getFunctions().item.remove();
         }
 
         clearLaunchers()
         const files = await readDir(selectedPath);
 
-        document.getElementById("search").value = ""
-        HTMLHelper.show("loader")
-        HTMLHelper.hide("main")
+        document.getElementById("search").value = STRINGS.EMPTY
+        Hud.show("loader")
+        Hud.hide("main")
         document.getElementById("nummods").textContent = files.length.toString();
 
         // Update Mods List
@@ -686,18 +685,18 @@ async function requestDirectory(directoryPath = undefined) {
 
         let interval = setInterval(async () => {
             if (finished_mods === mods_to_complete) {
-                HTMLHelper.setLoadingBar(100)
+                Hud.setLoadingBar(100)
                 clearInterval(interval)
                 Logger.log("Finished Loading DDMM - Enjoy!")
                 document.getElementById("loadingsub").textContent = "Loaded Mods | Loading GUI"
 
                 setTimeout(() => {
                     play(sound_click)
-                    HTMLHelper.hide("loader")
-                    HTMLHelper.show("main")
+                    Hud.hide("loader")
+                    Hud.show("main")
                 }, 500)
             } else {
-                HTMLHelper.setLoadingBar((finished_mods / mods_to_complete) * 100)
+                Hud.setLoadingBar((finished_mods / mods_to_complete) * 100)
                 document.getElementById("loadingsub").textContent = "Loaded " + finished_mods + "/" + mods_to_complete + " Mods -> " + finished.join(" | ")
                 finished = []
 
@@ -727,6 +726,7 @@ async function addMod(name) {
         Logger.warn("Mod " + name + " Does Not Exist! (path: " + selectedPath + fileTerminator + name + ")")
         return
     }
+
     // Find Correct Directory
 
     let dir = selectedPath + fileTerminator + name;
@@ -861,7 +861,7 @@ async function addMod(name) {
         escapedModCredits = configData.credits !== undefined ? htmlEscape(configData.credits).replaceAll("\n", "<br>") : undefined;
     }
 
-    if (configData.coverId === undefined || configData.coverId === null) {
+    if (Hud.isVoid(configData.coverId)) {
         configData.coverId = 0;
     }
 
@@ -910,12 +910,12 @@ async function addMod(name) {
         getOrder: () => configData.pinned ? char_code - 244 : (configData.favorite ? char_code - 122 : char_code),
         preloadImages: async () => {
             let images = 0;
-            getLauncher(name).functions().preload = {}
+            getLauncher(name).getFunctions().preload = {}
 
             for (const localEntry of await readDir(dir)) {
                 if (localEntry.name.includes("screenshot")) {
-                    getLauncher(name).functions().preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name), name, dir, localEntry.name, name, true);
-                    getLauncher(name).functions().preload[localEntry.name].classList.add("preload-image")
+                    getLauncher(name).getFunctions().preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name), name, dir, localEntry.name, name, true);
+                    getLauncher(name).getFunctions().preload[localEntry.name].classList.add("preload-image")
                     images++
 
                     if (images >= 2) {
@@ -938,11 +938,11 @@ async function addMod(name) {
             return name
         },
         resetOrder: () => {
-            sidetext.style.order = getLauncher(name).functions().getOrder()
+            sidetext.style.order = getLauncher(name).getFunctions().getOrder()
         },
         setPinned: async (pinnedState) => {
             if (pinnedState === undefined) {
-                if (configData.pinned === undefined || configData.pinned == null) {
+                if (Hud.isVoid(configData.pinned)) {
                     pinnedState = false
                 } else {
                     pinnedState = !configData.pinned;
@@ -958,13 +958,13 @@ async function addMod(name) {
                 sidetext.innerHTML = normalText
             }
 
-            getLauncher(name).functions().resetOrder()
+            getLauncher(name).getFunctions().resetOrder()
+            Hud.setPinned(configData.pinned)
 
             if (configData.pinned) {
                 play(dart_sfx)
             }
 
-            await setPinned(configData.pinned)
             if (configData.pinned) {
                 sidetext.classList.add("pinned")
             } else {
@@ -979,10 +979,10 @@ async function addMod(name) {
             })
             showContainers(false)
             await keepaliveTicker()
-            HTMLHelper.show("pill")
-            HTMLHelper.show("pill-files")
-            HTMLHelper.show("pill-contains")
-            if (covers.get(configData.coverId) !== null && covers.get(configData.coverId) !== undefined && preloadCovers.ofCover(configData.coverId) !== null && preloadCovers.ofCover(configData.coverId) !== undefined) {
+            Hud.show("pill")
+            Hud.show("pill-files")
+            Hud.show("pill-contains")
+            if (!Hud.isVoid(covers.get(configData.coverId),  preloadCovers.ofCover(configData.coverId))) {
                 document.getElementById("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(configData.coverId).src + '")';
             } else {
                 document.getElementById("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(0).src + '")';
@@ -990,13 +990,12 @@ async function addMod(name) {
             setTimeout(async () => {
                 play(sound_beep)
                 launch_time = Date.now();
-                if (configData.renpy === "" || configData.renpy === undefined) {
+                if (Hud.isVoid(configData.renpy)) {
                     configData.renpy = await getRenpy(dir);
                     await saveModData();
                 }
 
-
-                if (gameExePath === undefined || gameExePath === "" || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
+                if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
                     await searchGame()
                 }
 
@@ -1032,33 +1031,38 @@ async function addMod(name) {
             } else {
                 sidetext.innerHTML = normalText
             }
-            getLauncher(name).functions().isFavorite = configData.favorite;
-            getLauncher(name).functions().resetOrder()
+            getLauncher(name).getFunctions().isFavorite = configData.favorite;
+            getLauncher(name).getFunctions().resetOrder()
             await saveModData();
             document.getElementById("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
         },
         close: async () => {
-            if (alert_path === undefined) {
+            const playTime = Date.now() - launch_time;
+            const data = await metadata(selectedPath + fileTerminator + name);
+
+            if (alertPath === undefined) {
                 showContainers(true)
             }
+
             play(sound_click)
-            const playTime = Date.now() - launch_time;
+
             await sendEvent("game_close", {
                 mod: name,
-                length: Math.floor(playTime / 3600000) + TranslationUtil.of("h") + " " + (Math.floor(playTime / 60000) % 60) + TranslationUtil.of("m") + " " + (Math.floor(playTime / 1000) % 60) + "s"
+                length: Math.floor(playTime / 3600000) + TranslationUtil.of("h") + STRINGS.SPACE + (Math.floor(playTime / 60000) % 60) + TranslationUtil.of("m") + STRINGS.SPACE + (Math.floor(playTime / 1000) % 60) + "s"
             })
-            total_time += playTime;
+
+            totalPlayTime += playTime;
             configData.time += playTime;
-            const data = await metadata(selectedPath + fileTerminator + name);
             configData.size = data.size;
             configData.last_played = Date.now();
-            HTMLHelper.hide("pill")
-            HTMLHelper.hide("pill-files")
-            HTMLHelper.hide("pill-contains")
+
+            Hud.hide("pill")
+            Hud.hide("pill-files")
+            Hud.hide("pill-contains")
 
             await saveModData();
             await saveConfig()
-            await getLauncher(name).functions().leftClick();
+            await getLauncher(name).getFunctions().leftClick();
         },
         leftClick: async () => {
             let taskPromise;
@@ -1072,14 +1076,13 @@ async function addMod(name) {
 
             currentEntry = name;
             await setCover(configData.coverId);
-            await setPinned(configData.pinned);
+            Hud.setPinned(configData.pinned);
 
-            if (gameExePath === undefined || gameExePath === "" || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
-                Logger.log("re search")
+            if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
                 await searchGame()
             }
 
-            if (configData.renpy === "" || configData.renpy === undefined) {
+            if (Hud.isVoid(configData.renpy)) {
                 configData.renpy = await getRenpy(dir);
                 await saveModData();
             }
@@ -1095,27 +1098,29 @@ async function addMod(name) {
             const msSinceLastPlayed = Date.now() - configData.last_played;
             const pin_holder = document.getElementById("pin-holder");
 
-            if (pin_holder.style.top !== "") {
+            if (!STRINGS.isEmpty(pin_holder.style.top)) {
                 pin_holder.style.removeProperty("left")
                 pin_holder.style.removeProperty("top")
             }
 
-
             for (const child of children) {
                 if (!child.classList.contains("preload-image")) {
-                    lazy_deref(child.getElementsByClassName("screenshots-image")[0].src);
-                    child.getElementsByClassName("screenshots-image")[0].src = ""
+                    lazyDeref(child.getElementsByClassName("screenshots-image")[0].src);
+                    child.getElementsByClassName("screenshots-image")[0].src = STRINGS.EMPTY
                 }
                 child.remove()
             }
 
-            await taskPromise;
+            if (taskPromise !== null) {
+                await taskPromise;
+            }
 
             for (const localEntry of taskFiles) {
                 if (localEntry.name.startsWith("screenshot")) {
                     screenshots = true;
-                    if (getLauncher(name).functions().preload[localEntry.name] !== undefined) {
-                        document.getElementById("screenshots").appendChild(getLauncher(name).functions().preload[localEntry.name]);
+
+                    if (getLauncher(name).getFunctions().preload[localEntry.name] !== undefined) {
+                        document.getElementById("screenshots").appendChild(getLauncher(name).getFunctions().preload[localEntry.name]);
                         continue;
                     }
                     images.push(
@@ -1124,7 +1129,7 @@ async function addMod(name) {
                 }
             }
 
-            renpy = name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX_OTHER)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!");
+            renpy = name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && !STRINGS.isEmpty(gameExePath) && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX_OTHER)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!");
             document.getElementById("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
 
             new Promise(() => {
@@ -1138,7 +1143,7 @@ async function addMod(name) {
                     lastPlayed = TranslationUtil.of("just-now");
                 } else if (msSinceLastPlayed < Units.MillisMap.DAY) {
                     const is_prefix = TranslationUtil.getLanguage() === "es" || TranslationUtil.getLanguage() === "fr";
-                    lastPlayed = (is_prefix ? TranslationUtil.of("ago") + " " : "") + (msSinceLastPlayed >= Units.MillisMap.HOUR ? Math.floor(msSinceLastPlayed / Units.MillisMap.HOUR) + TranslationUtil.of("h") + " " : "") + (Math.floor(msSinceLastPlayed / Units.MillisMap.MINUTE) % 60) + TranslationUtil.of("m") + " " + (!is_prefix ? TranslationUtil.of("ago") : "");
+                    lastPlayed = (is_prefix ? TranslationUtil.of("ago") + STRINGS.SPACE : STRINGS.EMPTY) + (msSinceLastPlayed >= Units.MillisMap.HOUR ? Math.floor(msSinceLastPlayed / Units.MillisMap.HOUR) + TranslationUtil.of("h") + STRINGS.SPACE : STRINGS.EMPTY) + (Math.floor(msSinceLastPlayed / Units.MillisMap.MINUTE) % 60) + TranslationUtil.of("m") + STRINGS.SPACE + (!is_prefix ? TranslationUtil.of("ago") : STRINGS.EMPTY);
                 } else if (msSinceLastPlayed < Units.MillisMap.DAY * 2) {
                     lastPlayed = TranslationUtil.of("yesterday");
                 } else if (msSinceLastPlayed) {
@@ -1147,25 +1152,22 @@ async function addMod(name) {
             }
 
             if (configData.size === 0) {
-                updateDisplayInfo(name, configData.author, "Reading...", Math.floor(min / 60) + TranslationUtil.of("h") + " " + Math.floor(min % 60) + TranslationUtil.of("m"), renpy, "Never").then(() => {
-                })
+                updateDisplayInfo(name, configData.author, "Reading...", Math.floor(min / 60) + TranslationUtil.of("h") + STRINGS.SPACE + Math.floor(min % 60) + TranslationUtil.of("m"), renpy, "Never")
                 setTimeout(async () => {
                     let data = await metadata(selectedPath + fileTerminator + name);
                     configData.size = data.size;
                     if (currentEntry === name) {
-                        updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(min / 60) + TranslationUtil.of("h") + " " + Math.floor(min % 60) + TranslationUtil.of("m"), name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== "" && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed).then(() => {
-                        })
+                        updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(min / 60) + TranslationUtil.of("h") + STRINGS.SPACE + Math.floor(min % 60) + TranslationUtil.of("m"), name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== STRINGS.EMPTY && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed)
                     }
                     data = null
                 }, 0)
             } else {
-                updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.round(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(min / 60) + TranslationUtil.of("h") + " " + Math.floor(min % 60) + TranslationUtil.of("m"), renpy, lastPlayed).then(() => {
-                })
+                updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.round(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(min / 60) + TranslationUtil.of("h") + STRINGS.SPACE + Math.floor(min % 60) + TranslationUtil.of("m"), renpy, lastPlayed)
             }
 
             if (!screenshots) {
-                HTMLHelper.hide("screenshots-header")
-                HTMLHelper.hide("screenshots-parent")
+                Hud.hide("screenshots-header")
+                Hud.hide("screenshots-parent")
                 document.getElementById("info").classList.remove("info")
                 document.getElementById("info").classList.add("expanded")
                 document.getElementById("setinfo-header").style.left = "16rem";
@@ -1180,7 +1182,7 @@ async function addMod(name) {
                             imageS
                         );
                         imageS.getElementsByClassName("screenshots-image")[0].decode().then(() => {
-                            lazy_deref(imageS.getElementsByClassName("screenshots-image")[0].src);
+                            lazyDeref(imageS.getElementsByClassName("screenshots-image")[0].src);
                             caches.delete(imageS.getElementsByClassName("screenshots-image")[0].src);
                         }).catch(err => {
                             Logger.warn("Failed To Load Image: " + dir + fileTerminator + image_url + " Error: " + err)
@@ -1188,8 +1190,8 @@ async function addMod(name) {
                     }
                 }
 
-                HTMLHelper.show("screenshots-header")
-                HTMLHelper.show("screenshots-parent")
+                Hud.show("screenshots-header")
+                Hud.show("screenshots-parent")
                 document.getElementById("info").classList.remove("expanded")
                 document.getElementById("info").classList.add("info")
                 document.getElementById("setinfo-header").style.left = "30rem";
@@ -1198,14 +1200,13 @@ async function addMod(name) {
             renpy = null
         }
     })
+
     addLauncher(name, launcher)
-    launcher.functions().preloadImages().then(() => {
-    });
+    await launcher.getFunctions().preloadImages();
 
     sidetext.addEventListener("click", async () => {
         if (currentEntry === name) return;
-        launcher.functions().leftClick().then(() => {
-        });
+        await launcher.getFunctions().leftClick();
     })
 
     document.getElementById("modlist").appendChild(sidetext)
@@ -1242,10 +1243,10 @@ async function getRenpy(dir) {
                 const lines = code.split("\n");
                 for (const line of lines) {
                     if (line.startsWith("version_tuple = ") && !line.includes("*")) {
-                        renpy = line.replace("version_tuple = (", "").replace(", vc_version)", "").replaceAll(", ", ".");
+                        renpy = line.replace("version_tuple = (", STRINGS.EMPTY).replace(", vc_version)", STRINGS.EMPTY).replaceAll(", ", ".");
                         break;
                     } else if (line.trim().startsWith("version_tuple = ") && line.trim().includes("(8") && !line.includes("*")) {
-                        renpy = line.trim().replace("version_tuple = ", "").replace("VersionTuple", "").replace("(", "").replace(", vc_version)", "").replaceAll(", ", ".");
+                        renpy = line.trim().replace("version_tuple = ", STRINGS.EMPTY).replace("VersionTuple", STRINGS.EMPTY).replace("(", STRINGS.EMPTY).replace(", vc_version)", STRINGS.EMPTY).replaceAll(", ", ".");
                         break;
                     }
                 }
@@ -1256,7 +1257,7 @@ async function getRenpy(dir) {
                 const lines = code.split("\n");
                 for (const line of lines) {
                     if (line.startsWith("version = ")) {
-                        renpy = line.replace("version = ", "").replaceAll("'", "").replace("u", "");
+                        renpy = line.replace("version = ", STRINGS.EMPTY).replaceAll("'", STRINGS.EMPTY).replace("u", STRINGS.EMPTY);
                         break;
                     }
                 }
@@ -1275,33 +1276,33 @@ async function getRenpy(dir) {
 
 function showContainers(show) {
     if (show) {
-        if (tutorial_pointer != null) {
-            HTMLHelper.show("warn")
-            HTMLHelper.show("tutorial_pointer")
+        if (tutorialPointer != null) {
+            Hud.show("warn")
+            Hud.show("tutorial_pointer")
             document.getElementById("tutorial").dispatchEvent(new MouseEvent("mouseup", {}))
         }
-        HTMLHelper.show("modlist")
-        HTMLHelper.show("container-boarder")
-        HTMLHelper.show("container-shadow")
-        HTMLHelper.show("search")
-        HTMLHelper.show("container")
+        Hud.show("modlist")
+        Hud.show("container-boarder")
+        Hud.show("container-shadow")
+        Hud.show("search")
+        Hud.show("container")
     } else {
-        if (tutorial_pointer != null) {
-            HTMLHelper.hide("warn")
-            HTMLHelper.hideElement(tutorial_pointer)
+        if (tutorialPointer != null) {
+            Hud.hide("warn")
+            Hud.hideElement(tutorialPointer)
         }
 
-        if (!HTMLHelper.isHidden("pill")) {
-            HTMLHelper.hide("pill")
-            HTMLHelper.hide("pill-files")
-            HTMLHelper.hide("pill-contains")
+        if (!Hud.isHidden("pill")) {
+            Hud.hide("pill")
+            Hud.hide("pill-files")
+            Hud.hide("pill-contains")
         }
 
-        HTMLHelper.hide("modlist")
-        HTMLHelper.hide("container-boarder")
-        HTMLHelper.hide("container-shadow")
-        HTMLHelper.hide("search")
-        HTMLHelper.hide("container")
+        Hud.hide("modlist")
+        Hud.hide("container-boarder")
+        Hud.hide("container-shadow")
+        Hud.hide("search")
+        Hud.hide("container")
     }
 }
 
@@ -1314,7 +1315,7 @@ function showContainers(show) {
  * let time_played = "0h 100m";
  * let description = mod_name + "<br>Ren'Py 8.1";
  *
- * await updateDisplayInfo(mod_name, author, storage_size, time_played, description);
+ * updateDisplayInfo(mod_name, author, storage_size, time_played, description);
  * ```
  * @param {string} mod Mod Name
  * @param {string} author Author Name
@@ -1322,36 +1323,37 @@ function showContainers(show) {
  * @param {string} time Time Played
  * @param {string} renpy Ren'PY Version/Description
  * @param {string} lastTime Last Time Played
- * @returns {Promise<void>}
+ * @returns {void}
  */
 
-async function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
-    HTMLHelper.show("pin-holder")
+function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
+    Hud.show("pin-holder")
     document.getElementById("modtitle").value = formatModName(mod)
-    HTMLHelper.show("modtitle");
-    HTMLHelper.show("modinfo");
-    HTMLHelper.show("cove");
+    Hud.show("modtitle");
+    Hud.show("modinfo");
+    Hud.show("cove");
     document.getElementById("language-list").classList.add("language-list-hide");
+    Hud.hide("downloads-list")
 
     if (author.length > 0) {
         currentEntry = mod;
-        HTMLHelper.hide("covers");
-        HTMLHelper.show("setinfo-header");
-        HTMLHelper.show("info");
+        Hud.hide("covers");
+        Hud.show("setinfo-header");
+        Hud.show("info");
         if (renpy !== undefined) {
             document.getElementById("info").innerHTML = renpy;
         } else {
             document.getElementById("info").textContent = "No Information Found!";
         }
-        HTMLHelper.show("delete");
-        HTMLHelper.show("reset-save");
-        HTMLHelper.show("path");
-        HTMLHelper.show("extract");
-        HTMLHelper.show("delete-save");
-        HTMLHelper.show("play");
-        HTMLHelper.hide("optionsmenu");
-        HTMLHelper.hide("cover-up");
-        HTMLHelper.hide("cover-down");
+        Hud.show("delete");
+        Hud.show("reset-save");
+        Hud.show("path");
+        Hud.show("extract");
+        Hud.show("delete-save");
+        Hud.show("play");
+        Hud.hide("optionsmenu");
+        Hud.hide("cover-up");
+        Hud.hide("cover-down");
         document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60755;</span> " + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61966;</span> " + time + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61974;</span> " + lastTime;
         document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 150) + "px"
         if (space !== "Reading...") {
@@ -1370,38 +1372,38 @@ async function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
             document.getElementById("authinput").readOnly = true;
         }
     } else {
-        currentEntry = ""
-        setCover(background_cover).then(() => {
+        currentEntry = STRINGS.EMPTY
+        setCover(currentBackgroundCover).then(() => {
         })
-        let min = Math.floor(total_time / 60000);
-        HTMLHelper.hide("screenshots-header");
-        HTMLHelper.hide("screenshots-parent");
-        HTMLHelper.show("covers");
-        HTMLHelper.hide("setinfo-header");
-        HTMLHelper.hide("info");
-        HTMLHelper.hide("delete");
-        HTMLHelper.hide("reset-save");
-        HTMLHelper.hide("path");
-        HTMLHelper.hide("extract");
-        HTMLHelper.hide("delete-save");
-        HTMLHelper.hide("play");
-        HTMLHelper.show("cover-up");
-        HTMLHelper.show("cover-down");
-        HTMLHelper.show("optionsmenu");
-        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61966;</span> " + Math.floor(min / 60) + TranslationUtil.of("h") + " " + (min % 60) + TranslationUtil.of("m");
+        let min = Math.floor(totalPlayTime / 60000);
+        Hud.hide("screenshots-header");
+        Hud.hide("screenshots-parent");
+        Hud.show("covers");
+        Hud.hide("setinfo-header");
+        Hud.hide("info");
+        Hud.hide("delete");
+        Hud.hide("reset-save");
+        Hud.hide("path");
+        Hud.hide("extract");
+        Hud.hide("delete-save");
+        Hud.hide("play");
+        Hud.show("cover-up");
+        Hud.show("cover-down");
+        Hud.show("optionsmenu");
+        document.getElementById("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61966;</span> " + Math.floor(min / 60) + TranslationUtil.of("h") + STRINGS.SPACE + (min % 60) + TranslationUtil.of("m");
     }
 }
 
 /**
  * Returns To Home Screen
- * @returns {Promise<void>}
+ * @returns {void}
  */
 
-async function gotoHomePage() {
-    document.getElementById("covertext").innerHTML = ""
-    await setPinned(false)
-    HTMLHelper.hide("pin-holder")
-    await updateDisplayInfo(TranslationUtil.of("greet") + " " + user_name + "!", "", "", "", "", "")
+function gotoHomePage() {
+    document.getElementById("covertext").innerHTML = STRINGS.EMPTY
+    Hud.setPinned(false)
+    Hud.hide("pin-holder")
+    updateDisplayInfo(TranslationUtil.of("greet") + STRINGS.SPACE + currentUserName + "!", STRINGS.EMPTY, STRINGS.EMPTY, STRINGS.EMPTY, STRINGS.EMPTY, STRINGS.EMPTY)
 }
 
 /**
@@ -1410,18 +1412,18 @@ async function gotoHomePage() {
  */
 
 async function setAuthor() {
-    if (currentEntry === "") return;
+    if (currentEntry === STRINGS.EMPTY) return;
     document.getElementById("authinput").blur()
     let value = document.getElementById("authinput").value.trimEnd();
-    if (value === "") {
-        const author = (await getLauncher(currentEntry).functions().getData()).author;
+    if (value === STRINGS.EMPTY) {
+        const author = (await getLauncher(currentEntry).getFunctions().getData()).author;
         document.getElementById("authinput").value = author;
         document.getElementById("authinput").placeholder = author;
         document.getElementById("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
 
     } else {
-        await getLauncher(currentEntry).functions().setAuthor(value);
-        await getLauncher(currentEntry).functions().leftClick();
+        await getLauncher(currentEntry).getFunctions().setAuthor(value);
+        await getLauncher(currentEntry).getFunctions().leftClick();
     }
 }
 
@@ -1442,29 +1444,24 @@ async function sendKeepAlive() {
  */
 
 async function keepaliveTicker() {
-    HTMLHelper.tick()
+    Hud.tick()
+    DownloadsManager.tick()
 
-    if (!HTMLHelper.isHidden("loader")) return;
-    if (!HTMLHelper.isHidden("modlist") || alert_path !== undefined) {
-        if (!HTMLHelper.isHidden("pill")) {
-            HTMLHelper.hide("pill")
-            HTMLHelper.hide("pill-files")
-            HTMLHelper.hide("pill-contains")
+    if (!Hud.isHidden("loader")) return;
+    if (!Hud.isHidden("modlist") || alertPath !== undefined) {
+        if (!Hud.isHidden("pill")) {
+            Hud.hide("pill")
+            Hud.hide("pill-files")
+            Hud.hide("pill-contains")
         }
         return
     }
 
-    if (HTMLHelper.isHidden("pill")) {
-        HTMLHelper.show("pill")
-        HTMLHelper.show("pill-files")
-        HTMLHelper.show("pill-contains")
-    }
-
-    const playTime = await getLauncher(currentEntry).functions().get_time();
+    const playTime = await getLauncher(currentEntry).getFunctions().get_time();
     const second = Math.floor(playTime / 1000) % 60;
     const min = Math.floor(playTime / 60000);
-    const name = await getLauncher(currentEntry).functions().getName() + " ";
-    const author = (await getLauncher(currentEntry).functions().getData()).author;
+    const name = await getLauncher(currentEntry).getFunctions().getName() + STRINGS.SPACE;
+    const author = (await getLauncher(currentEntry).getFunctions().getData()).author;
     const time = Math.floor(min / 60) + "h " + (min % 60) + "m " + second + "s";
 
     document.getElementById("pill-game").textContent = name
@@ -1473,54 +1470,21 @@ async function keepaliveTicker() {
 }
 
 /**
- * Christmas Snowflake Animation
- * @returns {Promise<void>}
- */
-
-async function snowflake() {
-    if (!focused) return;
-    const snowflake = document.createElement("div");
-    const x = Math.floor(Math.random() * window.innerWidth);
-    const size = Math.random() * 30 + 20;
-    const speed = Math.random() * 5 + 2;
-    snowflake.style.left = x + "px";
-    snowflake.style.width = size + "px";
-    snowflake.style.height = size + "px";
-    snowflake.classList.add("snowflake");
-    snowflake.style.transition = "top " + speed + "s linear, rotate " + speed + "s ease";
-    snowflake.style.rotate = Math.floor(Math.random() * 360) + "deg";
-    snowflake.style.opacity = (Math.random() * 0.5 + 0.5).toString();
-    document.body.appendChild(snowflake);
-
-    setTimeout(() => {
-        snowflake.style.top = "100%"
-        snowflake.style.rotate = Math.floor(Math.random() * 360) + "deg";
-        if (Math.random() > 0.5) {
-            snowflake.style.zIndex = "-1"
-        }
-    }, 250)
-
-    setTimeout(() => {
-        snowflake.remove()
-    }, 250 + (speed * 1100))
-}
-
-/**
  * Rename Mod
  * @returns {Promise<void>}
  */
 
 async function renameMod() {
-    if (currentEntry === "") return;
+    if (currentEntry === STRINGS.EMPTY) return;
     let value = document.getElementById("modtitle").value.trimStart().trimEnd();
-    let name = await getLauncher(currentEntry).functions().getName();
+    let name = await getLauncher(currentEntry).getFunctions().getName();
     if (value === name) {
         document.getElementById("modtitle").value = formatModName(currentEntry);
         return;
     }
     if (value !== name && value.length !== 0) {
-        let oldName = (await getLauncher(currentEntry).functions().getPath()) + fileTerminator + name;
-        let newName = (await getLauncher(currentEntry).functions().getPath()) + fileTerminator + value;
+        let oldName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + name;
+        let newName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + value;
 
         if (value.match(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/g) || value.match(/^(con|prn|aux|nul|com\d|lpt\d)$/i) || value.length > 100) {
             await confirm("The Name '" + value + "' is invalid!")
@@ -1528,18 +1492,18 @@ async function renameMod() {
             return;
         }
 
-        if (await isExist(await getLauncher(currentEntry).functions().getPath() + fileTerminator + newName)) {
+        if (await isExist(await getLauncher(currentEntry).getFunctions().getPath() + fileTerminator + newName)) {
             await confirm("The Name '" + value + "' already exists!")
             document.getElementById("modtitle").value = formatModName(currentEntry);
             return;
         }
 
         try {
-            HTMLHelper.show("loader")
-            HTMLHelper.hide("main")
+            Hud.show("loader")
+            Hud.hide("main")
             document.getElementById("loadingsub").textContent = "Renaming Mod"
-            HTMLHelper.setLoadingBar(0, false)
-            HTMLHelper.setLoadingBar(100, true)
+            Hud.setLoadingBar(0, false)
+            Hud.setLoadingBar(100, true)
             await invoke("rename_dir", {
                 path: oldName,
                 newName: newName,
@@ -1568,7 +1532,7 @@ async function updateProfiles(path) {
         document.getElementById("profiles").replaceChildren();
     }
 
-    profile_path = profiles_path;
+    profilePath = profiles_path;
 
     if (!await isDir(profiles_path)) {
         await mkdir(profiles_path);
@@ -1580,26 +1544,26 @@ async function updateProfiles(path) {
 
     let profiles_data = JSON.parse(await readTextFile(current_info_path));
 
-    current_game_data_path = path;
-    selected_name = profiles_data.selected == null ? "profile-Default" : profiles_data.selected;
-    current_profile = profiles_data.current == null ? "Default" : profiles_data.current;
-    original_profile = current_profile;
-    current_profile_data = profiles_data.profiles == null ? {"0": "Default"} : profiles_data.profiles;
-    concurrent_profile_data = {}
+    currentGameDataPath = path;
+    selectedProfileName = profiles_data.selected == null ? "profile-Default" : profiles_data.selected;
+    currentProfile = profiles_data.current == null ? "Default" : profiles_data.current;
+    originalProfile = currentProfile;
+    currentProfileData = profiles_data.profiles == null ? {"0": "Default"} : profiles_data.profiles;
+    concurrentProfileData = {}
 
-    if (!await isExist(getProfilePath(current_profile))) {
-        await writeTextFile(getProfilePath(current_profile), "{}");
+    if (!await isExist(getProfilePath(currentProfile))) {
+        await writeTextFile(getProfilePath(currentProfile), "{}");
     }
 
     const profile_files = await readDir(profiles_path);
     for (const profile of profile_files) {
         if (profile.name.includes(".ddmm.profile.json")) {
-            const name = profile.name.replace(".ddmm.profile.json", "");
+            const name = profile.name.replace(".ddmm.profile.json", STRINGS.EMPTY);
             Logger.log(name)
-            Logger.log(current_profile_data)
+            Logger.log(currentProfileData)
             let profile_spot = undefined;
-            for (const key in current_profile_data) {
-                if (current_profile_data[key] === "profile-" + name) {
+            for (const key in currentProfileData) {
+                if (currentProfileData[key] === "profile-" + name) {
                     profile_spot = key;
                     break
                 }
@@ -1608,26 +1572,26 @@ async function updateProfiles(path) {
             createProfile(name, profile_spot);
         }
     }
-    HTMLHelper.show("profile-bg")
+    Hud.show("profile-bg")
 }
 
 function getProfilePath(name) {
     if (name === null) {
-        return profile_path + fileTerminator + "null"
+        return profilePath + fileTerminator + "null"
     }
-    return profile_path + fileTerminator + (name === undefined ? currentEntry : name).replace("profile-", "") + ".ddmm.profile.json"
+    return profilePath + fileTerminator + (name === undefined ? currentEntry : name).replace("profile-", STRINGS.EMPTY) + ".ddmm.profile.json"
 }
 
 async function saveProfileData() {
-    for (const key in current_profile_data) {
-        const profile_path = getProfilePath(current_profile_data[key]);
+    for (const key in currentProfileData) {
+        const profile_path = getProfilePath(currentProfileData[key]);
         Logger.log(profile_path)
         if (!await isExist(profile_path)) {
-            current_profile_data[key] = undefined;
+            currentProfileData[key] = undefined;
         }
     }
 
-    const sorted = Object.entries(current_profile_data)
+    const sorted = Object.entries(currentProfileData)
         .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
         .reduce((acc, [key, value], index, array) => {
             const currentKey = parseInt(key);
@@ -1640,19 +1604,19 @@ async function saveProfileData() {
         }, {});
 
     const profiles_data = {
-        "selected": selected_name,
-        "current": current_profile.replace("profile-", ""),
+        "selected": selectedProfileName,
+        "current": currentProfile.replace("profile-", STRINGS.EMPTY),
         "profiles": sorted
     }
 
     Logger.log(profiles_data, sorted)
 
-    writeTextFile(profile_path + fileTerminator + ".info.json", JSON.stringify(profiles_data, null, "\t")).then(_ => {
+    writeTextFile(profilePath + fileTerminator + ".info.json", JSON.stringify(profiles_data, null, "\t")).then(_ => {
     });
 }
 
 async function saveCurrentProfileData() {
-    let active_profile_path = getProfilePath(original_profile);
+    let active_profile_path = getProfilePath(originalProfile);
     if (!await isExist(active_profile_path)) {
         return;
     }
@@ -1660,7 +1624,7 @@ async function saveCurrentProfileData() {
 }
 
 async function saveCurrentGamePath(path = undefined, recursive = false) {
-    if (path === undefined) path = current_game_data_path;
+    if (path === undefined) path = currentGameDataPath;
     let data = {}
     for (const file of await readDir(path)) {
         if (file.isDirectory) {
@@ -1671,7 +1635,7 @@ async function saveCurrentGamePath(path = undefined, recursive = false) {
     }
 
     if (getLauncher(currentEntry) !== undefined && !recursive) {
-        const data_path = getLauncher(currentEntry).functions().absolute_location + fileTerminator + "game" + fileTerminator + "saves"
+        const data_path = getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "game" + fileTerminator + "saves"
         if (await isExist(data_path)) {
             const data_path_contents = await readDir(data_path)
             for (const file of data_path_contents) {
@@ -1688,23 +1652,23 @@ async function saveCurrentGamePath(path = undefined, recursive = false) {
 
 async function loadCurrentProfileData(reload, reset_data) {
     if (reset_data !== true) {
-        let profiles_data = JSON.parse(await readTextFile(profile_path + fileTerminator + ".info.json"));
-        selected_name = profiles_data.selected == null ? "profile-Default" : "profile-" + profiles_data.selected;
-        current_profile = profiles_data.current ?? "Default";
-        original_profile = current_profile;
-        current_profile_data = profiles_data.profiles ?? {"0": "Default"};
-        current_profile_data = Object.fromEntries(Object.entries(current_profile_data).sort((a, b) => parseInt(a[0]) - parseInt(b[0])));
-        concurrent_profile_data = {}
+        let profiles_data = JSON.parse(await readTextFile(profilePath + fileTerminator + ".info.json"));
+        selectedProfileName = profiles_data.selected == null ? "profile-Default" : "profile-" + profiles_data.selected;
+        currentProfile = profiles_data.current ?? "Default";
+        originalProfile = currentProfile;
+        currentProfileData = profiles_data.profiles ?? {"0": "Default"};
+        currentProfileData = Object.fromEntries(Object.entries(currentProfileData).sort((a, b) => parseInt(a[0]) - parseInt(b[0])));
+        concurrentProfileData = {}
     }
-    Logger.log(" should reload: " + reload + " file: " + current_profile)
+    Logger.log(" should reload: " + reload + " file: " + currentProfile)
     if (reload) {
-        await delDir(current_game_data_path);
-        await delDir(getLauncher(currentEntry).functions().absolute_location + fileTerminator + "game" + fileTerminator + "saves");
+        await delDir(currentGameDataPath);
+        await delDir(getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "game" + fileTerminator + "saves");
 
-        let data = await readTextFile(getProfilePath(current_profile));
+        let data = await readTextFile(getProfilePath(currentProfile));
         const self_data = JSON.parse(data);
 
-        await loadProfileData(self_data, current_game_data_path)
+        await loadProfileData(self_data, currentGameDataPath)
     }
 }
 
@@ -1720,8 +1684,8 @@ async function loadProfileData(self_data, upstream) {
         let n = f.replaceAll(fileTerminator, "/");
 
         if (f.startsWith("mod_saves_folder:")) {
-            let global_path = getLauncher(currentEntry).functions().absolute_location + fileTerminator + "game" + fileTerminator + "saves"
-            let path = f.replace(/mod_saves_folder:/, "")
+            let global_path = getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "game" + fileTerminator + "saves"
+            let path = f.replace(/mod_saves_folder:/, STRINGS.EMPTY)
             n = path.replaceAll(fileTerminator, "/")
             if (await isExist(global_path)) {
                 if (n.includes("/")) {
@@ -1755,13 +1719,6 @@ async function loadProfileData(self_data, upstream) {
     }
 }
 
-async function setPinned(pinned) {
-    HTMLHelper.toggle("pin-pinned", !pinned)
-    HTMLHelper.toggle("pin-unpinned", pinned)
-    document.getElementById("pin-holder").classList.toggle("pin-active", !pinned)
-    document.getElementById("pin-unpinned").classList.toggle("pin-unpinned-heart", !pinned)
-}
-
 async function delDir(path) {
     if (!await isExist(path)) {
         Logger.log("Path does not exist: " + path)
@@ -1777,7 +1734,7 @@ async function delDir(path) {
 }
 
 async function saveProfile() {
-    const changed_profile = original_profile !== current_profile;
+    const changed_profile = originalProfile !== currentProfile;
     Logger.log(await saveCurrentGamePath())
     await saveProfileData();
     await saveCurrentProfileData();
@@ -1787,7 +1744,7 @@ async function saveProfile() {
 function createProfile(profile, position) {
     if (position === undefined) {
         position = 0;
-        while (current_profile_data[position] !== undefined) {
+        while (currentProfileData[position] !== undefined) {
             position++;
         }
     }
@@ -1803,8 +1760,8 @@ function createProfile(profile, position) {
                 elm.classList.remove("profile-button-active")
             }
         }
-        selected_name = background.id;
-        current_profile = background.id.replace("profile-", "");
+        selectedProfileName = background.id;
+        currentProfile = background.id.replace("profile-", STRINGS.EMPTY);
         background.classList.add("profile-button-active")
     }
 
@@ -1828,7 +1785,7 @@ function createProfile(profile, position) {
     background.appendChild(b_select)
     background.appendChild(b_drag)
 
-    if (selected_name === background.id) {
+    if (selectedProfileName === background.id) {
         background.classList.add("profile-button-active")
     }
 
@@ -1838,30 +1795,30 @@ function createProfile(profile, position) {
             })
             return;
         }
-        rename_target = background.id.replace("profile-", "");
+        renameProfileTarget = background.id.replace("profile-", STRINGS.EMPTY);
         document.getElementById("profile-bg").classList.add("profile-bg-covered")
-        HTMLHelper.show("input-prompt")
-        document.getElementById("input-prompt-box").value = background.id.replace("profile-", "");
+        Hud.show("input-prompt")
+        document.getElementById("input-prompt-box").value = background.id.replace("profile-", STRINGS.EMPTY);
         document.getElementById("input-prompt-box").focus();
     })
 
     background.addEventListener("mousedown", onClick)
 
     b_drag.addEventListener("mousedown", async (_) => {
-        if (selected_button !== null) return;
-        selected_name = background.id;
-        selected_button = document.createElement("div");
+        if (selectedProfileButton !== null) return;
+        selectedProfileName = background.id;
+        selectedProfileButton = document.createElement("div");
         const text = document.createElement("header");
         text.classList.add("profile-item-name")
-        text.textContent = background.id.replace("profile-", "");
+        text.textContent = background.id.replace("profile-", STRINGS.EMPTY);
 
-        selected_button.classList.add("profile-button-hover")
-        selected_button.style.top = background.getBoundingClientRect().y + "px";
-        selected_button.style.left = background.getBoundingClientRect().x + "px";
-        selected_button.id = background.id
+        selectedProfileButton.classList.add("profile-button-hover")
+        selectedProfileButton.style.top = background.getBoundingClientRect().y + "px";
+        selectedProfileButton.style.left = background.getBoundingClientRect().x + "px";
+        selectedProfileButton.id = background.id
 
-        selected_button.appendChild(text)
-        document.getElementById("profile-blur").appendChild(selected_button);
+        selectedProfileButton.appendChild(text)
+        document.getElementById("profile-blur").appendChild(selectedProfileButton);
     })
 
     b_delete.addEventListener("mousedown", async (_) => {
@@ -1869,13 +1826,13 @@ function createProfile(profile, position) {
             await confirm(TranslationUtil.of("error-profile_delete"))
             return;
         }
-        await remove(profile_path + fileTerminator + background.id.replace("profile-", "") + ".ddmm.profile.json");
+        await remove(profilePath + fileTerminator + background.id.replace("profile-", STRINGS.EMPTY) + ".ddmm.profile.json");
 
-        current_profile = "Default"
-        selected_name = "profile-Default"
-        for (const key in current_profile_data) {
-            if (current_profile_data[key].replace("profile-", "") === background.id.replace("profile-", "")) {
-                delete current_profile_data[key]
+        currentProfile = "Default"
+        selectedProfileName = "profile-Default"
+        for (const key in currentProfileData) {
+            if (currentProfileData[key].replace("profile-", STRINGS.EMPTY) === background.id.replace("profile-", STRINGS.EMPTY)) {
+                delete currentProfileData[key]
             }
         }
 
@@ -1892,7 +1849,7 @@ function createProfile(profile, position) {
         await loadCurrentProfileData(true, true);
     })
 
-    concurrent_profile_data[profile] = {
+    concurrentProfileData[profile] = {
         files: {}
     }
 
@@ -1901,12 +1858,12 @@ function createProfile(profile, position) {
         Logger.log(profile, r)
         if (!r) {
             Logger.log("Creating Profile")
-            writeTextFile(getProfilePath(profile), JSON.stringify(concurrent_profile_data[profile], null, "\t")).then(_ => {
+            writeTextFile(getProfilePath(profile), JSON.stringify(concurrentProfileData[profile], null, "\t")).then(_ => {
             });
         }
     })
 
-    current_profile_data[position] = background.id;
+    currentProfileData[position] = background.id;
     document.getElementById("profiles").appendChild(background)
     return onClick;
 }
@@ -1934,7 +1891,7 @@ function moveEntries(obj, fromIndex, toIndex) {
 
 function closeProfileRenamePrompt() {
     document.getElementById("profile-bg").classList.remove("profile-bg-covered")
-    HTMLHelper.hide("input-prompt")
+    Hud.hide("input-prompt")
 }
 
 async function saveProfileName() {
@@ -1944,13 +1901,13 @@ async function saveProfileName() {
         return;
     }
     Logger.log("[MARKER] -> Rename")
-    if (name !== "") {
-        Logger.log(current_profile_data)
-        for (const profile in current_profile_data) {
-            Logger.log(current_profile_data[profile])
-            if (current_profile_data[profile] === null || current_profile_data[profile] === undefined) continue;
-            const comperator = (current_profile_data[profile] + "").toLowerCase().replace("profile-", "");
-            const comperason = name.toLowerCase().replace("profile-", "");
+    if (name !== STRINGS.EMPTY) {
+        Logger.log(currentProfileData)
+        for (const profile in currentProfileData) {
+            Logger.log(currentProfileData[profile])
+            if (currentProfileData[profile] === null || currentProfileData[profile] === undefined) continue;
+            const comperator = (currentProfileData[profile] + STRINGS.EMPTY).toLowerCase().replace("profile-", STRINGS.EMPTY);
+            const comperason = name.toLowerCase().replace("profile-", STRINGS.EMPTY);
             Logger.log(comperator, comperason, comperator === comperason)
             if (comperason === comperator || name.toLowerCase().includes("profile-")) {
                 await confirm("The Name '" + name + "' is already taken!")
@@ -1961,24 +1918,24 @@ async function saveProfileName() {
             await confirm("The Name '" + name + "' is invalid!")
             return;
         }
-        for (const key in current_profile_data) {
-            if (current_profile_data[key] === "profile-" + rename_target) {
-                Logger.log(concurrent_profile_data[rename_target], current_profile_data[key])
-                document.getElementById("profile-" + rename_target).querySelector("header").textContent = name;
-                document.getElementById("profile-" + rename_target).id = "profile-" + name;
-                current_profile_data[key] = "profile-" + name;
-                concurrent_profile_data[name] = concurrent_profile_data[rename_target];
-                delete concurrent_profile_data[rename_target];
+        for (const key in currentProfileData) {
+            if (currentProfileData[key] === "profile-" + renameProfileTarget) {
+                Logger.log(concurrentProfileData[renameProfileTarget], currentProfileData[key])
+                document.getElementById("profile-" + renameProfileTarget).querySelector("header").textContent = name;
+                document.getElementById("profile-" + renameProfileTarget).id = "profile-" + name;
+                currentProfileData[key] = "profile-" + name;
+                concurrentProfileData[name] = concurrentProfileData[renameProfileTarget];
+                delete concurrentProfileData[renameProfileTarget];
 
-                if (selected_name === "profile-" + rename_target) {
-                    selected_name = "profile-" + name;
-                    current_profile = name;
+                if (selectedProfileName === "profile-" + renameProfileTarget) {
+                    selectedProfileName = "profile-" + name;
+                    currentProfile = name;
                 }
 
-                Logger.log(rename_target)
+                Logger.log(renameProfileTarget)
 
-                await writeTextFile(getProfilePath(name), await readTextFile(getProfilePath(rename_target)));
-                await remove(getProfilePath(rename_target));
+                await writeTextFile(getProfilePath(name), await readTextFile(getProfilePath(renameProfileTarget)));
+                await remove(getProfilePath(renameProfileTarget));
 
                 break
             }
@@ -2073,113 +2030,108 @@ async function onLoad() {
 
     Logger.log("Loading Observers");
 
-    updateOSType()
-
-    Logger.log("Running on OS.TYPE-" + getOSType().toUpperCase())
-
-    if (getOSType() === OS.TYPE.LINUX) {
-        window.addEventListener('keydown', (e) => {
-            if (e.key === "r" && e.ctrlKey) {
-                e.preventDefault();
-                location.reload()
-            }
-        })
-    }
+    PreventDefaults.init()
+    OSUtil.Init()
+    await SeasonsManager.init(CURRENT.SEASON)
 
     await listen("import_done", async (event) => {
-        if (alert_path.includes(fileTerminator + "Downloads" + fileTerminator)) {
-            await remove(alert_path);
-        }
-        document.getElementById("loadingsub").textContent = "Mod Imported | Loading GUI"
         setTimeout(async () => {
-            if (alert_path !== undefined) {
-                if (await isExist(alert_path) && alert_path.toLowerCase().includes("downloads")) {
-                    await remove(alert_path)
+            if (alertPath !== undefined) {
+                if (await isExist(alertPath) && alertPath.toLowerCase().includes("downloads")) {
+                    await remove(alertPath)
                 }
-                alert_path = undefined;
+                alertPath = undefined;
             }
         })
+
         let goal = event.payload.text;
-        Logger.log("Imported: " + alert_path + " AT: " + goal)
+        let url = event.payload.text2;
+        if (!Hud.isVoid(url)) {
+            const download = DownloadsManager.getDownload(url)
+            if (!Hud.isVoid(download)) {
+                DownloadsManager.complete(url)
+            }
+        }
+
+        Logger.log("Imported: " + alertPath + " AT: " + goal + " with URL: " + url)
 
         await addMod(goal)
-        HTMLHelper.hide("loader")
-        HTMLHelper.show("main")
+
+        Hud.hide("loader")
+        Hud.show("main")
+        
         if (getLauncher(goal)) {
-            getLauncher(goal).functions().leftClick();
+            getLauncher(goal).getFunctions().leftClick();
         } else {
             Logger.warn(goal + " Not Found!")
         }
-        alert_path = undefined;
+        alertPath = undefined;
         showContainers(true)
     })
 
     await listen("download_start", async (e) => {
         Logger.log(e.payload.text)
-        let components = e.payload.text.split(" | ");
-        tracked_downloads.push(components[1])
-        Logger.log(tracked_downloads)
-        HTMLHelper.show("install-info")
+        
+        Hud.show("downloads-list")
+        document.getElementById("language-list").classList.add("language-list-hide");
+
+        const [url, path] = e.payload.text.split(" | ");
+        DownloadsManager.startDownload(url, path)
         confirm("Close Other Windows?").then(async (e) => {
             if (e) {
                 await invoke("goto_main")
             }
         })
+
+        Logger.log(tracked_downloads)
     })
 
     await listen("download_percent", async (e) => {
-        if (tracked_downloads.length > 0) {
-            let dT = Date.now() - last_change;
-            let path = tracked_downloads[0]
-            if (dT < 10) {
-                return
-            }
-            last_change = Date.now()
-            part_file = path;
-            let name = part_file.split(fileTerminator).pop().split(".").reverse().pop();
+        const [url, downloadString, downloadPercent] = e.payload.text.split(" | ");
+        const downloadingObject = DownloadsManager.getDownload(url)
 
-            document.getElementById("install-info").textContent = "Downloading " + (name.length <= 20 ? name : name.slice(0, 16) + "...") + " at " + e.payload.text
+        if (!Hud.isVoid(downloadingObject)) {
+            downloadingObject.setUpdateString(downloadString)
+            downloadingObject.setPercent(parseFloat(downloadPercent))
         }
     })
 
     await listen("download_end", async (e) => {
         let components = e.payload.text.split(" | ");
+        let url = components[0]
         let path = components[1]
-        let split = terminatePath(path).split(fileTerminator)
-        let file = split.pop()
-        let dir = split.join(fileTerminator)
+        let download = DownloadsManager.getDownload(url)
 
-        if (tracked_downloads.includes(path)) {
-            tracked_downloads.splice(tracked_downloads.indexOf(path), 1)
-            Logger.log(tracked_downloads + " | " + tracked_downloads.length)
-        }
+        download.setPercent(0)
+        download.setUpdateString("Importing")
 
-        if (tracked_downloads.length === 0) {
-            HTMLHelper.hide("install-info")
-            part_file_size = 0
-            part_file = null
-        }
+        console.log(url, path)
 
-        alert_path = path
+        DownloadsManager.swap(url, path)
 
-        Logger.log("Download Finished - " + e.payload.text)
-        const data = await metadata(path);
-
-        showContainers(false)
-        HTMLHelper.show("alert")
-        document.getElementById("alert-size").innerText = Math.floor(data.size / 1048600).toString() + "mb";
-        document.getElementById("alert-pth").innerText = dir;
-        document.getElementById("alert-name").textContent = file
+        await importMod(path)
     })
 
     // Listener for Loading Bar Percent
 
     await listen("set_bar", (event) => {
         let goal = event.payload.number_goal;
-        HTMLHelper.setLoadingBar(event.payload.number, false)
+        let number = event.payload["number"];
         Logger.log(event.payload)
+
+        if (event.payload.path !== undefined) {
+            const url = event.payload.path.replaceAll("\\\\","\\")
+            const downloadingObject = DownloadsManager.getDownload(url)
+            if (!Hud.isVoid(downloadingObject)) {
+                downloadingObject.setPercent(number)
+                downloadingObject.setPercentFrames(parseFloat(goal))
+                return
+            }
+        }
+
+        Hud.setLoadingBar(event.payload.number, false)
         if (goal > 0) {
-            HTMLHelper.setLoadingBar(goal, true)
+            Hud.setLoadingBar(goal, true)
         }
     })
 
@@ -2205,12 +2157,12 @@ async function onLoad() {
                 Logger.warn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
                 document.getElementById("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
                 if (navigator.onLine) {
-                    if (TranslationUtil.getLanguage() === "") {
+                    if (TranslationUtil.getLanguage() === STRINGS.EMPTY) {
                         escape_clause_language = true;
                     }
                     loadTranslation(TranslationUtil.getLanguage(), true)
 
-                    HTMLHelper.show("changelog")
+                    Hud.show("changelog")
                     document.getElementById("changelog-title").textContent = "New Update! | " + newest_version.split("\n")[0]
                     document.getElementById("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
                     document.getElementById("changelog-update").textContent = TranslationUtil.of("update")
@@ -2226,7 +2178,7 @@ async function onLoad() {
                         })
                     });
 
-                    HTMLHelper.hide("changelog")
+                    Hud.hide("changelog")
 
                     if (response) {
                         await updateClient()
@@ -2239,18 +2191,19 @@ async function onLoad() {
                 Logger.log(CLIENT_VERSION, localConfig.config.get("version"))
                 document.getElementById("version").textContent = `(${CLIENT_VERSION})`
                 if (localConfig.config.get("version") !== CLIENT_VERSION) {
-                    await saveConfig()
-                    if (TranslationUtil.getLanguage() === "") {
+                    if (TranslationUtil.getLanguage() === STRINGS.EMPTY) {
                         escape_clause_language = true;
                     }
                     loadTranslation(TranslationUtil.getLanguage(), true)
+                    await saveConfig()
 
-                    HTMLHelper.show("changelog")
+                    Hud.show("changelog")
                     document.getElementById("changelog-title").textContent = "Update Complete! | " + newest_version.split("\n")[0]
                     document.getElementById("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
-                    HTMLHelper.hide("changelog-ignore")
+                    Hud.hide("changelog-ignore")
                     document.getElementById("changelog-update").textContent = TranslationUtil.of("ignore")
                     document.getElementById("changelog-ignore").style.right = "calc(2rem + " + document.getElementById("changelog-update").getBoundingClientRect().width + "px)"
+
                     await new Promise(resolve => {
                         document.getElementById("changelog-update").addEventListener("mouseup", async () => {
                             resolve(true)
@@ -2260,20 +2213,20 @@ async function onLoad() {
                         })
                     });
 
-                    HTMLHelper.hide("changelog")
+                    Hud.hide("changelog")
                 }
             }
 
             Logger.log("Language (" + (Date.now() - start) + "ms). Current=" + TranslationUtil.getLanguage() + " | Escaped=" + escape_clause_language)
 
-            if (TranslationUtil.getLanguage() === "" || escape_clause_language) {
-                TranslationUtil.setLanguage("")
+            if (TranslationUtil.getLanguage() === STRINGS.EMPTY || escape_clause_language) {
+                TranslationUtil.setLanguage(STRINGS.EMPTY)
                 document.getElementById("language-list").classList.remove("language-list-hide")
                 document.getElementById("language-list").classList.add("language-list-force")
                 document.getElementById("loader").appendChild(document.getElementById("language-list"))
                 let interval;
                 await new Promise(resolve => interval = setInterval(() => {
-                    if (TranslationUtil.getLanguage() !== "") {
+                    if (TranslationUtil.getLanguage() !== STRINGS.EMPTY) {
                         resolve()
                         clearInterval(interval)
                     }
@@ -2288,15 +2241,15 @@ async function onLoad() {
 
             Logger.log("DDLC Check (" + (Date.now() - start) + "ms).")
 
-            if (!await isDir(local_path + fileTerminator + "store" + fileTerminator + "ddlc")) {
+            if (!await isDir(localPath + fileTerminator + "store" + fileTerminator + "ddlc")) {
                 document.getElementById("loadingsub").textContent = TranslationUtil.of("select_zip")
-                HTMLHelper.show("select-zip")
+                Hud.show("select-zip")
                 let listener = async () => {
                     await openUrl("https://ddlc.moe")
                 };
                 document.getElementById("loadingsub").addEventListener("mouseup", listener)
 
-                while (!await isDir(local_path + fileTerminator + "store" + fileTerminator + "ddlc")) {
+                while (!await isDir(localPath + fileTerminator + "store" + fileTerminator + "ddlc")) {
                     await new Promise(resolve => setTimeout(resolve, 1000))
                 }
 
@@ -2310,7 +2263,7 @@ async function onLoad() {
             Logger.log("Covers (" + (Date.now() - start) + "ms).")
             await updateCoverImages(true)
             Logger.log("Main (" + (Date.now() - start) + "ms).")
-            await gotoHomePage()
+            gotoHomePage()
             Logger.log("Watcher (" + (Date.now() - start) + "ms).")
             await watch(
                 event.payload.path,
@@ -2318,48 +2271,31 @@ async function onLoad() {
                     for (const index in event.paths) {
                         const path = event.paths[index];
                         setTimeout(async () => {
-                            if ((path.endsWith(".zip") || path.endsWith(".rar") || path.endsWith(".rpa")) && await isExist(path)) {
-                                const split = path.split(fileTerminator);
-                                const data = await metadata(path);
+                            if (!supportedModPackage(path) || !(await isExist(path))) return;
 
-                                if (data.size === 0) {
-                                    return;
-                                }
+                            const data = await metadata(path);
+                            const split = terminatePath(path).split(fileTerminator)
 
-                                part_file_size = 0
-                                part_file = null
-
-                                HTMLHelper.hide("install-info")
-                                HTMLHelper.show("alert")
-
-                                showContainers(false)
-                                alert_path = path
-
-
-                                document.getElementById("alert-size").innerText = Math.floor(data.size / 1048600).toString() + "mb";
-                                document.getElementById("alert-pth").innerText = payloadPath;
-                                document.getElementById("alert-name").textContent = split[split.length - 1].split(".")[0];
-                            } else if ((path.includes(".zip") || path.includes(".rar") || path.includes(".rpa")) && path.endsWith(".crdownload") && await isExist(path)) {
-                                if (path == part_file) {
-                                    let old_size = part_file_size;
-                                    let dT = Date.now() - last_change;
-                                    if (dT < 10) {
-                                        return
-                                    }
-                                    last_change = Date.now()
-                                    part_file = path;
-                                    part_file_size = (await metadata(path)).size
-
-                                    let mbs = (part_file_size - old_size) / (dT * 1000);
-                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split(fileTerminator).pop().split(".").reverse().pop() + " at " + (Math.round(mbs * 100) / 100) + "mb/s"
-                                } else {
-                                    part_file = path;
-                                    last_change = Date.now();
-                                    part_file_size = (await metadata(path)).size
-                                    document.getElementById("install-info").textContent = "Downloading " + part_file.split(fileTerminator).pop().split(".").reverse().pop()
-                                    HTMLHelper.show("install-info")
-                                }
+                            if (data.size === 0) {
+                                return;
                             }
+
+                            let download = DownloadsManager.getDownload(path)
+                            if (Hud.isVoid(download)) {
+                                download = DownloadsManager.startDownload(path, path)
+                            }
+
+                            download.setPercent(100)
+                            download.setUpdateString("Finished Downloading")
+
+                            Hud.show("alert")
+
+                            showContainers(false)
+                            alertPath = path
+
+                            document.getElementById("alert-size").innerText = Math.floor(data.size / 1048600).toString() + "mb";
+                            document.getElementById("alert-pth").innerText = payloadPath;
+                            document.getElementById("alert-name").textContent = split[split.length - 1].split(".")[0];
                         }, 1000)
                     }
                 }, {
@@ -2371,16 +2307,16 @@ async function onLoad() {
         }
         try {
             await requestDirectory(event.payload.final_data)
-            await gotoHomePage()
+            gotoHomePage()
         } catch (e) {
             Logger.log(e)
         }
     })
 
     await listen('closed', async (event) => {
-        if (event.payload.id !== "") {
+        if (event.payload.id !== STRINGS.EMPTY) {
 
-            await getLauncher(event.payload.id).functions().close();
+            await getLauncher(event.payload.id).getFunctions().close();
         }
     });
 
@@ -2389,6 +2325,14 @@ async function onLoad() {
     });
 
     await listen('substring', async (event) => {
+        if (event.payload.text.includes("|ppathIdentifier|")) {
+            const url = event.payload.text.split("|ppathIdentifier|").pop().replaceAll("\\\\","\\");
+            const downloadingObject = DownloadsManager.getDownload(url)
+            if (!Hud.isVoid(downloadingObject)) {
+                downloadingObject.setUpdateString(event.payload.text.split("|ppathIdentifier|")[0])
+                return
+            }
+        }
         if (event.payload.text.startsWith("Extracting")) {
             document.getElementById("loadingsub").textContent = event.payload.text.replace("Extracting", TranslationUtil.of("extracting"))
         } else {
@@ -2402,26 +2346,26 @@ async function onLoad() {
         const value = event.payload.text;
 
         await requestDirectory(selectedPath);
-        while (HTMLHelper.isHidden("loader")) {
+        while (Hud.isHidden("loader")) {
         }
 
         Logger.log(value)
         if (getLauncher(value)) {
-            await getLauncher(value).functions().leftClick();
+            await getLauncher(value).getFunctions().leftClick();
         }
     })
 
     document.getElementById("save-profile").addEventListener("click", async () => {
-        HTMLHelper.hide("profile-bg")
+        Hud.hide("profile-bg")
         await saveProfile();
-        HTMLHelper.hide("profile-blur")
-        HTMLHelper.hide("profile-bg")
+        Hud.hide("profile-blur")
+        Hud.hide("profile-bg")
     });
 
     document.getElementById("create-profile").addEventListener("click", async () => {
         let newProfile = "Default 0";
         while (document.getElementById("profile-" + newProfile) !== null) {
-            newProfile = "Default " + (parseInt(newProfile.split(" ")[1]) + 1);
+            newProfile = "Default " + (parseInt(newProfile.split(STRINGS.SPACE)[1]) + 1);
         }
         createProfile(newProfile)()
         document.getElementById("profiles").scroll({
@@ -2432,18 +2376,18 @@ async function onLoad() {
 
     document.getElementById("backup-profile").addEventListener("click", async () => {
 
-        HTMLHelper.hide("profile-bg")
-        HTMLHelper.hide("profile-bg")
+        Hud.hide("profile-bg")
+        Hud.hide("profile-bg")
         await saveProfile();
 
-        HTMLHelper.hide("profile-blur")
-        if (!await isDir(local_path + fileTerminator + terminatePath("store\\backup"))) {
-            await mkdir(local_path + fileTerminator + terminatePath("store\\backup"));
+        Hud.hide("profile-blur")
+        if (!await isDir(localPath + fileTerminator + terminatePath("store\\backup"))) {
+            await mkdir(localPath + fileTerminator + terminatePath("store\\backup"));
         }
 
-        await writeTextFile(local_path + fileTerminator + terminatePath("store\\backup") + fileTerminator + profile_path.replaceAll("\\\\", "").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profile_path), null, "\t"));
+        await writeTextFile(localPath + fileTerminator + terminatePath("store\\backup") + fileTerminator + profilePath.replaceAll("\\\\", STRINGS.EMPTY).replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profilePath), null, "\t"));
         await invoke("open_path", {
-            path: local_path + fileTerminator + terminatePath("store\\backup")
+            path: localPath + fileTerminator + terminatePath("store\\backup")
         })
     })
 
@@ -2457,27 +2401,27 @@ async function onLoad() {
                 extensions: ['json']
             }],
             title: 'Select Backup File',
-            defaultPath: local_path + fileTerminator + terminatePath("store\\backup") + fileTerminator
+            defaultPath: localPath + fileTerminator + terminatePath("store\\backup") + fileTerminator
         });
 
-        HTMLHelper.hide("profile-bg")
+        Hud.hide("profile-bg")
         await saveProfile();
         if (backup_select !== null && backup_select !== undefined) {
-            if (!await isDir(local_path + fileTerminator + terminatePath("store\\backup"))) {
-                await mkdir(local_path + fileTerminator + terminatePath("store\\backup"));
+            if (!await isDir(localPath + fileTerminator + terminatePath("store\\backup"))) {
+                await mkdir(localPath + fileTerminator + terminatePath("store\\backup"));
             }
-            if (!await isDir(local_path + fileTerminator + terminatePath("store\\backup\\autosave"))) {
-                await mkdir(local_path + fileTerminator + terminatePath("store\\backup\\autosave"));
+            if (!await isDir(localPath + fileTerminator + terminatePath("store\\backup\\autosave"))) {
+                await mkdir(localPath + fileTerminator + terminatePath("store\\backup\\autosave"));
             }
-            await writeTextFile(local_path + fileTerminator + terminatePath("store\\backup\\autosave") + fileTerminator + profile_path.replaceAll("\\\\", "\\").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profile_path), null, "\t"));
-            await delDir(profile_path);
-            await loadProfileData(JSON.parse(await readTextFile(backup_select)), profile_path);
-            Logger.log(current_game_data_path)
-            await updateProfiles(current_game_data_path);
+            await writeTextFile(localPath + fileTerminator + terminatePath("store\\backup\\autosave") + fileTerminator + profilePath.replaceAll("\\\\", "\\").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profilePath), null, "\t"));
+            await delDir(profilePath);
+            await loadProfileData(JSON.parse(await readTextFile(backup_select)), profilePath);
+            Logger.log(currentGameDataPath)
+            await updateProfiles(currentGameDataPath);
             await loadCurrentProfileData(true);
         }
 
-        HTMLHelper.hide("profile-blur")
+        Hud.hide("profile-blur")
     })
 
     /**
@@ -2489,35 +2433,35 @@ async function onLoad() {
     }
 
     document.getElementById("cover-up").addEventListener("click", () => {
-        if (currentEntry !== "") return;
-        bg_offset += 5;
-        if (bg_offset > 100) bg_offset = 0;
-        document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
+        if (currentEntry !== STRINGS.EMPTY) return;
+        currentBackgroundOffset += 5;
+        if (currentBackgroundOffset > 100) currentBackgroundOffset = 0;
+        document.getElementById("bg").style.backgroundPositionY = ((600 - currentBackgroundMaxOffset) * (currentBackgroundOffset / 100)) + "px";
         saveConfig();
     })
 
     document.getElementById("cover-down").addEventListener("click", () => {
-        if (currentEntry !== "") return;
-        bg_offset -= 5;
-        if (bg_offset < 0) bg_offset = 100;
-        document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
+        if (currentEntry !== STRINGS.EMPTY) return;
+        currentBackgroundOffset -= 5;
+        if (currentBackgroundOffset < 0) currentBackgroundOffset = 100;
+        document.getElementById("bg").style.backgroundPositionY = ((600 - currentBackgroundMaxOffset) * (currentBackgroundOffset / 100)) + "px";
         saveConfig();
     })
 
     document.getElementById("cove").addEventListener("wheel", (e) => {
-        if (currentEntry !== "") return;
-        bg_offset += e.deltaY / 20;
-        if (bg_offset < 0) bg_offset = 0;
-        if (bg_offset > 100) bg_offset = 100;
+        if (currentEntry !== STRINGS.EMPTY) return;
+        currentBackgroundOffset += e.deltaY / 20;
+        if (currentBackgroundOffset < 0) currentBackgroundOffset = 0;
+        if (currentBackgroundOffset > 100) currentBackgroundOffset = 100;
 
-        document.getElementById("bg").style.backgroundPositionY = ((600 - current_bg_max) * (bg_offset / 100)) + "px";
+        document.getElementById("bg").style.backgroundPositionY = ((600 - currentBackgroundMaxOffset) * (currentBackgroundOffset / 100)) + "px";
         saveConfig();
     })
 
     document.getElementById("load-profile").addEventListener("click", async () => {
         await loadCurrentProfileData(true)
-        HTMLHelper.hide("profile-blur")
-        HTMLHelper.hide("profile-bg")
+        Hud.hide("profile-blur")
+        Hud.hide("profile-bg")
     })
 
     document.getElementById("input-prompt-box").addEventListener("keydown", (e) => {
@@ -2529,9 +2473,9 @@ async function onLoad() {
     document.getElementById("profile-blur").addEventListener("mouseup", (e) => {
         if (document.getElementById("image-picker-bg").classList.contains("image-picker-visible")) {
             document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
-            HTMLHelper.hide("profile-blur")
+            Hud.hide("profile-blur")
         }
-        if (selected_button !== null) {
+        if (selectedProfileButton !== null) {
             let is_hovering = null;
             for (const elm of document.getElementsByClassName("profile-button")) {
                 if (elm.contains(e.target)) {
@@ -2539,37 +2483,35 @@ async function onLoad() {
                     break;
                 }
             }
-            if (is_hovering === null) {
-
-            } else {
+            if (is_hovering !== null) {
                 let moveNext = 0;
                 let old_index = 0;
-                for (const index in current_profile_data) {
-                    const data = current_profile_data[index];
+                for (const index in currentProfileData) {
+                    const data = currentProfileData[index];
                     if (is_hovering.id === data) {
                         moveNext = parseInt(index);
-                    } else if (data === selected_button.id) {
+                    } else if (data === selectedProfileButton.id) {
                         old_index = parseInt(index);
                     }
                 }
 
-                Logger.log(current_profile_data)
+                Logger.log(currentProfileData)
 
                 Logger.log("moving " + old_index + " to " + moveNext)
-                current_profile_data = moveEntries(current_profile_data, old_index, moveNext);
-                Logger.log(current_profile_data)
-                for (const index in current_profile_data) {
-                    const data = current_profile_data[index];
+                currentProfileData = moveEntries(currentProfileData, old_index, moveNext);
+                Logger.log(currentProfileData)
+                for (const index in currentProfileData) {
+                    const data = currentProfileData[index];
                     if (data === undefined || data === null || document.getElementById(data) == null) continue;
                     Logger.log(data, index)
                     document.getElementById(data).style.order = index;
                 }
-                selected_button.style.top = is_hovering.getBoundingClientRect().y + "px";
-                selected_button.style.left = is_hovering.getBoundingClientRect().x + "px";
+                selectedProfileButton.style.top = is_hovering.getBoundingClientRect().y + "px";
+                selectedProfileButton.style.left = is_hovering.getBoundingClientRect().x + "px";
             }
             setTimeout(() => {
-                const button = selected_button;
-                selected_button = null;
+                const button = selectedProfileButton;
+                selectedProfileButton = null;
                 button.classList.add("bounce-out");
                 button.classList.add("shrink")
                 button.addEventListener("transitionend", () => {
@@ -2580,7 +2522,7 @@ async function onLoad() {
     })
 
     document.getElementById("profile-blur").addEventListener("mousemove", (e) => {
-        if (selected_button !== null) {
+        if (selectedProfileButton !== null) {
             let is_hovering = null;
             for (const elm of document.getElementsByClassName("profile-button")) {
                 if (elm.contains(e.target)) {
@@ -2589,11 +2531,11 @@ async function onLoad() {
                 }
             }
             if (is_hovering === null) {
-                selected_button.style.top = e.pageY + "px";
-                selected_button.style.left = e.pageX + "px";
+                selectedProfileButton.style.top = e.pageY + "px";
+                selectedProfileButton.style.left = e.pageX + "px";
             } else {
-                selected_button.style.top = is_hovering.getBoundingClientRect().y + "px";
-                selected_button.style.left = is_hovering.getBoundingClientRect().x + "px";
+                selectedProfileButton.style.top = is_hovering.getBoundingClientRect().y + "px";
+                selectedProfileButton.style.left = is_hovering.getBoundingClientRect().x + "px";
             }
         }
     })
@@ -2678,14 +2620,14 @@ async function onLoad() {
         });
         try {
             document.getElementById("loadingsub").textContent = TranslationUtil.of("importing_zip")
-            HTMLHelper.hide("select-zip")
-            HTMLHelper.setLoadingBar(100, true)
+            Hud.hide("select-zip")
+            Hud.setLoadingBar(100, true)
             await invoke("set_ddlc_zip", {
                 path: p
             })
             document.getElementById("loadingsub").textContent = "Done!"
         } catch (Exception) {
-            HTMLHelper.show("select-zip")
+            Hud.show("select-zip")
             document.getElementById("loadingsub").textContent = TranslationUtil.of("select_zip")
         }
     })
@@ -2702,36 +2644,41 @@ async function onLoad() {
     document.getElementById("cancel").addEventListener("mouseup", async () => {
         play(sound_beep)
         showContainers(true)
-        alert_path = undefined;
-        HTMLHelper.hide("alert")
+        alertPath = undefined;
+        const download = DownloadsManager.getDownload(alertPath)
+        if (!Hud.isVoid(download)) {
+            DownloadsManager.complete(alertPath)
+        }
+        Hud.hide("alert")
     })
 
     // Opens Up Path Of The Mod That Is Installing
 
     document.getElementById("sub3").addEventListener("mouseup", async () => {
         await invoke("open_path", {
-            path: alert_path
+            path: alertPath
         })
     })
 
     // Accept Mod Download
 
     document.getElementById("download").addEventListener("mouseup", async () => {
-        if (alert_path !== undefined) {
+        if (alertPath !== undefined) {
             play(sound_beep)
-            HTMLHelper.hide("alert")
+            Hud.hide("alert")
+            showContainers(true)
             await sendEvent("auto_download", {
-                name: alert_path.split(fileTerminator).pop()
+                name: alertPath.split(fileTerminator).pop()
             })
-            await importMod(alert_path)
+            await importMod(alertPath)
         }
     })
 
     Logger.log("Finished Loading Observers. Took " + (Date.now() - start) + "ms.")
     Logger.log("Loading Loading Screen")
 
-    HTMLHelper.show("loader")
-    HTMLHelper.hide("main")
+    Hud.show("loader")
+    Hud.hide("main")
     document.getElementById("loadingsub").textContent = "Installing DDLC-Vanilla (If nothing happens after 20s, please restart the program)"
 
     Logger.log("Loading Drag/Drop")
@@ -2742,12 +2689,14 @@ async function onLoad() {
     await listen('tauri://drag-drop', async (event) => {
         let paths = event.payload.paths;
         for (const path of paths) {
-            if (path.endsWith(".zip") || path.endsWith(".rar") || path.endsWith(".rpa")) {
+            if (supportedModPackage(path)) {
                 await sendEvent("manual_download")
+                DownloadsManager.startDownload(path, path)
+                Hud.show("downloads-list")
                 await importMod(path)
-            } else if ((/\.(gif|jpe?g|tiff?|png|webp|bmp)$/i).test(path)) {
-                let dir = await readDir(local_path + fileTerminator + terminatePath("store\\images") + fileTerminator)
-                await writeFile(local_path + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
+            } else if (regexImageName(path)) {
+                let dir = await readDir(localPath + fileTerminator + terminatePath("store\\images") + fileTerminator)
+                await writeFile(localPath + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
             } else {
                 await confirm("Unsupported Format " + (path.includes("\.") ? path.split("\.").pop() : "None") + "! {Supported: .zip, .rar, .rpa}")
             }
@@ -2763,8 +2712,8 @@ async function onLoad() {
     })
 
     document.getElementById("play").addEventListener("mouseup", async () => {
-        if (currentEntry !== "" && HTMLHelper.isHidden("delete-prompt")) {
-            await getLauncher(currentEntry).functions().open();
+        if (currentEntry !== STRINGS.EMPTY && Hud.isHidden("delete-prompt")) {
+            await getLauncher(currentEntry).getFunctions().open();
         }
     })
 
@@ -2773,57 +2722,56 @@ async function onLoad() {
     })
 
     document.getElementById("cover-last").addEventListener("mouseenter", () => {
-        mouse_cover_available = true
+        mouseCoverAvailable = true
     })
 
     document.getElementById("cover-last").addEventListener("mouseleave", () => {
-        mouse_cover_available = false
+        mouseCoverAvailable = false
     })
 
     document.getElementById("image-picker-cancel").addEventListener("mouseup", async () => {
         play(sound_boop)
-        HTMLHelper.hide("profile-blur")
+        Hud.hide("profile-blur")
         document.getElementById("image-picker-bg").classList.remove("image-picker-visible");
     })
 
     document.getElementById("cove").addEventListener("mouseup", async () => {
-        if (currentEntry !== "" && !mouse_cover_available) {
-            await getLauncher(currentEntry).functions().onFavorite()
+        if (currentEntry !== STRINGS.EMPTY && !mouseCoverAvailable) {
+            await getLauncher(currentEntry).getFunctions().onFavorite()
         }
     })
 
     document.getElementById("delete").addEventListener("mouseup", async () => {
-        if (currentEntry !== "") {
-            let confirmed = await confirm("Are you sure you want to delete '" + getLauncher(currentEntry).functions().location + "' and its data?")
+        if (currentEntry !== STRINGS.EMPTY) {
+            let confirmed = await confirm("Are you sure you want to delete '" + getLauncher(currentEntry).getFunctions().location + "' and its data?")
             if (confirmed) {
                 showContainers(false)
                 await invoke("delete_path", {
-                    path: getLauncher(currentEntry).functions().location
+                    path: getLauncher(currentEntry).getFunctions().location
                 });
-                getLauncher(currentEntry).functions().item.remove();
-                delete getLauncher(currentEntry).functions();
+                getLauncher(currentEntry).getFunctions().item.remove();
+                delete getLauncher(currentEntry).getFunctions();
                 showContainers(true)
-                await gotoHomePage()
-
+                gotoHomePage()
             }
         }
     })
 
     document.getElementById("path").addEventListener("mouseup", async () => {
-        if (currentEntry !== "") {
-            await getLauncher(currentEntry).functions().path();
+        if (currentEntry !== STRINGS.EMPTY) {
+            await getLauncher(currentEntry).getFunctions().path();
         }
     })
 
     document.getElementById("pill-files").addEventListener("mouseup", async () => {
-        if (currentEntry !== "") {
-            await getLauncher(currentEntry).functions().path();
+        if (currentEntry !== STRINGS.EMPTY) {
+            await getLauncher(currentEntry).getFunctions().path();
         }
     })
 
     document.getElementById("reset-save").addEventListener("mouseup", async () => {
-        if (currentEntry !== "") {
-            let final = getLauncher(currentEntry).functions().absolute_location;
+        if (currentEntry !== STRINGS.EMPTY) {
+            let final = getLauncher(currentEntry).getFunctions().absolute_location;
             let path = final + fileTerminator + terminatePath(terminatePath("game\\scripts.rpa"));
             if (!await isExist(path)) {
                 path = final + fileTerminator + terminatePath(terminatePath("game\\options.rpyc"));
@@ -2842,10 +2790,10 @@ async function onLoad() {
             if (await isExist(loc2)) {
                 data = (await readDir(loc2)).length !== 0
             }
-            if (loc !== "" || data) {
-                HTMLHelper.show("delete-prompt")
-                document.getElementById("delete-context").textContent = "Are you sure you want to delete\n" + loc + (data ? " & " + loc2 : "") + "?"
-                save_path = loc + "|" + (data ? loc2 : "");
+            if (loc !== STRINGS.EMPTY || data) {
+                Hud.show("delete-prompt")
+                document.getElementById("delete-context").textContent = "Are you sure you want to delete\n" + loc + (data ? " & " + loc2 : STRINGS.EMPTY) + "?"
+                currentSavePath = loc + "|" + (data ? loc2 : STRINGS.EMPTY);
             } else {
                 await confirm("Unknown Save Data Location!")
             }
@@ -2855,10 +2803,10 @@ async function onLoad() {
     })
 
     document.getElementById("delete-save").addEventListener("mouseup", async () => {
-        if (currentEntry !== "") {
-            HTMLHelper.show("profile-blur")
+        if (currentEntry !== STRINGS.EMPTY) {
+            Hud.show("profile-blur")
 
-            let final = getLauncher(currentEntry).functions().absolute_location;
+            let final = getLauncher(currentEntry).getFunctions().absolute_location;
             let path = final + fileTerminator + terminatePath("game\\scripts.rpa");
             if (!await isExist(path)) {
                 path = final + fileTerminator + terminatePath("game\\options.rpyc");
@@ -2879,17 +2827,17 @@ async function onLoad() {
                 option: "config.name"
             })
             const loc2 = final + fileTerminator + "game" + fileTerminator + "saves"
-            const loc3 = local_path + fileTerminator + terminatePath("store\\save_data_secondary")
-            let secondary = dat === "" ? loc3 + fileTerminator + currentEntry : dat + "_DDMM_data"
+            const loc3 = localPath + fileTerminator + terminatePath("store\\save_data_secondary")
+            let secondary = dat === STRINGS.EMPTY ? loc3 + fileTerminator + currentEntry : dat + "_DDMM_data"
             let data = false
 
             Logger.log(loc2, loc3, loc, dat)
 
-            if (loc === "") {
+            if (loc === STRINGS.EMPTY) {
                 let secondary_name = secondary.split(fileTerminator).pop()
                 if (secondary_name.match(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/g) || secondary_name.match(/^(con|prn|aux|nul|com\d|lpt\d)$/i)) {
-                    secondary_name = secondary_name.replace(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/gi, "")
-                    secondary_name = secondary_name.replace(/^(con|prn|aux|nul|com\d|lpt\d)$/gi, "")
+                    secondary_name = secondary_name.replace(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/gi, STRINGS.EMPTY)
+                    secondary_name = secondary_name.replace(/^(con|prn|aux|nul|com\d|lpt\d)$/gi, STRINGS.EMPTY)
                     let comps = secondary.split(fileTerminator)
                     comps.pop()
                     secondary = comps.join(fileTerminator) + fileTerminator + secondary_name
@@ -2915,15 +2863,15 @@ async function onLoad() {
 
             Logger.log(loc, data)
 
-            if (loc !== "" || data) {
-                const name = loc === "" ? secondary : loc
+            if (loc !== STRINGS.EMPTY || data) {
+                const name = loc === STRINGS.EMPTY ? secondary : loc
                 if (!await isExist(name)) {
                     await mkdir(name)
                 }
-                HTMLHelper.show("profile-blur")
+                Hud.show("profile-blur")
                 await updateProfiles(name)
             } else {
-                HTMLHelper.hide("profile-blur")
+                Hud.hide("profile-blur")
                 await confirm("Unknown Save Data Location!")
             }
 
@@ -2932,35 +2880,35 @@ async function onLoad() {
     })
 
     document.getElementById("extract").addEventListener("mouseup", async () => {
-        if (currentEntry !== "") {
-            let final = getLauncher(currentEntry).functions().absolute_location + fileTerminator + terminatePath("game\\scripts.rpa");
+        if (currentEntry !== STRINGS.EMPTY) {
+            let final = getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + terminatePath("game\\scripts.rpa");
             Logger.log(final)
             document.getElementById("loadingsub").textContent = "Extracting (This will take 20-40s)"
-            HTMLHelper.show("loader")
-            HTMLHelper.hide("main")
+            Hud.show("loader")
+            Hud.hide("main")
             if (await isExist(final)) {
                 await invoke("extract_game_script", {
                     path: final,
-                    out: getLauncher(currentEntry).functions().absolute_location + fileTerminator + "deobf"
+                    out: getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "deobf"
                 })
                 await invoke("open_path", {
-                    path: getLauncher(currentEntry).functions().absolute_location + fileTerminator + "deobf"
+                    path: getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "deobf"
                 })
             } else {
                 await confirm("No game script found!")
             }
 
-            await getLauncher(currentEntry).functions().leftClick()
-            HTMLHelper.hide("loader")
-            HTMLHelper.show("main")
+            await getLauncher(currentEntry).getFunctions().leftClick()
+            Hud.hide("loader")
+            Hud.show("main")
         }
     })
 
     document.getElementById("delete-yes").addEventListener("mouseup", async () => {
-        HTMLHelper.hide("delete-prompt")
-        if (save_path === "") return;
-        for (const p of save_path.split("|")) {
-            if (p === "") continue
+        Hud.hide("delete-prompt")
+        if (currentSavePath === STRINGS.EMPTY) return;
+        for (const p of currentSavePath.split("|")) {
+            if (p === STRINGS.EMPTY) continue
             await invoke("delete_path", {
                 path: p
             });
@@ -2968,15 +2916,15 @@ async function onLoad() {
     })
 
     document.getElementById("delete-no").addEventListener("mouseup", async () => {
-        save_path = "";
-        HTMLHelper.hide("delete-prompt")
+        currentSavePath = STRINGS.EMPTY;
+        Hud.hide("delete-prompt")
     })
 
     document.getElementById("modtitle").addEventListener("focusin", async () => {
-        if (currentEntry === "") {
-            document.getElementById("modtitle").value = user_name
+        if (currentEntry === STRINGS.EMPTY) {
+            document.getElementById("modtitle").value = currentUserName
         } else {
-            document.getElementById("modtitle").value = await getLauncher(currentEntry).functions().getName();
+            document.getElementById("modtitle").value = await getLauncher(currentEntry).getFunctions().getName();
         }
     })
 
@@ -2994,55 +2942,55 @@ async function onLoad() {
         document.getElementById("modtitle").scrollTo({
             left: 0
         });
-        if (currentEntry !== "") {
+        if (currentEntry !== STRINGS.EMPTY) {
             await renameMod()
         } else {
             const name = document.getElementById("modtitle").value;
-            if (name.includes(TranslationUtil.of("greet")) || name === "") {
-                await gotoHomePage()
+            if (name.includes(TranslationUtil.of("greet")) || name === STRINGS.EMPTY) {
+                gotoHomePage()
                 return;
             }
-            user_name = name
+            currentUserName = name
             await sendEvent("set_user_name", {
-                name: user_name
+                name: currentUserName
             })
             await saveConfig()
-            await gotoHomePage()
+            gotoHomePage()
         }
     })
 
     document.getElementById("options").addEventListener("mouseup", async () => {
         play(sound_beep)
-        await gotoHomePage()
+        gotoHomePage()
     })
 
     document.getElementById("report-open").addEventListener("mouseup", async () => {
-        HTMLHelper.show("profile-blur")
-        HTMLHelper.show("report-bg")
+        Hud.show("profile-blur")
+        Hud.show("report-bg")
         document.getElementById("report-textc").focus()
     })
 
     document.getElementById("report-close").addEventListener("mouseup", async () => {
-        HTMLHelper.hide("profile-blur")
-        HTMLHelper.hide("report-bg")
+        Hud.hide("profile-blur")
+        Hud.hide("report-bg")
     })
 
     document.getElementById("report-send").addEventListener("mouseup", async () => {
-        if (document.getElementById("report-textc").value !== "") {
+        if (document.getElementById("report-textc").value !== STRINGS.EMPTY) {
             await sendEvent("issue", {
                 issue: document.getElementById("report-textc").value
             })
             Logger.log(document.getElementById("report-textc").value)
         }
-        document.getElementById("report-textc").value = ""
-        HTMLHelper.hide("profile-blur")
-        HTMLHelper.hide("report-bg")
+        document.getElementById("report-textc").value = STRINGS.EMPTY
+        Hud.hide("profile-blur")
+        Hud.hide("report-bg")
     })
 
     document.getElementById("cover-last").addEventListener("mouseup", async () => {
         play(sound_beep)
         document.getElementById("image-picker-cancel").textContent = TranslationUtil.of("cancel");
-        HTMLHelper.show("profile-blur")
+        Hud.show("profile-blur")
         document.getElementById("image-picker-bg").classList.add("image-picker-visible")
     })
 
@@ -3052,12 +3000,17 @@ async function onLoad() {
 
     document.getElementById("view-background").addEventListener("mouseup", async () => {
         document.getElementById("view-image").classList.remove("zoom")
-        HTMLHelper.hide("view-background")
+        Hud.hide("view-background")
     })
 
     document.getElementById("min").addEventListener("mouseup", async () => {
         play(sound_beep)
         await invoke("minimize");
+    })
+
+    document.getElementById("downloads-show").addEventListener("mouseup", async () => {
+        Hud.toggle("downloads-list")
+        document.getElementById("language-list").classList.add("language-list-hide");
     })
 
     document.getElementById("source").addEventListener("mouseup", async () => {
@@ -3066,15 +3019,15 @@ async function onLoad() {
     })
 
     document.getElementById("search").addEventListener("input", async (event) => {
-        if (event.target.value === "" && lastInputLength > 0) {
+        if (event.target.value === STRINGS.EMPTY && lastInputLength > 0) {
             for (const index in getLaunchers()) {
-                const element = getLauncher(index).functions();
+                const element = getLauncher(index).getFunctions();
                 element.item.classList.remove("hide2");
                 element.resetOrder()
             }
             lastInputLength = 0;
             return;
-        } else if (event.target.value === "") {
+        } else if (event.target.value === STRINGS.EMPTY) {
             return
         }
 
@@ -3084,7 +3037,7 @@ async function onLoad() {
         let names = []
 
         for (const index in getLaunchers()) {
-            const element = getLauncher(index).functions();
+            const element = getLauncher(index).getFunctions();
 
             if (ignoreInvis && element.item.classList.contains("hide2")) {
                 continue;
@@ -3098,85 +3051,51 @@ async function onLoad() {
         const entries = fzf_list.find(lowerTarget)
 
         entries.forEach(e => {
-            getLauncher(e.item).functions().item.classList.remove("hide2")
+            getLauncher(e.item).getFunctions().item.classList.remove("hide2")
         })
 
         lastInputLength = length;
     })
 
-    document.getElementById("english").addEventListener("mouseup", async () => {
-        let old = TranslationUtil.getLanguage();
-        loadTranslation("en", (old === ""))
-        if (old !== "") {
-            saveConfig().then(_ => {
-            })
-        }
-    })
+    for (const language in TRANSLATION_TABLE) {
+        const data = TRANSLATION_TABLE[language]
+        const button = document.createElement("button")
+        const flag = document.createElement("img")
+        const name = document.createElement("span")
 
-    document.getElementById("russian").addEventListener("mouseup", async () => {
-        let old = TranslationUtil.getLanguage();
-        loadTranslation("ru", (old === ""))
-        if (old !== "") {
-            saveConfig().then(_ => {
-            })
-        }
-    })
+        button.classList.add("language-button-list")
+        flag.classList.add("language-flag-list")
+        name.classList.add("language-text-list")
 
-    document.getElementById("pt").addEventListener("mouseup", async () => {
-        let old = TranslationUtil.getLanguage();
-        loadTranslation("pt", (old === ""))
-        if (old !== "") {
-            saveConfig().then(_ => {
-            })
-        }
-    })
+        flag.src = await getImage("Flags/" + data.data.flag)
+        name.textContent = data.data.name
 
-    document.getElementById("spanish").addEventListener("mouseup", async () => {
-        let old = TranslationUtil.getLanguage();
-        loadTranslation("es", (old === ""))
-        if (old !== "") {
-            saveConfig().then(_ => {
-            })
-        }
-    })
+        button.appendChild(flag)
+        button.appendChild(name)
 
-    document.getElementById("japan").addEventListener("mouseup", async () => {
-        let old = TranslationUtil.getLanguage();
-        loadTranslation("jp", (old === ""))
-        if (old !== "") {
-            saveConfig().then(_ => {
-            })
-        }
-    })
+        button.addEventListener("mouseup", async () => {
+            let old = TranslationUtil.getLanguage();
+            loadTranslation(language, (old === STRINGS.EMPTY))
+            if (old !== STRINGS.EMPTY) {
+                saveConfig().then(_ => {
+                })
+            }
+        })
 
-    document.getElementById("french").addEventListener("mouseup", async () => {
-        let old = TranslationUtil.getLanguage();
-        loadTranslation("fr", (old === ""))
-        if (old !== "") {
-            saveConfig().then(_ => {
-            })
-        }
-    })
-
-    document.getElementById("cantonese").addEventListener("mouseup", async () => {
-        let old = TranslationUtil.getLanguage();
-        loadTranslation("zh-HK", (old === ""))
-        if (old !== "") {
-            saveConfig().then(_ => {
-            })
-        }
-    })
+        document.getElementById("language-list").appendChild(button)
+    }
 
     document.getElementById("language").addEventListener("mouseup", async () => {
         document.getElementById("language-list").classList.toggle("language-list-hide")
+        Hud.hide("downloads-list")
     })
 
     document.getElementById("tutorial-no").addEventListener("mouseup", async () => {
-        if (tutorial_pointer != null) {
-            tutorial_pointer.remove()
-            tutorial_pointer = null;
+        if (tutorialPointer != null) {
+            tutorialPointer.remove()
+            tutorialPointer = null;
         }
-        tutorial_complete = true
+        isTutorialComplete = true
         document.getElementById("warn").remove()
         await saveConfig()
     })
@@ -3185,114 +3104,114 @@ async function onLoad() {
         document.getElementById("warn").classList.add("tutorial-active")
         document.getElementById("tutorial").textContent = TranslationUtil.of("next")
         document.getElementById("tutorial-no").textContent = TranslationUtil.of("cancel")
-        if (tutorial_step >= 4 && currentEntry === "") {
-            if (tutorial_pointer == null) {
-                tutorial_pointer = document.createElement("div")
-                tutorial_pointer.classList.add("tutorial-pointer")
-                document.getElementById("main").appendChild(tutorial_pointer)
+        if (tutorialStep >= 4 && currentEntry === STRINGS.EMPTY) {
+            if (tutorialPointer == null) {
+                tutorialPointer = document.createElement("div")
+                tutorialPointer.classList.add("tutorial-pointer")
+                document.getElementById("main").appendChild(tutorialPointer)
             }
-            tutorial_pointer.style.width = document.getElementById("modlist").getBoundingClientRect().width + "px";
-            tutorial_pointer.style.height = document.getElementById("modlist").getBoundingClientRect().height + "px";
-            tutorial_pointer.style.borderRadius = "10px"
-            tutorial_pointer.style.top = (document.getElementById("modlist").getBoundingClientRect().y + (document.getElementById("modlist").getBoundingClientRect().height / 2)) + "px"
-            tutorial_pointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width / 2)) + "px"
+            tutorialPointer.style.width = document.getElementById("modlist").getBoundingClientRect().width + "px";
+            tutorialPointer.style.height = document.getElementById("modlist").getBoundingClientRect().height + "px";
+            tutorialPointer.style.borderRadius = "10px"
+            tutorialPointer.style.top = (document.getElementById("modlist").getBoundingClientRect().y + (document.getElementById("modlist").getBoundingClientRect().height / 2)) + "px"
+            tutorialPointer.style.left = (document.getElementById("modlist").getBoundingClientRect().x + (document.getElementById("modlist").getBoundingClientRect().width / 2)) + "px"
             document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(4).of("title");
             document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(4).of("context");
             await confirm(TranslationUtil.sub("tutorial").of("select"))
             return
         }
-        tutorial_step++;
-        switch (tutorial_step) {
+        tutorialStep++;
+        switch (tutorialStep) {
             case 1:
                 document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(1).of("title");
                 document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(1).of("context");
                 break;
             case 2:
-                if (tutorial_pointer == null) {
-                    tutorial_pointer = document.createElement("div")
-                    tutorial_pointer.classList.add("tutorial-pointer")
-                    tutorial_pointer.style.top = (document.getElementById("themeselect").getBoundingClientRect().y + (document.getElementById("themeselect").getBoundingClientRect().height / 2)) + "px"
-                    tutorial_pointer.style.left = (document.getElementById("themeselect").getBoundingClientRect().x + (document.getElementById("themeselect").getBoundingClientRect().width / 2)) + "px"
+                if (tutorialPointer == null) {
+                    tutorialPointer = document.createElement("div")
+                    tutorialPointer.classList.add("tutorial-pointer")
+                    tutorialPointer.style.top = (document.getElementById("themeselect").getBoundingClientRect().y + (document.getElementById("themeselect").getBoundingClientRect().height / 2)) + "px"
+                    tutorialPointer.style.left = (document.getElementById("themeselect").getBoundingClientRect().x + (document.getElementById("themeselect").getBoundingClientRect().width / 2)) + "px"
 
-                    document.getElementById("main").appendChild(tutorial_pointer)
+                    document.getElementById("main").appendChild(tutorialPointer)
                 }
                 document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(2).of("title");
                 document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(2).of("context");
                 break;
             case 3:
-                if (tutorial_pointer == null) {
-                    tutorial_pointer = document.createElement("div")
-                    tutorial_pointer.classList.add("tutorial-pointer")
-                    document.getElementById("main").appendChild(tutorial_pointer)
+                if (tutorialPointer == null) {
+                    tutorialPointer = document.createElement("div")
+                    tutorialPointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorialPointer)
                 }
-                tutorial_pointer.style.width = document.getElementById("covers").getBoundingClientRect().width + "px";
-                tutorial_pointer.style.height = document.getElementById("covers").getBoundingClientRect().height + "px";
-                tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("covers").getBoundingClientRect().y + (document.getElementById("covers").getBoundingClientRect().height / 2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("covers").getBoundingClientRect().x + (document.getElementById("covers").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.width = document.getElementById("covers").getBoundingClientRect().width + "px";
+                tutorialPointer.style.height = document.getElementById("covers").getBoundingClientRect().height + "px";
+                tutorialPointer.style.borderRadius = "10px"
+                tutorialPointer.style.top = (document.getElementById("covers").getBoundingClientRect().y + (document.getElementById("covers").getBoundingClientRect().height / 2)) + "px"
+                tutorialPointer.style.left = (document.getElementById("covers").getBoundingClientRect().x + (document.getElementById("covers").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(3).of("title");
                 document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(3).of("context");
                 break;
             case 4:
-                if (tutorial_pointer == null) {
-                    tutorial_pointer = document.createElement("div")
-                    tutorial_pointer.classList.add("tutorial-pointer")
-                    document.getElementById("main").appendChild(tutorial_pointer)
+                if (tutorialPointer == null) {
+                    tutorialPointer = document.createElement("div")
+                    tutorialPointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorialPointer)
                 }
-                tutorial_pointer.style.width = document.getElementById("reddit").getBoundingClientRect().width + "px";
-                tutorial_pointer.style.height = document.getElementById("reddit").getBoundingClientRect().height + "px";
-                tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("reddit").getBoundingClientRect().y + (document.getElementById("reddit").getBoundingClientRect().height / 2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("reddit").getBoundingClientRect().x + (document.getElementById("reddit").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.width = document.getElementById("reddit").getBoundingClientRect().width + "px";
+                tutorialPointer.style.height = document.getElementById("reddit").getBoundingClientRect().height + "px";
+                tutorialPointer.style.borderRadius = "10px"
+                tutorialPointer.style.top = (document.getElementById("reddit").getBoundingClientRect().y + (document.getElementById("reddit").getBoundingClientRect().height / 2)) + "px"
+                tutorialPointer.style.left = (document.getElementById("reddit").getBoundingClientRect().x + (document.getElementById("reddit").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(4).of("title");
                 document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(4).of("context");
                 break;
             case 5:
-                if (tutorial_pointer == null) {
-                    tutorial_pointer = document.createElement("div")
-                    tutorial_pointer.classList.add("tutorial-pointer")
-                    document.getElementById("main").appendChild(tutorial_pointer)
+                if (tutorialPointer == null) {
+                    tutorialPointer = document.createElement("div")
+                    tutorialPointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorialPointer)
                 }
-                tutorial_pointer.style.width = document.getElementById("cove").getBoundingClientRect().width + "px";
-                tutorial_pointer.style.height = document.getElementById("cove").getBoundingClientRect().height + "px";
-                tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("cove").getBoundingClientRect().y + (document.getElementById("cove").getBoundingClientRect().height / 2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("cove").getBoundingClientRect().x + (document.getElementById("cove").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.width = document.getElementById("cove").getBoundingClientRect().width + "px";
+                tutorialPointer.style.height = document.getElementById("cove").getBoundingClientRect().height + "px";
+                tutorialPointer.style.borderRadius = "10px"
+                tutorialPointer.style.top = (document.getElementById("cove").getBoundingClientRect().y + (document.getElementById("cove").getBoundingClientRect().height / 2)) + "px"
+                tutorialPointer.style.left = (document.getElementById("cove").getBoundingClientRect().x + (document.getElementById("cove").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(5).of("title");
                 document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(5).of("context");
                 break;
             case 6:
-                if (tutorial_pointer == null) {
-                    tutorial_pointer = document.createElement("div")
-                    tutorial_pointer.classList.add("tutorial-pointer")
-                    document.getElementById("main").appendChild(tutorial_pointer)
+                if (tutorialPointer == null) {
+                    tutorialPointer = document.createElement("div")
+                    tutorialPointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorialPointer)
                 }
-                tutorial_pointer.style.width = document.getElementById("modtitle").getBoundingClientRect().width + "px";
-                tutorial_pointer.style.height = document.getElementById("modtitle").getBoundingClientRect().height + "px";
-                tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("modtitle").getBoundingClientRect().y + (document.getElementById("modtitle").getBoundingClientRect().height / 2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("modtitle").getBoundingClientRect().x + (document.getElementById("modtitle").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.width = document.getElementById("modtitle").getBoundingClientRect().width + "px";
+                tutorialPointer.style.height = document.getElementById("modtitle").getBoundingClientRect().height + "px";
+                tutorialPointer.style.borderRadius = "10px"
+                tutorialPointer.style.top = (document.getElementById("modtitle").getBoundingClientRect().y + (document.getElementById("modtitle").getBoundingClientRect().height / 2)) + "px"
+                tutorialPointer.style.left = (document.getElementById("modtitle").getBoundingClientRect().x + (document.getElementById("modtitle").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(6).of("title");
                 document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(6).of("context");
                 break;
             case 7:
-                if (tutorial_pointer == null) {
-                    tutorial_pointer = document.createElement("div")
-                    tutorial_pointer.classList.add("tutorial-pointer")
-                    document.getElementById("main").appendChild(tutorial_pointer)
+                if (tutorialPointer == null) {
+                    tutorialPointer = document.createElement("div")
+                    tutorialPointer.classList.add("tutorial-pointer")
+                    document.getElementById("main").appendChild(tutorialPointer)
                 }
-                tutorial_pointer.style.width = document.getElementById("modinfo").getBoundingClientRect().width + "px";
-                tutorial_pointer.style.height = document.getElementById("modinfo").getBoundingClientRect().height + "px";
-                tutorial_pointer.style.borderRadius = "10px"
-                tutorial_pointer.style.top = (document.getElementById("modinfo").getBoundingClientRect().y + (document.getElementById("modinfo").getBoundingClientRect().height / 2)) + "px"
-                tutorial_pointer.style.left = (document.getElementById("modinfo").getBoundingClientRect().x + (document.getElementById("modinfo").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.width = document.getElementById("modinfo").getBoundingClientRect().width + "px";
+                tutorialPointer.style.height = document.getElementById("modinfo").getBoundingClientRect().height + "px";
+                tutorialPointer.style.borderRadius = "10px"
+                tutorialPointer.style.top = (document.getElementById("modinfo").getBoundingClientRect().y + (document.getElementById("modinfo").getBoundingClientRect().height / 2)) + "px"
+                tutorialPointer.style.left = (document.getElementById("modinfo").getBoundingClientRect().x + (document.getElementById("modinfo").getBoundingClientRect().width / 2)) + "px"
                 document.getElementById("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(7).of("title");
                 document.getElementById("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(7).of("context");
                 break;
             default:
-                if (tutorial_pointer != null) {
-                    tutorial_pointer.remove()
-                    tutorial_pointer = null;
+                if (tutorialPointer != null) {
+                    tutorialPointer.remove()
+                    tutorialPointer = null;
                 }
                 document.getElementById("tutorial").remove()
                 document.getElementById("tutorial-no").style.width = "85%"
@@ -3302,14 +3221,6 @@ async function onLoad() {
                 break;
         }
     })
-
-    // Prevent Find
-
-    window.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
-            e.preventDefault();
-        }
-    });
 
     document.getElementById("themeselect").addEventListener("mouseup", async (e) => {
         let next = CLIENT_THEME_ENUM.indexOf(localConfig.config.get("theme")) + (e.button === 0 ? 1 : -1);
@@ -3325,7 +3236,7 @@ async function onLoad() {
 
     document.getElementById("importimage").addEventListener("mouseup", async () => {
         await invoke("open_path", {
-            path: local_path + fileTerminator + terminatePath("store\\images")
+            path: localPath + fileTerminator + terminatePath("store\\images")
         })
     })
 
@@ -3337,28 +3248,8 @@ async function onLoad() {
     Logger.log("Finished Loading Listeners (" + (Date.now() - start) + "ms).")
     Logger.log("Loading Intervals.")
 
-    // setInterval(snowflake, 100)
     setInterval(keepaliveTicker, 1000)
     setInterval(sendKeepAlive, 300_000)
-
-    // getCurrentWindow().onFocusChanged(({
-    //     payload: isfocused
-    // }) => {
-    //     focused = isfocused
-    //     if (focused) {
-    //         jingle_audio.play()
-    //     } else {
-    //         jingle_audio.pause()
-    //     }
-    // });
-
-    // jingle_audio.volume = 0.1;
-    // jingle_audio.loop = true;
-    // jingle_audio.play()
-
-    // Setup SVG
-    let dragging = false;
-    let dragStart = 0;
 
     document.getElementById("pin-holder").addEventListener("mousedown", async () => {
         if (getLauncher(currentEntry)) {
@@ -3368,15 +3259,15 @@ async function onLoad() {
     })
 
     document.getElementById("pin-holder").addEventListener("mousemove", async (x) => {
-        if (currentEntry !== "" && dragging) {
+        if (currentEntry !== STRINGS.EMPTY && dragging) {
             const absx = document.getElementById("container").getBoundingClientRect().x;
             const absy = document.getElementById("container").getBoundingClientRect().y;
             document.getElementById("pin-holder").style.left = x.clientX - absx + "px";
             document.getElementById("pin-holder").style.top = x.clientY - absy + "px";
             document.getElementById("pin-holder").classList.add("pin-holder-drag")
-            HTMLHelper.hide("pin-pinned")
+            Hud.hide("pin-pinned")
             document.getElementById("pin-unpinned").classList.add("pin-unpinned-heart")
-            HTMLHelper.show("pin-unpinned")
+            Hud.show("pin-unpinned")
         }
     })
 
@@ -3388,7 +3279,7 @@ async function onLoad() {
             if (Date.now() - dragStart < 150) {
                 document.getElementById("pin-holder").style.removeProperty("left")
                 document.getElementById("pin-holder").style.removeProperty("top")
-                getLauncher(currentEntry).functions().setPinned()
+                getLauncher(currentEntry).getFunctions().setPinned()
             } else {
                 const minX = document.getElementById("cove").getBoundingClientRect().x;
                 const minY = document.getElementById("cove").getBoundingClientRect().y;
@@ -3396,11 +3287,11 @@ async function onLoad() {
                 const maxY = minY + document.getElementById("cove").getBoundingClientRect().height;
 
                 if (mouse.clientX >= minX && mouse.clientX <= maxX && mouse.clientY >= minY && mouse.clientY <= maxY) {
-                    getLauncher(currentEntry).functions().setPinned(true)
+                    getLauncher(currentEntry).getFunctions().setPinned(true)
                 } else {
                     document.getElementById("pin-holder").style.removeProperty("left")
                     document.getElementById("pin-holder").style.removeProperty("top")
-                    getLauncher(currentEntry).functions().setPinned(false)
+                    getLauncher(currentEntry).getFunctions().setPinned(false)
                 }
             }
         }
