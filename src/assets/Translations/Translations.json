@@ -40,8 +40,11 @@
     "just-now": "Just now",
     "never": "Never",
     "ago": "Ago",
-    "m": "m",
-    "h": "h",
+    "timeUnits": {
+      "s": "s",
+      "m": "m",
+      "h": "h"
+    },
     "tutorial": {
       "select": "Please select a mod, or download one before continuing!",
       "1": {
@@ -127,8 +130,11 @@
     "just-now": "Только что",
     "never": "Никогда",
     "ago": "назад",
-    "m": "м",
-    "h": "ч",
+    "timeUnits": {
+      "s": "с",
+      "m": "м",
+      "h": "ч"
+    },
     "tutorial": {
       "select": "Пожалуйста, выберите мод или скачайте его перед продолжением!",
       "1": {
@@ -214,8 +220,11 @@
     "just-now": "Agora mesmo",
     "never": "Nunca",
     "ago": "Atrás",
-    "m": "m",
-    "h": "h",
+    "timeUnits": {
+      "s": "s",
+      "m": "m",
+      "h": "h"
+    },
     "tutorial": {
       "select": "Por favor, selecione um mod ou baixe um antes de continuar!",
       "1": {
@@ -301,8 +310,11 @@
     "just-now": "Ahora mismo",
     "never": "Nunca",
     "ago": "Hace",
-    "m": "m",
-    "h": "h",
+    "timeUnits": {
+      "s": "s",
+      "m": "m",
+      "h": "h"
+    },
     "tutorial": {
       "select": "¡Por favor, selecciona un mod o descarga uno antes de continuar!",
       "1": {
@@ -388,8 +400,11 @@
     "just-now": "À l'instant",
     "never": "Jamais",
     "ago": "Il y a",
-    "m": "min",
-    "h": "h",
+    "timeUnits": {
+      "s": "s",
+      "m": "min",
+      "h": "h"
+    },
     "tutorial": {
       "select": "Veuillez sélectionner un mod, ou en télécharger un avant de continuer !",
       "1": {
@@ -475,8 +490,11 @@
     "just-now": "啱啱",
     "never": "從未",
     "ago": "前",
-    "m": "分",
-    "h": "時",
+    "timeUnits": {
+      "s": "秒",
+      "m": "分",
+      "h": "時"
+    },
     "tutorial": {
       "select": "請選擇一個模組，或者先下載一個再繼續!",
       "1": {
@@ -562,8 +580,11 @@
     "just-now": "たった今",
     "never": "なし",
     "ago": "前",
-    "m": "分",
-    "h": "時",
+    "timeUnits": {
+      "s": "秒",
+      "m": "分",
+      "h": "時"
+    },
     "tutorial": {
       "select": "続行する前に、Modを選択するかダウンロードしてください！",
       "1": {
@@ -649,8 +670,11 @@
     "just-now": "Proprio ora",
     "never": "Mai",
     "ago": "fa",
-    "m": "min",
-    "h": "h",
+    "timeUnits": {
+      "s": "s",
+      "m": "min",
+      "h": "h"
+    },
     "tutorial": {
       "select": "Seleziona una mod o scaricane una prima di continuare!",
       "1": {
@@ -736,8 +760,11 @@
     "just-now": "Przed chwilą",
     "never": "Nigdy",
     "ago": "temu",
-    "m": "min",
-    "h": "godz.",
+    "timeUnits": {
+      "s": "s",
+      "m": "min",
+      "h": "godz."
+    },
     "tutorial": {
       "select": "Wybierz moda lub pobierz go przed kontynuowaniem!",
       "1": {

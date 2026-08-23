@@ -75,3 +75,5 @@ export const CLIENT_THEMES = {
 export const USE_CACHED_IMAGING = true;
 export const HEART_EMPTY = "&#62920;";
 export const HEART_FULL = "&#62919;";
+export const CLIENT_START = Date.now()
+export const DDLC_FOLDER_NAME = "DDLC-1.1.1-pc"

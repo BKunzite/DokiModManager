@@ -1,4 +1,4 @@
-export const CLIENT_VERSION = "4.8.0-canary"
+export const CLIENT_VERSION = "3.8.0-alpha"
 const BRANCH = "current_ver_beta.txt"
 const VERSION_URL = "https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/" + BRANCH
 

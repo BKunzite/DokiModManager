@@ -56,11 +56,12 @@ Doki Doki Mod Manager, whilst open, will constantly scan downloads for newly dow
 # Roadmap
 
 | Tasks (Descending Importance For 2.0.0) | Time Required | Completed? |
-|-----------------------------------------|---------------|------------|
-| Multiple Downloads/Imports              | 1 Day         | ☑          |
+|-----------------------------------------|--------------|------------|
+| Multiple Downloads/Imports              | 1 Day        | ☑          |
+| Migration from ZIP/UNRAR to UNARC       | 1 Day        | ☑    |
 | MacOS Support                           | 1 - 2 Week(s) | &#9744;    |
-| Rust Refactor                           | 1 - 2 Week(s) | &#9744;    |
-| TypeScript Migration                    | 1 Week        | &#9744;    |
+| Rust Refactor?                          | 1 - 2 Week(s) | &#9744;    |
+| TypeScript Migration?                   | 1 Week       | &#9744;    |
 | Resizing?                               | 1 - 2 Week(s) | &#9744;    |
 | Docker Integration?                     | 2 - 3 Week(s) | &#9744;    |
 

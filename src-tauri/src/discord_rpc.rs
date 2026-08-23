@@ -1,3 +1,4 @@
+use crate::simple_logger::{pop_stamp, push_stamp, stamp};
 use discord_rpc_client::Client;
 use std::sync::LazyLock;
 use std::sync::Mutex;
@@ -14,11 +15,15 @@ pub fn start() {
     let mut drpc = Client::new(1410874079589961800);
 
     drpc.on_ready(|_ctx| {
-        println!("DISCORD RPC READY!");
+        push_stamp("<RPC>");
+        stamp("Discord RPC Ready!");
+        pop_stamp();
     });
 
     drpc.on_error(|_ctx| {
-        println!("An error occurred");
+        push_stamp("<ERROR>");
+        stamp("Discord RPC Failure!");
+        pop_stamp();
     });
 
     drpc.start();

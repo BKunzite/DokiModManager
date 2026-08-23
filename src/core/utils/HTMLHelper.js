@@ -50,10 +50,8 @@ class HTMLHelperObject {
                 case STRINGS.EMPTY:
                     flags.push(true)
                     break;
-                case this.CONDITIONALS.OR:
-                    modifier = val
-                    break;
                 case this.CONDITIONALS.AND:
+                case this.CONDITIONALS.OR:
                     modifier = val
                     break;
                 default:
@@ -144,5 +142,31 @@ class HTMLHelperObject {
         }
     }
 
+    /**
+     * Shorthand for: documents.getElementById(elementId)
+     * @param elementId
+     * @returns {HTMLElement | HTMLImageElement | null}
+     */
+
+    ofId(elementId) {
+        return document.getElementById(elementId)
+    }
+
+    exists(elementId) {
+        return this.ofId(elementId) !== null
+    }
+
+    /**
+     * Shorthand for:
+     * ```javascript
+     * Hud.ofId(elementId).addEventListener("click", async () => {});
+     * ```
+     * @param elementId
+     * @param {function} consumer
+     */
+
+    onClick(elementId, consumer) {
+        this.ofId(elementId).addEventListener("click", consumer)
+    }
 }
 export default new HTMLHelperObject()

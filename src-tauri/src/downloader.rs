@@ -1,14 +1,8 @@
-use crate::extractor;
+use crate::unarc_extractor::extract_archive_without_tld;
 use std::fs;
-use std::fs::File;
 use std::path::PathBuf;
-use zip::ZipArchive;
-pub async fn extract_folder(target_dir: &PathBuf, file: &mut File) {
-    fs::create_dir_all(target_dir).unwrap();
-    println!("Extracting file");
 
-    let mut archive = ZipArchive::new(file).map_err(|e| e.to_string()).unwrap();
-    extractor::extract_zip_archive_without_toplevel(&mut archive, target_dir, "DDLC-1.1.1-pc")
-        .unwrap();
-    println!("File downloaded");
+pub async fn extract_folder(target_dir: &PathBuf, file: &PathBuf) {
+    fs::create_dir_all(target_dir).unwrap();
+    extract_archive_without_tld(file, target_dir, "DDLC-1.1.1-pc").unwrap();
 }

@@ -1478,10 +1478,6 @@ body {
     box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
 }
 
-[os-type="linux"] .minimize {
-    border-radius: 0.5rem;
-}
-
 .minimize {
     position: absolute;
     font-family: "Icon", sans-serif;
@@ -1503,11 +1499,7 @@ body {
     box-shadow: rgba(0, 0, 0, 0.5) 0 0 10px;
 }
 
-[os-type="linux"] .minimize {
-    border-radius: 0.5rem;
-}
-
-[os-type="linux"] .close {
+[os-type="linux"] .minimize, [os-type="linux"] .close, [os-type="linux"] .downloads-show {
     border-radius: 0.5rem;
 }
 

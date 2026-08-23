@@ -5,9 +5,10 @@
   "identifier": "com.dokimodmanager.app",
   "build": {
     "beforeDevCommand": "deno run dev",
-    "devUrl": "http://localhost:1420",
+         "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "deno run build",
-    "frontendDist": "../dist"
+    "frontendDist": "../dist",
+    "removeUnusedCommands": true
   },
   "app": {
     "windows": [
@@ -22,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; connect-src 'self' http://ipc.localhost https://raw.githubusercontent.com;",
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob: ipc://localhost; connect-src 'self' http://ipc.localhost https://raw.githubusercontent.com;",
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]
@@ -51,6 +52,12 @@
         "files": {
           "/usr/share/README.md": "../README.md"
         }
+      },
+      "appimage": {
+        "files": {
+          "/usr/share/README.md": "../README.md"
+        },
+        "bundleMediaFramework": true
       }
     }
   },

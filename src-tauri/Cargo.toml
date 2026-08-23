@@ -7,13 +7,14 @@ edition = "2021"
 license = "Apache-2.0"
 homepage = "https://github.com/BKunzite/DokiModManager"
 
+[profile.dev]
+incremental = true
+
 [profile.release]
-opt-level = 3
-lto = "fat"
 codegen-units = 1
+lto = true
+opt-level = 3
 panic = "abort"
-debug = false
-debug-assertions = false
 strip = true
 
 [lib]
@@ -25,14 +26,11 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2.11.5", features = ["protocol-asset", "unstable"] }
-wry = "0.54"
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-dialog = "*"
 tauri-plugin-fs = { version = "2", features = ["watch"] }
-unrar = "0.5.8"
-zip = "5.1.1"
 sysinfo = "0.37.1"
 regex = "1.11.3"
 tokio = { version = "1", features = ["full"] }
@@ -52,6 +50,5 @@ gethostname = "1.1.0"
 include_dir = "0.7.4"
 futures-util = "0.3.32"
 tauri-plugin-fs-pro = "2.4.0"
-os = "0.1.0"
-tauri-plugin-os = "2.3.2"
 opener = { version = "0.8.5", features = ["reveal"] }
+unarc-rs = "0.6.2"

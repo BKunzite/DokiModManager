@@ -1,6 +1,7 @@
 import {getOSType, OS} from "./OSUtil";
 
 export let fileTerminator = getOSType() === OS.TYPE.WINDOWS ? "\\" : "/"
+const archiveRegex = /\.(zip|rar|tar|7z|gz)$/i;
 
 /**
  * Replaces \\\\ with operating-system-specific terminator.
@@ -13,6 +14,5 @@ export function terminatePath(path) {
 }
 
 export function supportedModPackage(selectedPath) {
-    return selectedPath.endsWith(".zip") || selectedPath.endsWith(".rar") || selectedPath.endsWith("scripts.rpa")
+    return archiveRegex.test(selectedPath) || selectedPath.endsWith("scripts.rpa")
 }
-

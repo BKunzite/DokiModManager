@@ -9,9 +9,8 @@ use rayon::{ThreadPool, ThreadPoolBuilder};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::fmt::format;
 use std::fs::{create_dir_all, exists, remove_dir_all, remove_file, File};
 #[allow(unused_imports)]
 use std::io::{Read, Write};
@@ -19,64 +18,41 @@ use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex, OnceLock
-};
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 use sysinfo::{ProcessesToUpdate, System};
 use tauri::webview::{DownloadEvent, NewWindowResponse};
-use tauri::window::Color;
-use tauri::{
-    AppHandle, Emitter, Listener, Manager, PhysicalSize, PixelUnit, Size, Url, WebviewUrl,
-    WebviewWindowBuilder, WindowSizeConstraints,
-};
+use tauri::{AppHandle, Emitter, Listener, Manager, Url, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_aptabase::EventTracker;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_fs_pro::{is_dir, is_file};
 use tokio::fs::File as TokioFile;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::oneshot;
 use tokio::task;
-use unrar::Archive;
-use window_vibrancy::{apply_acrylic, apply_vibrancy, NSVisualEffectMaterial};
-use zip::ZipArchive;
+use window_vibrancy::apply_acrylic;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
+mod constants;
 mod discord_rpc;
 mod downloader;
-mod extractor;
 mod hash;
 mod simple_logger;
+mod unarc_extractor;
 
-#[cfg(target_os = "linux")]
-static LATEST_ARTIFACT_LINUX_DEB: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/DEB/dokimodmanager.deb";
-#[cfg(target_os = "linux")]
-static LATEST_ARTIFACT_LINUX_APP: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/APP/dokimodmanager.AppImage";
-#[cfg(target_os = "linux")]
-static LATEST_ARTIFACT_LINUX_RPM: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/LINUX_BINARY/RPM/dokimodmanager.rpm";
-#[cfg(target_os = "linux")]
-static UN_RPYC_LINUX_HASH: &str =
-    "ff33e7c27d4456ad5baf09c86bdd1051c3ce2abfe458504c2e13f06e11a11983";
-#[cfg(target_os = "linux")]
-static UN_RPYC_LINUX: &str =
-    "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.sh";
-
-static UN_RPYC: &str =
-    "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/src-tauri/unrpyc.exe";
-static UN_RPYC_HASH: &str = "6bd359dccf6ad7612ccc479bd65a4c768465d925177ec682b796d3d67739755c";
+use crate::unarc_extractor::*;
+use constants::*;
+use simple_logger::*;
 
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
-static LATEST_ARTIFACT: &str = "https://github.com/BKunzite/DokiModManager/raw/refs/heads/main/BUILD_LATEST_ARTIFACT/dokimodmanager.exe";
-static SCRIPTS_RPA_HASH: &str = "da7ba6d3cf9ec1ae666ec29ae07995a65d24cca400cd266e470deb55e03a51d4";
 static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
 static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
-
 static DOWNLOAD_STATE: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
+
+#[cfg(target_os = "linux")]
 static PENDING_FALLBACKS: OnceLock<Mutex<HashMap<String, oneshot::Sender<()>>>> = OnceLock::new();
 
 #[cfg(target_os = "linux")]
@@ -125,7 +101,7 @@ struct StringData<'a> {
 #[derive(Clone, Serialize)]
 struct DoubleStringData<'a> {
     text: &'a str,
-    text2: &'a str
+    text2: &'a str,
 }
 
 #[derive(serde::Deserialize)]
@@ -144,7 +120,7 @@ struct DownloadRequest<'a> {
 struct IntData<'a> {
     number: u16,
     number_goal: u16,
-    path: &'a str
+    path: &'a str,
 }
 
 #[derive(Clone, Serialize)]
@@ -177,6 +153,7 @@ async fn path_select(path: &str) -> Result<(), String> {
 
 #[tauri::command]
 async fn request_path(app: AppHandle) -> Result<(), String> {
+    push_stamp("Secondary <INIT>");
     let default_config_data: ConfigData = ConfigData {
         directory: get_current_dir().display().to_string()
             + std::path::MAIN_SEPARATOR_STR
@@ -186,7 +163,9 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
     };
     let mut contents = String::new();
 
+    stamp("Getting DNNconfig.json");
     if fs::metadata(get_current_dir().join("DNNconfig.json")).is_err() {
+        stamp("DNNconfig.json not found!");
         let json_data =
             serde_json::to_string_pretty(&default_config_data).map_err(|e| e.to_string())?;
         let mut file = TokioFile::create(get_current_dir().join("DNNconfig.json"))
@@ -197,6 +176,7 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         contents = json_data;
     } else {
+        stamp("DNNconfig.json found! Loading File.");
         let mut file = TokioFile::open(get_current_dir().join("DNNconfig.json"))
             .await
             .map_err(|e| e.to_string())?;
@@ -204,6 +184,8 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
             .await
             .map_err(|e| e.to_string())?;
     }
+    stamp("Done!");
+    stamp("Posting JS (pathRespond) Response");
 
     let final_data: ConfigData = serde_json::from_str(&contents).map_err(|e| e.to_string())?;
     app.emit(
@@ -217,15 +199,17 @@ async fn request_path(app: AppHandle) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
 
+    stamp("Done!");
+    pop_stamp();
     Ok(())
 }
 
 #[tauri::command]
 fn delete_path(app_handle: AppHandle, path: &str) {
     match remove_dir_all(path) {
-        Ok(_) => println!("Deleted"),
+        Ok(_) => stamp(format!("Deleted {}", path).as_str()),
         Err(e) => {
-            println!("Failed to delete");
+            stamp(format!("Failed to delete {} with error {}", path, e.to_string()).as_str());
 
             app_handle
                 .emit(
@@ -267,22 +251,37 @@ async fn fix_renpy_8(renpy: &str, scripts: &PathBuf) {
     }
 
     let file_size = File::open(&scriptsrpa).unwrap().metadata().unwrap().len();
-
-    println!("File Size: {}", file_size);
+    push_stamp("Ren'Py 8 Fix");
+    stamp(format!("File Size: {}", file_size).as_str());
     if file_size > 280_0000 {
+        stamp("Large File Size! Modified scripts.rpa - Fix should not be ran");
+        pop_stamp();
         return;
     }
     let version = version_f32(renpy);
     if version.is_none() {
+        stamp("Unknown Ren'Py Version! This Should Never Occur!");
+        pop_stamp();
         return;
     }
     let versionint = version.unwrap();
     let equal = default_rpa(scripts).await;
-    println!("Version: {} ({}f32); Equal: {};", renpy, versionint, equal);
-    if versionint >= 8.0 && equal {
+    stamp(
+        format!(
+            "Version: {} ({}f32); Default scripts.rpa?: {};",
+            renpy, versionint, equal
+        )
+        .as_str(),
+    );
+    if versionint < 8.0 {
+        stamp(format!("Ren'Py Version Older Then 8.0 - {}", versionint).as_str());
+    } else if !equal {
+        stamp("Custom scripts.rpa Detected - Ren'Py 8.0+ - Fix should not be ran");
+    } else {
         remove_file(PathBuf::from(&scripts).join("scripts.rpa")).unwrap();
-        println!("[REMOVED] scripts.rpa file removed in order to fix DDLC Mods >= RenPy 8.0");
+        stamp("[REMOVED] scripts.rpa file removed in order to fix DDLC Mods >= RenPy 8.0");
     }
+    pop_stamp();
 }
 
 #[tauri::command]
@@ -468,15 +467,13 @@ fn parse_source(source: &str, option: &str) -> Option<String> {
         contents.next()?;
         let content = contents.next().unwrap_or("");
         println!("{}", line);
-        let mut data: PathBuf;
-        #[cfg(target_os = "linux")]
-        {
-            data = home_dir().unwrap().join(".renpy").join(content);
-        }
-        #[cfg(windows)]
-        {
-            data = dirs::config_dir().unwrap().join("RenPy").join(content);
-        }
+
+        let data: PathBuf = if cfg!(target_os = "windows") {
+            dirs::config_dir().unwrap().join("RenPy").join(content)
+        } else {
+            home_dir().unwrap().join(".renpy").join(content)
+        };
+
         println!("Found Mod Data @ {}", data.as_path().to_str().unwrap());
         return Some(data.to_str().unwrap().to_string());
     }
@@ -530,12 +527,7 @@ fn extract_rpyc(app: &AppHandle, path: &str, out: &str) {
 }
 
 fn decrypt_rpa_dir(app: &AppHandle, root_path: &Path) {
-    let exe_dir = get_current_dir();
-    let mut unrpyc_path = exe_dir.join("unrpyc.exe");
-    #[cfg(target_os = "linux")]
-    {
-        unrpyc_path = exe_dir.join("unrpyc.sh");
-    }
+    let unrpyc_path = get_unrpyc_filename();
 
     let files: Vec<_> = WalkDir::new(root_path)
         .into_iter()
@@ -583,6 +575,22 @@ fn chmod_x_file(path: &str) {
         println!("chmod +x {}", path);
     }
 }
+
+#[cfg(target_os = "linux")]
+fn chmod_x_directory(execs: &PathBuf) {
+    for entry in WalkDir::new(&execs)
+        .skip_hidden(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        chmod_x_file(path.to_str().unwrap());
+    }
+}
+
 #[tauri::command]
 async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(), String> {
     let _ = app.get_window("main").unwrap().minimize();
@@ -594,13 +602,17 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     let mut launch_time = Instant::now();
     let mut error: Option<String> = None;
 
-    println!("{}", path);
+    stamp(format!("Got Command To Launch Binary : {}", path).as_str());
     fix_renpy_8(renpy, &scripts).await;
     set_playing(id);
 
     #[cfg(target_os = "linux")]
     if path.ends_with(".sh") {
         chmod_x_file(path);
+
+        stamp("\nChecking For Executables That Require chmod +x.\n");
+        let paths = ["py2-linux-x86_64", "py3-linux-x86_64", "linux-x86_64"];
+
         let execs = PathBuf::from(&path)
             .parent()
             .unwrap()
@@ -621,20 +633,22 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         )
         .await
         {
-            for entry in WalkDir::new(&execs)
-                .skip_hidden(false)
-                .into_iter()
-                .filter_map(|e| e.ok())
-            {
-                let path = entry.path();
-                if !path.is_file() {
-                    continue;
-                }
-                let file_name = path.file_name().unwrap().to_str().unwrap();
-                chmod_x_file(path.to_str().unwrap());
-            }
+            stamp(
+                format!(
+                    "[+] Executables Found In Path: {}",
+                    &execs.to_str().unwrap(),
+                )
+                .as_str(),
+            );
+            chmod_x_directory(&execs);
         } else {
-            println!("No Execs Found! path={}", &execs.to_str().unwrap());
+            stamp(
+                format!(
+                    "[-] No Executables Found In Path: {}",
+                    &execs.to_str().unwrap(),
+                )
+                .as_str(),
+            );
         }
 
         if is_dir(
@@ -646,20 +660,22 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         )
         .await
         {
-            for entry in WalkDir::new(&execs2)
-                .skip_hidden(false)
-                .into_iter()
-                .filter_map(|e| e.ok())
-            {
-                let path = entry.path();
-                if !path.is_file() {
-                    continue;
-                }
-                let file_name = path.file_name().unwrap().to_str().unwrap();
-                chmod_x_file(path.to_str().unwrap());
-            }
+            stamp(
+                format!(
+                    "[+] Executables Found In Path: {}",
+                    &execs2.to_str().unwrap(),
+                )
+                .as_str(),
+            );
+            chmod_x_directory(&execs2);
         } else {
-            println!("No Execs Found! path2={}", &execs.to_str().unwrap());
+            stamp(
+                format!(
+                    "[-] No Executables Found In Path: {}",
+                    &execs2.to_str().unwrap(),
+                )
+                .as_str(),
+            );
         }
     }
 
@@ -671,14 +687,14 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
 
     match launch_result {
         Ok(process) => {
-            println!("File Launched Successfully!");
+            stamp("File Launched Successfully!");
             let output = process.wait_with_output().unwrap();
 
             if output.status.success() {
                 error = Some("exit code: 0".to_string());
             } else {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                println!("Command failed with error:\n{}", stderr);
+                stamp(format!("Command failed with error:\n{}", stderr).as_str());
                 error = Some(format!("{}", stderr));
             }
         }
@@ -713,7 +729,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
 
     #[cfg(target_os = "linux")]
     if try_admin {
-        app.emit("popup", StringData { text: "Running as script failed; tring to execute sh through bash. If it still doesnt run, this mod cannot be ran on linux." }).expect("Popup Error");
+        app.emit("popup", StringData { text: "Running as script failed; trying to execute <file>.sh through bash. If it still doesnt run, this mod cannot be ran on linux." }).expect("Popup Error");
         tokio::time::sleep(Duration::from_millis(3000)).await;
         launch_time = Instant::now();
 
@@ -728,12 +744,18 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         }
     }
 
-    println!("Time: {}", launch_time.elapsed().as_secs());
+    stamp(
+        format!(
+            "Application Closed! Time: {}",
+            launch_time.elapsed().as_secs()
+        )
+        .as_str(),
+    );
 
     if launch_time.elapsed().as_secs() <= 10 {
         tokio::time::sleep(Duration::from_millis(1000)).await;
         if is_process_running(file_name) {
-            println!("File Launched Child Process!");
+            stamp("File Launched Child Process!");
             loop {
                 if !is_process_running(file_name) {
                     break;
@@ -808,7 +830,6 @@ fn version_f32(s: &str) -> Option<f32> {
     let mut indices = s.char_indices().map(|(i, _)| i);
     let end_index = indices.nth(3).unwrap_or(s.len());
     let sub_string = &s[0..end_index];
-    println!("{}", sub_string);
     sub_string.parse::<f32>().ok()
 }
 
@@ -830,12 +851,11 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         IntData {
             number: 10,
             number_goal: 0,
-            path
+            path,
         },
     )
     .unwrap();
 
-    let mut logger = simple_logger::SimpleLogger::new(format!("Import_Mod {}", path));
     let config_contents = tokio::fs::read_to_string(get_current_dir().join("DNNconfig.json"))
         .await
         .map_err(|e| e.to_string())?;
@@ -854,6 +874,16 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
             .to_str()
             .ok_or("Invalid source file name")?
     };
+    let mut logger = SimpleLogger::new(format!(
+        "Import_Mod {}",
+        source_file
+            .parent()
+            .unwrap()
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+    ));
 
     let source_name_no_ext = remove_numbered_suffix(
         source_name
@@ -878,10 +908,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     }
 
     let initial_target_dir = target_dir.clone();
-
-    let mut file = File::open(&source_file).map_err(|e| e.to_string())?;
-
-    let mut zip_archive_opt: Option<ZipArchive<File>> = None;
+    let mut is_archive = false;
 
     logger.log(String::from("Starting Init"));
 
@@ -893,10 +920,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
     post_status(
         &app,
-        &format!(
-            "Extracting - Cloning DDLC|ppathIdentifier|{}",
-            path
-        ),
+        &format!("Extracting - Cloning DDLC|ppathIdentifier|{}", path),
     );
 
     app.emit(
@@ -904,7 +928,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         IntData {
             number: 40,
             number_goal: 80,
-            path
+            path,
         },
     )
     .unwrap();
@@ -914,24 +938,25 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
     logger.log(String::from("I/O Copy DDLC Files Finished"));
 
-    post_status(&app, &format!("Extracting '{}'|ppathIdentifier|{}", source_name_no_ext, path));
+    post_status(
+        &app,
+        &format!(
+            "Extracting '{}'|ppathIdentifier|{}",
+            source_name_no_ext, path
+        ),
+    );
 
     app.emit(
         "set_bar",
         IntData {
             number: 80,
             number_goal: 95,
-            path
+            path,
         },
     )
     .unwrap();
 
-    if path.ends_with(".rar") {
-        if import_game_rar(&source_file) {
-            target_dir = target_dir.join("game");
-        }
-        let _ = extractor::extract_rar_archive(&source_file, &target_dir);
-    } else if path.ends_with(".rpa") {
+    if path.ends_with(".rpa") {
         let file_content = fs::read(&source_file).unwrap();
         fs::write(
             target_dir.join(format!(
@@ -942,28 +967,29 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         )
         .unwrap();
     } else {
-        let mut archive = ZipArchive::new(file.try_clone().unwrap()).map_err(|e| e.to_string())?;
-        let nest_check = detect_nest_1(Some(&mut archive));
-        if import_game_zip(&mut archive, "") {
+        let nest_check = detect_nest(&source_file).expect("Failed to get nest");
+        let mut is_game = false;
+
+        is_archive = true;
+
+        if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder") {
             target_dir = target_dir.join("game");
+            is_game = true;
         }
 
-        if !target_dir.to_str().unwrap().ends_with("game") && nest_check.clone().is_some() {
-            if import_game_zip(&mut archive, &nest_check.clone().unwrap()) {
+        if !is_game && nest_check.clone().is_some() {
+            if is_archive_game_folder(&source_file, &nest_check.clone().unwrap())
+                .expect("Failed to get archive game folder")
+            {
                 target_dir = target_dir.join("game");
             }
-            println!("Extract A");
-            extractor::extract_zip_archive_without_toplevel(
-                &mut ZipArchive::new(&mut file).unwrap(),
-                &target_dir,
-                &nest_check.unwrap().replace("/", ""),
-            )
-            .map_err(|e| e.to_string())?;
+            stamp("Importing Archive Without Toplevel");
+            extract_archive_without_tld(&source_file, &target_dir, &nest_check.unwrap())
+                .map_err(|e| e.to_string())?;
         } else {
-            extractor::extract_zip_archive(&mut archive, &target_dir).map_err(|e| e.to_string())?;
+            stamp("Importing Archive");
+            extract_archive(&source_file, &target_dir).map_err(|e| e.to_string())?;
         }
-
-        zip_archive_opt = Some(archive);
     }
 
     let mut loop_time = 0;
@@ -973,51 +999,58 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         IntData {
             number: 95,
             number_goal: 0,
-            path
+            path,
         },
     )
     .unwrap();
 
-    loop {
-        let mut is_game = false;
-        let nested = &detect_nest(
-            source_name_no_ext,
-            target_dir.to_str().unwrap(),
-            zip_archive_opt.as_mut(),
-        )
-        .await;
-        loop_time += 1;
-        if nested == "None" {
-            break;
-        } else {
-            println!("Fixing Nested");
-            logger.log(String::from("I/O [BAD] Fixing Nested"));
+    if is_archive {
+        loop {
+            let mut is_game = false;
+            let nested = &fallback_legacy_nest_check(
+                source_name_no_ext,
+                target_dir.to_str().unwrap(),
+                &source_file,
+            )
+            .await;
 
-            post_status(
-                &app,
-                &format!("Fixing Nested Zip File... Try {}|ppathIdentifier|{}", loop_time, path),
-            );
-            if !is_game {
-                let p = &PathBuf::from(nested);
-                for file in p.read_dir().unwrap() {
-                    let path = file.unwrap().path();
-                    let close_dir = path
-                        .to_str()
-                        .unwrap()
-                        .replace(&format!("{}{}", nested, std::path::MAIN_SEPARATOR), "");
-                    if is_game_folder(&close_dir) && !close_dir.contains(std::path::MAIN_SEPARATOR)
-                    {
-                        is_game = true;
-                        break;
+            loop_time += 1;
+            if nested == "None" {
+                break;
+            } else {
+                stamp("Fixing Nested File (This is a fallback and should not occur)");
+                logger.log(String::from("I/O [BAD] Fixing Nested"));
+
+                post_status(
+                    &app,
+                    &format!(
+                        "Fixing Nested Zip File... Try {}|ppathIdentifier|{}",
+                        loop_time, path
+                    ),
+                );
+                if !is_game {
+                    let p = &PathBuf::from(nested);
+                    for file in p.read_dir().unwrap() {
+                        let path = file.unwrap().path();
+                        let close_dir = path
+                            .to_str()
+                            .unwrap()
+                            .replace(&format!("{}{}", nested, std::path::MAIN_SEPARATOR), "");
+                        if is_game_folder(&close_dir)
+                            && !close_dir.contains(std::path::MAIN_SEPARATOR)
+                        {
+                            is_game = true;
+                            break;
+                        }
                     }
                 }
+                if is_game {
+                    copy_dir_recursive(&PathBuf::from(nested), &target_dir.join("game")).unwrap();
+                } else {
+                    copy_dir_recursive(&PathBuf::from(nested), &target_dir).unwrap();
+                }
+                remove_dir_all(nested).unwrap();
             }
-            if is_game {
-                copy_dir_recursive(&PathBuf::from(nested), &target_dir.join("game")).unwrap();
-            } else {
-                copy_dir_recursive(&PathBuf::from(nested), &target_dir).unwrap();
-            }
-            remove_dir_all(nested).unwrap();
         }
     }
 
@@ -1032,7 +1065,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         IntData {
             number: 100,
             number_goal: 0,
-            path
+            path,
         },
     )
     .unwrap();
@@ -1044,7 +1077,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
                 .expect("Could not get file name")
                 .to_str()
                 .unwrap(),
-            text2: path
+            text2: path,
         },
     )
     .unwrap();
@@ -1068,37 +1101,13 @@ fn remove_numbered_suffix(input: &str) -> &str {
     }
 }
 
-fn detect_nest_1(zip_archive: Option<&mut ZipArchive<File>>) -> Option<String> {
-    let mut newest_found: Option<String> = None;
-    let archive = zip_archive.unwrap();
-    for i in 0..archive.len() {
-        let file = archive.by_index(i).map_err(|e| e.to_string()).unwrap();
-        let name = file.name().to_string();
-        if name.contains("/") {
-            let newest = if let Some(s) = newest_found.as_ref() {
-                s
-            } else {
-                ""
-            };
-            let zero = name.split("/").next().unwrap();
-            if zero == newest || newest_found.is_none() {
-                newest_found = Some(zero.to_string());
-            } else {
-                newest_found = None;
-                break;
-            }
-        } else if !name.to_lowercase().contains("credit") {
-            newest_found = None;
-            break;
-        }
-    }
-    newest_found
-}
-async fn detect_nest(
-    string: &str,
-    target_dir: &str,
-    zip_archive: Option<&mut ZipArchive<File>>,
-) -> String {
+async fn fallback_legacy_nest_check(string: &str, target_dir: &str, zip: &PathBuf) -> String {
+    println!(
+        "\nRunning Ren'Py Nested Folder Detection Engine -> Path: {} \n",
+        string
+    );
+    push_stamp("Legacy nest Check");
+
     let paths = [
         string,
         "-Renpy7Mod",
@@ -1108,18 +1117,16 @@ async fn detect_nest(
         "CupcakeDelivery-1.0.1-pc",
     ];
 
-    if zip_archive.is_some() {
-        let newest_found: Option<String> = detect_nest_1(zip_archive);
-        if let Some(newest) = newest_found {
-            if newest == "game" {
-                println!("Invalid Newest: {}", newest)
-            } else {
-                println!("Newest: {}", newest);
-                let candidate = PathBuf::from(target_dir).join(newest);
-                let inval = is_dir(candidate.clone()).await;
-                if inval {
-                    return candidate.as_path().to_str().unwrap().to_string();
-                }
+    let newest_found = detect_nest(&zip).expect("Failed to get nest");
+    if let Some(newest) = newest_found {
+        if newest == "game" {
+            stamp(format!("Invalid Newest: {}", newest).as_str())
+        } else {
+            stamp(format!("Newest: {}", newest).as_str());
+            let candidate = PathBuf::from(target_dir).join(newest);
+            let inval = is_dir(candidate.clone()).await;
+            if inval {
+                return candidate.as_path().to_str().unwrap().to_string();
             }
         }
     }
@@ -1135,11 +1142,14 @@ async fn detect_nest(
         }
         let file_name = path.file_name().unwrap().to_str().unwrap();
         for selected in paths {
-            println!(
-                "Checking: '{}' against '{}' with result '{}'",
-                file_name,
-                selected,
-                file_name.contains(selected)
+            stamp(
+                format!(
+                    "Checking: '{}' against '{}' with result '{}'",
+                    file_name,
+                    selected,
+                    file_name.contains(selected)
+                )
+                .as_str(),
             );
             if file_name.contains(selected) {
                 return path.to_str().unwrap().to_string();
@@ -1150,45 +1160,8 @@ async fn detect_nest(
         }
     }
 
+    pop_stamp();
     String::from("None")
-}
-
-fn import_game_rar(archive_path: &Path) -> bool {
-    let mut found = false;
-    let mut archive = Archive::new(archive_path.to_str().unwrap())
-        .open_for_processing()
-        .unwrap();
-    while let Some(header) = archive.read_header().unwrap() {
-        archive = if header.entry().is_directory() {
-            if header
-                .entry()
-                .filename
-                .to_str()
-                .expect("Failed To Read File")
-                .starts_with("mod_assets")
-            {
-                found = true;
-                break;
-            }
-            header.skip().expect("Failed to skip header")
-        } else if header.entry().is_file() {
-            if is_game_folder(header.entry().filename.to_str().unwrap())
-                && !header
-                    .entry()
-                    .filename
-                    .to_str()
-                    .unwrap()
-                    .contains(std::path::MAIN_SEPARATOR)
-            {
-                found = true;
-                break;
-            }
-            header.skip().expect("Failed to skip header")
-        } else {
-            header.skip().expect("Failed to skip header")
-        };
-    }
-    found
 }
 
 #[tauri::command]
@@ -1208,7 +1181,6 @@ fn goto_main(app: AppHandle) {
 async fn download_file(app: &AppHandle, url: String, save_path: String) -> Result<(), String> {
     let response = reqwest::get(url.clone()).await.unwrap();
     let total = response.content_length().unwrap_or(0);
-    let cloned_save_path = save_path.clone();
     let url_clone = url.clone();
     let mut file = tokio::fs::File::create(save_path).await.unwrap();
     let mut stream = response.bytes_stream();
@@ -1247,6 +1219,7 @@ async fn download_file(app: &AppHandle, url: String, save_path: String) -> Resul
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 fn file_name_from_url(url: &Url) -> String {
     url.path_segments()
         .and_then(|segments| segments.filter(|segment| !segment.is_empty()).last())
@@ -1254,14 +1227,18 @@ fn file_name_from_url(url: &Url) -> String {
         .to_owned()
 }
 
+#[cfg(target_os = "linux")]
 fn is_archive_url(url: &Url) -> bool {
     url.path().rsplit_once('.').is_some_and(|(_, extension)| {
         matches!(extension.to_ascii_lowercase().as_str(), "zip" | "rar")
     })
 }
+
 async fn run_download(app: AppHandle, url: String, path: PathBuf) {
     let path_string = path.to_string_lossy().into_owned();
-    println!("downloading;");
+
+    stamp(format!("Downloading: {}", url).as_str());
+
     app.emit(
         "download_start",
         StringData {
@@ -1284,9 +1261,11 @@ fn download_state() -> &'static Mutex<HashMap<String, bool>> {
     DOWNLOAD_STATE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+#[cfg(target_os = "linux")]
 fn pending_fallbacks() -> &'static Mutex<HashMap<String, oneshot::Sender<()>>> {
     PENDING_FALLBACKS.get_or_init(|| Mutex::new(HashMap::new()))
 }
+
 #[tauri::command]
 async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), String> {
     let external_url = Url::parse(url).map_err(|error| error.to_string())?;
@@ -1328,8 +1307,7 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
              Chrome/146.0.0.0 Safari/537.36",
         )
         .on_navigation(move |navigation_url| {
-            println!("Navigation received: {navigation_url}");
-
+            // println!("Navigation received: {navigation_url}");
             if navigation_url.domain() == Some("econventa.com") {
                 return false;
             }
@@ -1343,11 +1321,13 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
                     if url.starts_with("blob") {
                         let confirmed = app
                             .dialog()
-                            .message("Mega.NZ downloads are not natively supported, running fallback".to_string())
+                            .message(
+                                "Mega.NZ downloads are not natively supported, running fallback"
+                                    .to_string(),
+                            )
                             .title("Download Request")
                             .buttons(MessageDialogButtons::Ok)
                             .blocking_show();
-                        *destination = download_dir().unwrap();
                         return true;
                     }
 
@@ -1373,7 +1353,8 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
                             .lock()
                             .expect("pending_fallbacks mutex poisoned");
 
-                        if let Some(previous_sender) = fallbacks.insert(url.clone(), cancel_sender) {
+                        if let Some(previous_sender) = fallbacks.insert(url.clone(), cancel_sender)
+                        {
                             let _ = previous_sender.send(());
                         }
                     }
@@ -1439,7 +1420,10 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
                 if url.starts_with("blob") {
                     let confirmed = downloads_app
                         .dialog()
-                        .message("Mega.NZ downloads are not natively supported, running fallback".to_string())
+                        .message(
+                            "Mega.NZ downloads are not natively supported, running fallback"
+                                .to_string(),
+                        )
                         .title("Download Request")
                         .buttons(MessageDialogButtons::Ok)
                         .blocking_show();
@@ -1474,8 +1458,6 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
 
                 let path = download_downloads_dir.join(file_name);
 
-                println!("Download event received: {url}");
-
                 tauri::async_runtime::spawn(async move {
                     run_download(app, url, path).await;
                 });
@@ -1493,13 +1475,6 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
     Ok(())
 }
 
-fn is_game_folder(name: &str) -> bool {
-    name.ends_with(".rpyc")
-        || name.ends_with(".rpa")
-        || name.starts_with("mod_assets")
-        || name.ends_with(".rpy")
-}
-
 #[tauri::command]
 fn rename_dir(app: AppHandle, path: &str, new_name: &str, id: &str) {
     let dir = PathBuf::from(path);
@@ -1513,27 +1488,6 @@ fn rename_dir(app: AppHandle, path: &str, new_name: &str, id: &str) {
         });
     }
     app.emit("rename_done", StringData { text: id }).unwrap();
-}
-
-fn import_game_zip(archive: &mut ZipArchive<File>, toppath: &str) -> bool {
-    let mut found = false;
-    for i in 0..archive.len() {
-        let file = archive.by_index(i).map_err(|e| e.to_string()).unwrap();
-        let mut formatted = file
-            .enclosed_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .replace(toppath, "");
-        if formatted.starts_with("/") {
-            formatted.remove(0);
-        }
-        if is_game_folder(file.name()) && !formatted.contains("/") {
-            found = true;
-            break;
-        }
-    }
-    found
 }
 
 fn get_pool() -> &'static ThreadPool {
@@ -1576,28 +1530,53 @@ pub fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
     })
 }
 #[tauri::command]
-async fn set_ddlc_zip(path: &str) -> Result<(), bool> {
+async fn set_ddlc_zip(app_handle: AppHandle, path: &str) -> Result<(), bool> {
     if !is_file(PathBuf::from(path)).await {
+        stamp("Failed to find zip file");
         return Err(false);
     }
 
     if get_file_hash(path).expect("Failed to get Hash") != DDLC_HASH {
+        stamp("Invalid DDLC Zip");
+        app_handle
+            .emit(
+                "popup",
+                StringData {
+                    text: "Invalid DDLC Zip Checksum - Re-download the zip from ddlc.moe!",
+                },
+            )
+            .expect("Popup Error");
         return Err(false);
     }
 
     create_dir_all(get_current_dir().join("store")).unwrap();
-
-    fs::copy(
+    match fs::copy(
         PathBuf::from(path),
         get_current_dir().join("store").join("ddlc.zip"),
-    )
-    .unwrap();
+    ) {
+        Ok(_) => {
+            stamp("DDLC Zip Copied");
+        }
+        Err(error) => {
+            app_handle
+                .emit(
+                    "popup",
+                    StringData {
+                        text: format!("Failed to copy file: {}", error.to_string()).as_str(),
+                    },
+                )
+                .expect("Popup Error");
+            return Err(false);
+        }
+    };
 
     downloader::extract_folder(
         &get_current_dir().join("store").join("ddlc"),
-        &mut File::open(get_current_dir().join("store").join("ddlc.zip")).unwrap(),
+        &get_current_dir().join("store").join("ddlc.zip"),
     )
     .await;
+
+    stamp("DDLC Zip Extracted");
 
     Ok(())
 }
@@ -1707,7 +1686,7 @@ async fn update_linux_binary() {
             let mut update_script_path2 =
                 File::create(get_current_dir().join("update_app.sh")).unwrap();
             update_script_path2
-                .write_all(update_script.as_bytes())
+                .write_all(update_script2.as_bytes())
                 .unwrap();
             run_solo_proc_linux(
                 get_current_dir()
@@ -1791,8 +1770,8 @@ fn run_solo_proc_linux(executor: String) {
 }
 #[cfg(target_os = "windows")]
 async fn update_windows_binary() {
-    println!("Updating Using {}", LATEST_ARTIFACT);
-    let resp = reqwest::get(LATEST_ARTIFACT)
+    println!("Updating Using {}", LATEST_ARTIFACT_WINDOWS);
+    let resp = reqwest::get(LATEST_ARTIFACT_WINDOWS)
         .await
         .expect("Failed to download latest");
 
@@ -1833,6 +1812,11 @@ fn tracker(app: AppHandle, event: String, props: Option<serde_json::Value>) {
     track(&app, event, props);
 }
 
+#[tauri::command]
+fn sync_log(msg: &str) {
+    stamp(format!("(JS) {}", msg).as_str());
+}
+
 fn track(app: &AppHandle, event: String, props: Option<serde_json::Value>) {
     app.track_event(&event, props)
         .expect("Failed to track event");
@@ -1855,76 +1839,101 @@ async fn make_config() {
 }
 
 async fn update_unrpyc() {
-    let mut rpyc = UN_RPYC;
-    #[cfg(target_os = "linux")]
-    {
-        rpyc = UN_RPYC_LINUX;
-    }
+    push_stamp("UnRPYC Update");
+    let rpyc = UN_RPYC;
     let resp = reqwest::get(rpyc).await.expect("Failed to download latest");
-    let mut out;
-    #[cfg(target_os = "windows")]
-    {
-        out = File::create(get_current_dir().join("unrpyc.exe")).expect("Failed to create file");
-    }
-    #[cfg(target_os = "linux")]
-    {
-        out = File::create(get_current_dir().join("unrpyc.sh")).expect("Failed to create file");
-    }
+    let path = if cfg!(target_os = "windows") {
+        get_current_dir().join("unrpyc.exe")
+    } else {
+        get_current_dir().join("unrpyc.sh")
+    };
+
+    let mut out = File::create(&path).expect("Failed to create file");
+
+    stamp(
+        format!(
+            "Writing Bytes To: {}",
+            &path.to_str().expect("Failed to convert path to string")
+        )
+        .as_str(),
+    );
+
     out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
         .unwrap();
+
     #[cfg(target_os = "linux")]
-    {
-        chmod_x_file(&get_current_dir().join("unrpyc.sh").display().to_string());
-    }
+    chmod_x_file(&get_current_dir().join("unrpyc.sh").display().to_string());
+
+    pop_stamp();
 }
 
 pub fn get_current_dir() -> PathBuf {
-    #[cfg(target_os = "windows")]
-    {
-        return env::current_dir().expect("Could Not Get Current Directory");
-    }
-    #[cfg(target_os = "linux")]
-    {
-        return env::current_dir()
+    if cfg!(target_os = "windows") {
+        env::current_dir().expect("Could Not Get Current Directory")
+    } else {
+        env::current_dir()
             .expect("Could Not Get Current Directory")
-            .join(".dokimodmanager");
+            .join(".dokimodmanager")
+    }
+}
+
+pub fn get_unrpyc_filename() -> String {
+    if cfg!(target_os = "linux") {
+        String::from("unrpyc.sh")
+    } else {
+        String::from("unrpyc.exe")
     }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
+    simple_logger::setup_logs();
+    push_stamp("<INIT>");
+
+    stamp(
+        format!(
+            "Starting Doki Doki Mod Manager | Platform - {}",
+            if cfg!(target_os = "windows") {
+                "WINDOWS".to_string()
+            } else if cfg!(target_os = "linux") {
+                "LINUX".to_string()
+            } else {
+                "OTHER".to_string()
+            }
+        )
+        .as_str(),
+    );
+
+    push_stamp("CREATE_STORE");
     create_dir_all(get_current_dir().join("store/mods").display().to_string())
         .expect("FS Error: Failed To Create Store/Mods");
     create_dir_all(get_current_dir().join("store/images").display().to_string())
         .expect("FS Error: Failed To Create Store/Mods");
+    pop_stamp();
 
-    #[cfg(target_os = "windows")]
-    {
-        if !exists(get_current_dir().join("unrpyc.exe")).unwrap()
-            || get_file_hash(&get_current_dir().join("unrpyc.exe").display().to_string())
-                .expect("Unable to get hash on UNRPYC")
-                != crate::UN_RPYC_HASH
-        {
-            crate::update_unrpyc().await;
-        }
-    }
+    let exec_name = get_unrpyc_filename();
 
-    #[cfg(target_os = "linux")]
+    push_stamp("UnRPYC Hash");
+    if !exists(get_current_dir().join(&exec_name)).unwrap()
+        || get_file_hash(&get_current_dir().join(&exec_name).display().to_string())
+            .expect("Unable to get hash on UNRPYC")
+            != UN_RPYC_HASH
     {
-        if !exists(get_current_dir().join("unrpyc.sh")).unwrap()
-            || get_file_hash(&get_current_dir().join("unrpyc.sh").display().to_string())
-                .expect("Unable to get hash on UNRPYC")
-                != UN_RPYC_LINUX_HASH
-        {
-            update_unrpyc().await;
-        }
+        stamp("UnRPYC Update Required");
+        update_unrpyc().await;
+    } else {
+        stamp("UnRPYC - UnRPYC Up To Date!");
     }
+    pop_stamp();
 
     std::thread::spawn(move || {
         discord_rpc::start();
     });
+
     discord_rpc::set_activity("In Main Menu");
+
     make_config().await;
+    pop_stamp();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -2019,8 +2028,8 @@ pub async fn run() {
                 });
             });
 
-            // Clear Downloads On Start
             if downloads_dir.exists() {
+                stamp("Clearing Downloads Folder");
                 let _ = remove_dir_all(downloads_dir);
             }
             Ok(())
@@ -2043,7 +2052,8 @@ pub async fn run() {
             extract_game_script,
             get_host_name,
             open_webview,
-            goto_main
+            goto_main,
+            sync_log
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

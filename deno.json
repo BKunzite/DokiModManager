@@ -3,6 +3,7 @@
   "tasks": {
     "dev": "deno run -A --node-modules-dir npm:vite dev",
     "build": "deno run -A --node-modules-dir npm:vite build",
+    "build:linux": "deno run tauri build && bash src-tauri/scripts/patch-appimage-wayland.sh",
     "tauri": "deno run -A --node-modules-dir npm:@tauri-apps/cli"
   }
 }

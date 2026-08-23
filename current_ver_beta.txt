@@ -1,4 +1,4 @@
-4.8.0-canary
+3.8.0-alpha
 
 Multiple Downloads/Imports At Once
 Translations
@@ -7,5 +7,16 @@ Translations
  - Language Translations
  - Report Button Auto Resizes
 
+Linux Beta Fixes
+ - Better Mod Support
+ - If the error contained:
+    py3-linux-x86_64
+    py2-linux-x86_64
+  then it should now be fixed
+
+Migration from unrar/zip to unarc-rs
+ - Better RAR Archive Support
+
 ToDo:
-- [ ] MacOS Support
+ - macOS Support
+ - Arch Linux / Wayland Fix

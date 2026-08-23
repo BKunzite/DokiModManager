@@ -87,7 +87,7 @@ class DownloadingObject {
     }
 
     tick() {
-        if (this.#percentGoal > 0) this.setPercent(Math.min(this.#percent + (this.#percentGoal - this.#percent) * 0.2, 100))
+        if (this.#percentGoal > 0) this.setPercent(Math.min(this.#percent + (this.#percentGoal - this.#percent) * 0.1, 100))
     }
 
     complete() {
