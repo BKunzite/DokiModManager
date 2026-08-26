@@ -32,6 +32,9 @@ class DefaultClass {
         document.documentElement.setAttribute("os-type", getOSType())
         Logger.log("Running on OS.TYPE-" + getOSType().toUpperCase())
         if (getOSType() === OS.TYPE.LINUX) {
+            /*
+                Reloading the webpage is broken on webkit! We love webkit!
+             */
             window.addEventListener('keydown', (e) => {
                 if (e.key === "r" && e.ctrlKey) {
                     e.preventDefault();

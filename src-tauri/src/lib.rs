@@ -1,4 +1,3 @@
-use crate::hash::get_file_hash;
 use dirs::{download_dir, home_dir};
 use futures_util::TryStreamExt;
 use include_dir::{include_dir, Dir};
@@ -21,19 +20,27 @@ use std::process::{Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
-use sysinfo::{ProcessesToUpdate, System};
+use sysinfo::{CpuRefreshKind, MemoryRefreshKind, ProcessesToUpdate, System};
 use tauri::webview::{DownloadEvent, NewWindowResponse};
-use tauri::{AppHandle, Emitter, Listener, Manager, Url, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Listener, Manager, Size, Url, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_aptabase::EventTracker;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_fs_pro::{is_dir, is_file};
 use tokio::fs::File as TokioFile;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::task;
-use window_vibrancy::apply_acrylic;
+
+#[cfg(target_os = "linux")]
+use tauri::{PhysicalSize, PixelUnit, WindowSizeConstraints};
+#[cfg(target_os = "linux")]
+use tauri::webview::Color;
+#[cfg(target_os = "linux")]
+use tokio::sync::oneshot;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+#[cfg(target_os = "windows")]
+use window_vibrancy::apply_acrylic;
 
 mod constants;
 mod discord_rpc;
@@ -43,6 +50,7 @@ mod simple_logger;
 mod unarc_extractor;
 
 use crate::unarc_extractor::*;
+use crate::hash::get_file_hash;
 use constants::*;
 use simple_logger::*;
 
@@ -610,72 +618,37 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     if path.ends_with(".sh") {
         chmod_x_file(path);
 
-        stamp("\nChecking For Executables That Require chmod +x.\n");
-        let paths = ["py2-linux-x86_64", "py3-linux-x86_64", "linux-x86_64"];
+        stamp("\n\nChecking For Executables That Require chmod +x.\n");
 
-        let execs = PathBuf::from(&path)
+        let lib_folder = PathBuf::from(&path)
             .parent()
             .unwrap()
-            .join("lib")
-            .join("py2-linux-x86_64");
-        let execs2 = PathBuf::from(&path)
-            .parent()
-            .unwrap()
-            .join("lib")
-            .join("linux-x86_64");
+            .join("lib");
 
-        if is_dir(
-            PathBuf::from(&path)
-                .parent()
-                .unwrap()
-                .join("lib")
-                .join("py2-linux-x86_64"),
-        )
-        .await
-        {
-            stamp(
-                format!(
-                    "[+] Executables Found In Path: {}",
-                    &execs.to_str().unwrap(),
-                )
-                .as_str(),
-            );
-            chmod_x_directory(&execs);
-        } else {
-            stamp(
-                format!(
-                    "[-] No Executables Found In Path: {}",
-                    &execs.to_str().unwrap(),
-                )
-                .as_str(),
-            );
-        }
-
-        if is_dir(
-            PathBuf::from(&path)
-                .parent()
-                .unwrap()
-                .join("lib")
-                .join("linux-x86_64"),
-        )
-        .await
-        {
-            stamp(
-                format!(
-                    "[+] Executables Found In Path: {}",
-                    &execs2.to_str().unwrap(),
-                )
-                .as_str(),
-            );
-            chmod_x_directory(&execs2);
-        } else {
-            stamp(
-                format!(
-                    "[-] No Executables Found In Path: {}",
-                    &execs2.to_str().unwrap(),
-                )
-                .as_str(),
-            );
+        for path in LINUX_DDLC_LIB_PATHS {
+            let final_location = lib_folder.join(path);
+            if is_dir(
+                final_location.clone()
+            )
+                .await
+            {
+                stamp(
+                    format!(
+                        "[+] Executables Found In Path: {}",
+                        &final_location.to_str().unwrap(),
+                    )
+                        .as_str(),
+                );
+                chmod_x_directory(&final_location);
+            } else {
+                stamp(
+                    format!(
+                        "[-] No Executables Found In Path: {}",
+                        &final_location.to_str().unwrap(),
+                    )
+                        .as_str(),
+                );
+            }
         }
     }
 
@@ -1813,8 +1786,11 @@ fn tracker(app: AppHandle, event: String, props: Option<serde_json::Value>) {
 }
 
 #[tauri::command]
-fn sync_log(msg: &str) {
-    stamp(format!("(JS) {}", msg).as_str());
+fn sync_log(msgs: Vec<&str>) {
+    let len = msgs.len();
+    for msg_id in 0..len {
+        stamp(format!("(JS) {}", msgs[msg_id]).as_str());
+    }
 }
 
 fn track(app: &AppHandle, event: String, props: Option<serde_json::Value>) {
@@ -1885,24 +1861,46 @@ pub fn get_unrpyc_filename() -> String {
     }
 }
 
+async fn stamp_system_info() {
+    stamp("====================== HARDWARE SPECS ======================");
+
+    stamp("- OS Info -");
+    stamp(format!("{}", os_info::get()).as_str());
+
+    let mut system = System::new();
+    tokio::time::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL).await;
+
+    system.refresh_memory_specifics(MemoryRefreshKind::everything());
+    system.refresh_cpu_specifics(CpuRefreshKind::everything());
+
+    stamp("- CPU Info -");
+
+    for cpu in system.cpus() {
+        stamp("");
+        stamp(format!("    CPU - {}", cpu.name()).as_str());
+        stamp(format!("    Brand - {}", cpu.brand()).as_str());
+        stamp(format!("    Freq - {:.2} Ghz", cpu.frequency() as f32 / 1000f32).as_str());
+        stamp(format!("    VendorID - {}", cpu.vendor_id()).as_str());
+    }
+
+    stamp("");
+    stamp("- RAM Info -");
+
+    let bytes_to_gb = 1f32/1024f32/1024f32/1024f32;
+
+    stamp(format!("    Physical Ram Size - {:.2} GB", system.total_memory() as f32 * bytes_to_gb).as_str());
+    stamp(format!("    Swap Ram Size - {:.2} GB", system.total_swap() as f32 * bytes_to_gb).as_str());
+    stamp(format!("    Used Physical Ram Size - {:.2} GB", system.used_memory() as f32 * bytes_to_gb).as_str());
+    stamp(format!("    Used Swap Ram Size - {:.2} GB", system.used_swap() as f32 * bytes_to_gb).as_str());
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
     simple_logger::setup_logs();
     push_stamp("<INIT>");
 
-    stamp(
-        format!(
-            "Starting Doki Doki Mod Manager | Platform - {}",
-            if cfg!(target_os = "windows") {
-                "WINDOWS".to_string()
-            } else if cfg!(target_os = "linux") {
-                "LINUX".to_string()
-            } else {
-                "OTHER".to_string()
-            }
-        )
-        .as_str(),
-    );
+    stamp("Starting Doki Doki Mod Manager");
+    stamp_system_info().await;
 
     push_stamp("CREATE_STORE");
     create_dir_all(get_current_dir().join("store/mods").display().to_string())

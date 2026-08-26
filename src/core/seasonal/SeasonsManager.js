@@ -16,6 +16,22 @@ class SeasonsManager {
 		break;
 	}
     }
+
+    unfocus(season = this.SEASON.NONE) {
+	switch (season) {
+	    case this.SEASON.CHRISTMAS:
+		Christmas.unfocus()
+		break;
+	}
+    }
+
+    focus(season = this.SEASON.NONE) {
+	switch (season) {
+	    case this.SEASON.CHRISTMAS:
+		Christmas.focus()
+		break;
+	}
+    }
 }
 
 export default new SeasonsManager()

@@ -1,3 +1,5 @@
+import {fileTerminator} from "./FileSystem";
+
 /**
  * REGEX pattern to check for HTML elements
  * @type {RegExp}
@@ -91,7 +93,9 @@ export function getTextWidth(text, font) {
 }
 
 export function formatModName(text) {
-    return text.replace(/\b(ddlc|renpy7mod|renpy8mod)\b/gi, "").replace(/-/g, " ").replace(/_/g, " ").trim()
+    return text.replace(/\b(ddlc|renpy7mod|renpy8mod)\b/gi, "")
+        .replace(/[-_]/g, " ")
+        .trim()
 }
 
 export function linkify(inputText) {

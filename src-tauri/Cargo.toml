@@ -52,3 +52,4 @@ futures-util = "0.3.32"
 tauri-plugin-fs-pro = "2.4.0"
 opener = { version = "0.8.5", features = ["reveal"] }
 unarc-rs = "0.6.2"
+os_info = "3.15.0"

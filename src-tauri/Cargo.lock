@@ -1192,6 +1192,7 @@ dependencies = [
  "jwalk",
  "open",
  "opener",
+ "os_info",
  "rand",
  "rayon",
  "regex",

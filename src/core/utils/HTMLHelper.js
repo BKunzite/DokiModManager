@@ -145,7 +145,7 @@ class HTMLHelperObject {
     /**
      * Shorthand for: documents.getElementById(elementId)
      * @param elementId
-     * @returns {HTMLElement | HTMLImageElement | null}
+     * @returns {HTMLElement | HTMLTextAreaElement | HTMLImageElement | null}
      */
 
     ofId(elementId) {

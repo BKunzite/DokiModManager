@@ -5,6 +5,7 @@ import {
 import {
     USE_CACHED_IMAGING
 } from "../Constants"
+import OSUtil, {OS, getOSType} from "./OSUtil";
 
 let cache = {}
 let localPreloadCovers = {}
@@ -115,7 +116,11 @@ async function getImageEager(id) {
         const contents = await readFile(id);
         return createURL(contents, id)
     } else {
-        const images = import.meta.glob('../../assets/**/*.{png,jpg,jpeg,svg,json,webp}', {eager: true, query: '?url', import: 'default'});
+        const images = import.meta.glob('../../assets/**/*.{png,jpg,jpeg,svg,json,webp}', {
+            eager: true,
+            query: '?url',
+            import: 'default'
+        });
         if (cover !== undefined) {
             return images["../../assets/" + cover]
         } else {
@@ -185,17 +190,27 @@ export function deref(url) {
  * Preloads and image given a path to optimize
  * image loading speeds.
  * @param {string} src - Path to the image
- * @returns {Promise<void>}
+ * @returns {HTMLImageElement}
  */
 
-export function preloadImageObject(src) {
-    return new Promise(async (resolve, reject) => {
-        const img = new Image();
-        img.decoding = 'async';
-        img.src = await getImage(src, true);
-        img.onerror = reject;
-        resolve(img);
-    });
+export async function preloadImageObject(src) {
+    const img = new Image();
+    img.decoding = 'async';
+
+    /*
+        I LOVE WEBKIT ORDER ISSUES!!!!!
+     */
+
+    if (getOSType() === OS.TYPE.LINUX) {
+        img.src = await getImage(src, true)
+    } else {
+        getImage(src, true)
+            .then((resp)=> {
+                    img.src = resp
+                }
+            )
+    }
+    return img
 }
 
 /**
@@ -231,5 +246,5 @@ export function lazyDeref(url) {
  * @returns {boolean}
  */
 export function regexImageName(name) {
-    return imageRegex.test(name)
+    return imageRegex.exec(name) !== null
 }

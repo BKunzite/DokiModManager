@@ -74,7 +74,7 @@ MacOS Support Will Be Included In 1.8.0
 # Support For Non-Windows-Based Operating Systems
 
 ### macOS (BigSur 11 and newer with an Mx chip (M1, M2, etc.))
-There are now plans for Mac support this summer. MacOS Support should be available in the 1.8.0-release update.
+There are now plans for Mac support this summer/fall. MacOS Support should be available in the 1.9.0-release update.
 
 ### Linux-Based Operating Systems
 The linux build is currently in beta. Expect bugs to come from this version.

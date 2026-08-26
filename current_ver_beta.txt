@@ -1,4 +1,4 @@
-3.8.0-alpha
+2.8.0-beta
 
 Multiple Downloads/Imports At Once
 Translations
@@ -13,6 +13,19 @@ Linux Beta Fixes
     py3-linux-x86_64
     py2-linux-x86_64
   then it should now be fixed
+
+App Logs
+    - If you want to report a bug on the discord,
+    please press Updates (Desktop) -> Copy Latest Log
+    and paste it into the Discord Ticket
+
+Performance Improvements
+    - Technical -
+        - Batch DOM Updates Via Document Fragments
+        - Decrease CPU/GPU Usage Upon Window Unfocus
+        - Launch Time Should Be Decreased (Slightly)
+            - (Windows Only)
+            - Image Preloading Is Now Async
 
 Migration from unrar/zip to unarc-rs
  - Better RAR Archive Support

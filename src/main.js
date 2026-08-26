@@ -1,3 +1,4 @@
+"use strict";
 //// Vue
 
 import {createApp} from "vue";
@@ -63,6 +64,8 @@ import AssetsManager from "./core/manager/AssetsManager";
 // ----- EXTERNAL ------- //
 import {Base64} from 'js-base64';
 import {Fzf} from 'fzf';
+import DOMBatch from "./core/fragment/DOMBatch";
+import {getCurrentWindow} from "@tauri-apps/api/window";
 
 //// Profile Data
 
@@ -205,12 +208,21 @@ async function syncCovers() {
     }
 }
 
+function onWindowFocusChanged(focus) {
+    if (focus) {
+        for (const child of document.querySelectorAll(".play, .favorite")) {
+            child.classList.remove("pause-for-unfocused")
+        }
+    } else {
+        for (const child of document.querySelectorAll(".play, .favorite")) {
+            child.classList.add("pause-for-unfocused")
+        }
+    }
+}
+
 /**
  * Loads local config which includes background cover id
  * and the total amount of time you have played mods
- *
- * Also includes whether it has warned you to
- * save downloads to the user's download folder
  * @param path Path To Config File
  */
 
@@ -305,7 +317,9 @@ async function loadConfig(path) {
  */
 
 async function updateCoverImages(first_time = false) {
-    await syncCovers()
+    if (!first_time) {
+        await syncCovers()
+    }
     const images = Hud.ofId("images")
 
     if (!first_time) {
@@ -314,54 +328,56 @@ async function updateCoverImages(first_time = false) {
         }
     }
 
-    for (const cover in preloadCovers.asList()) {
-        let cover_img = preloadCovers.get(cover)
-        let x = 1;
-        let y = 1;
-        let aspect = cover_img.naturalWidth / cover_img.naturalHeight;
+    DOMBatch.batchRender("image-picker-bg", (frag) => {
+        for (const cover in preloadCovers.asList()) {
+            let cover_img = preloadCovers.get(cover)
+            let x = 1;
+            let y = 1;
+            let aspect = cover_img.naturalWidth / cover_img.naturalHeight;
 
-        const div = document.createElement("div");
-        const img = cover_img.cloneNode(true);
+            const div = document.createElement("div");
+            const img = cover_img.cloneNode(true);
 
-        div.classList.add("image-picker-cover");
-        img.alt = covers.indexOf(cover) + " | " + cover
-        img.loading = "lazy";
-        img.decoding = "async";
+            div.classList.add("image-picker-cover");
+            img.alt = covers.indexOf(cover) + " | " + cover
+            img.loading = "lazy";
+            img.decoding = "async";
 
-        if (aspect > 1.6) {
-            x = 2;
-            img.classList.add("image-picker-cover-img");
-        } else if (aspect > 1.2) {
-            x = 2;
-            y = 2;
-            img.classList.add("image-picker-cover-img-vertical");
-        } else if (aspect < 0.9) {
-            y = 2;
-            img.classList.add("image-picker-cover-img-vertical");
-        } else {
-            if (aspect > 1) {
+            if (aspect > 1.6) {
+                x = 2;
+                img.classList.add("image-picker-cover-img");
+            } else if (aspect > 1.2) {
+                x = 2;
+                y = 2;
+                img.classList.add("image-picker-cover-img-vertical");
+            } else if (aspect < 0.9) {
+                y = 2;
                 img.classList.add("image-picker-cover-img-vertical");
             } else {
-                img.classList.add("image-picker-cover-img");
+                if (aspect > 1) {
+                    img.classList.add("image-picker-cover-img-vertical");
+                } else {
+                    img.classList.add("image-picker-cover-img");
+                }
             }
+
+            img.addEventListener("mouseup", async (e) => {
+                if (currentEntry !== STRINGS.EMPTY && e.button === 0) {
+                    await getLauncher(currentEntry).getFunctions().setCover(covers.indexOf(cover));
+                } else if (e.button === 0) {
+                    currentBackgroundCover = covers.indexOf(cover)
+                    await setCover(currentBackgroundCover)
+                }
+                AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)
+                Hud.hide("profile-blur")
+                Hud.ofId("image-picker-bg").classList.remove("image-picker-visible");
+            })
+
+            div.classList.add("image-" + x + "x" + y);
+            div.appendChild(img);
+            frag.appendChild(div);
         }
-
-        img.addEventListener("mouseup", async (e) => {
-            if (currentEntry !== STRINGS.EMPTY && e.button === 0) {
-                await getLauncher(currentEntry).getFunctions().setCover(covers.indexOf(cover));
-            } else if (e.button === 0) {
-                currentBackgroundCover = covers.indexOf(cover)
-                await setCover(currentBackgroundCover)
-            }
-            AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)
-            Hud.hide("profile-blur")
-            Hud.ofId("image-picker-bg").classList.remove("image-picker-visible");
-        })
-
-        div.classList.add("image-" + x + "x" + y);
-        div.appendChild(img);
-        Hud.ofId("image-picker-bg").appendChild(div);
-    }
+    })
 
     if (!first_time) {
         for (const cover of document.querySelectorAll(".covers-cover")) {
@@ -369,42 +385,44 @@ async function updateCoverImages(first_time = false) {
         }
     }
 
-    for (let i = covers.length() - 1; i >= 0; i--) {
-        const cover_bg = document.createElement("div");
-        const cover_img = preloadCovers.ofCover(i).cloneNode(true);
-        const cover_text = document.createElement("button");
+    DOMBatch.batchRender(images, (image_fragment) => {
+        for (let i = covers.length() - 1; i >= 0; i--) {
+            const cover_bg = document.createElement("div");
+            const cover_img = preloadCovers.ofCover(i).cloneNode(true);
+            const cover_text = document.createElement("button");
 
-        cover_img.classList.add("covers-image");
+            cover_img.classList.add("covers-image");
 
-        cover_bg.classList.add("covers-cover");
+            cover_bg.classList.add("covers-cover");
 
-        cover_text.classList.add("covers-text");
-        cover_text.innerHTML = "&#60450;"
+            cover_text.classList.add("covers-text");
+            cover_text.innerHTML = "&#60450;"
 
-        cover_img.addEventListener("mouseup", () => {
-            currentBackgroundCover = i;
-            setCover(currentBackgroundCover)
-        })
-
-        if (i > 5) {
-            cover_text.addEventListener("mouseup", () => {
-                remove(covers.get(i));
-                covers.splice(i, 1);
-                setTimeout(async () => {
-                    let scroll = images.scrollLeft;
-                    await updateCoverImages()
-                    await setCover(currentBackgroundCover);
-                    images.scrollTo({
-                        left: scroll
-                    })
-                }, 100)
+            cover_img.addEventListener("mouseup", () => {
+                currentBackgroundCover = i;
+                setCover(currentBackgroundCover)
             })
-            cover_bg.appendChild(cover_text);
-        }
 
-        cover_bg.appendChild(cover_img);
-        images.appendChild(cover_bg);
-    }
+            if (i > 5) {
+                cover_text.addEventListener("mouseup", () => {
+                    remove(covers.get(i));
+                    covers.splice(i, 1);
+                    setTimeout(async () => {
+                        let scroll = images.scrollLeft;
+                        await updateCoverImages()
+                        await setCover(currentBackgroundCover);
+                        images.scrollTo({
+                            left: scroll
+                        })
+                    }, 100)
+                })
+                cover_bg.appendChild(cover_text);
+            }
+
+            cover_bg.appendChild(cover_img);
+            image_fragment.appendChild(cover_bg);
+        }
+    })
 
     if (first_time) {
         images.scrollTo(-images.scrollWidth, 0)
@@ -564,6 +582,7 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
     const newScreenshot = document.createElement("img")
     const cover_text = document.createElement("button");
     const path_text = document.createElement("button");
+    const fragment = document.createDocumentFragment();
 
     const cover_bg = document.createElement("div");
     newScreenshot.decoding = "async"
@@ -602,9 +621,10 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
     path_text.innerHTML = "&#60792;"
     cover_text.classList.add("screenshots-text");
     cover_text.innerHTML = "&#60450;"
-    cover_bg.appendChild(path_text)
-    cover_bg.appendChild(cover_text);
-    cover_bg.appendChild(newScreenshot);
+    fragment.appendChild(path_text)
+    fragment.appendChild(cover_text);
+    fragment.appendChild(newScreenshot);
+    cover_bg.appendChild(fragment);
     cover_bg.classList.add("screenshots-cover");
     return cover_bg
 }
@@ -619,6 +639,7 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
 
 async function requestDirectory(directoryPath = undefined) {
     let chosenPath = undefined;
+
     if (directoryPath === undefined || !await isExist(directoryPath)) {
         while (Hud.isVoid(chosenPath) || !await isDir(chosenPath)) {
             chosenPath = await open({
@@ -634,6 +655,7 @@ async function requestDirectory(directoryPath = undefined) {
     } else {
         selectedPath = directoryPath;
     }
+
     if (chosenPath !== undefined || selectedPath !== undefined) {
         if (chosenPath !== undefined) {
             selectedPath = chosenPath;
@@ -656,15 +678,18 @@ async function requestDirectory(directoryPath = undefined) {
         let mods_to_complete = 0;
         let finished = []
         let working_mods_count = 0
+	    let docFrag = DOMBatch.inline("modlist")
 
         for (const entry of files) {
             if (entry.isDirectory) {
                 mods_to_complete++;
                 addMod(entry.name)
-                    .then(() => {
+                    .then((val) => {
                         finished.push(entry.name)
                         finished_mods++;
+                        if (val === undefined) return
                         working_mods_count++;
+			docFrag.append(val)
                     })
                     .catch(err => {
                         finished_mods++;
@@ -676,6 +701,7 @@ async function requestDirectory(directoryPath = undefined) {
         let interval = setInterval(async () => {
             if (finished_mods === mods_to_complete) {
                 clearInterval(interval)
+		docFrag.finalize()
 
                 Hud.setLoadingBar(100)
                 Hud.ofId("nummods").textContent = working_mods_count.toString();
@@ -710,13 +736,13 @@ async function requestDirectory(directoryPath = undefined) {
 /**
  * Add Mods to List
  * @param {string} name Name Of Mod To Add
- * @returns {Promise<void>}
+ * @returns {Promise<HTMLElement | undefined>}
  */
 
 async function addMod(name) {
     if (!await isExist(selectedPath + fileTerminator + name)) {
         Logger.warn("Mod " + name + " Does Not Exist! (path: " + selectedPath + fileTerminator + name + ")")
-        return
+        return undefined
     }
 
     // Find Correct Directory
@@ -746,7 +772,7 @@ async function addMod(name) {
 
     if (!isInDir) {
         Logger.warn("DDLC.exe / Ren'Py folder not found in " + name + " (" + dir + ")")
-        return;
+        return undefined
     }
 
     // Create SideButton And Load Config
@@ -854,7 +880,8 @@ async function addMod(name) {
         configData.coverId = 0;
     }
 
-    let shorthand = formatModName(name)
+    const shorthand = formatModName(name)
+    const elementId = "mod-" + name
     const char_code = shorthand.toLowerCase().charCodeAt(0) <= 122 ? shorthand.toLowerCase().charCodeAt(0) : 0
     const sidetext = document.createElement("header");
     const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
@@ -863,7 +890,7 @@ async function addMod(name) {
 
     let launch_time = Date.now();
     sidetext.classList.add("sidebutton");
-    sidetext.id = shorthand;
+    sidetext.id = elementId;
     sidetext.style.order = char_code
 
     if (configData.favorite) {
@@ -898,13 +925,14 @@ async function addMod(name) {
         nameId: name.toLowerCase(),
         getOrder: () => configData.pinned ? char_code - 244 : (configData.favorite ? char_code - 122 : char_code),
         preloadImages: async () => {
+            const list = getLauncher(name).getFunctions()
             let images = 0;
-            getLauncher(name).getFunctions().preload = {}
+            list.preload = {}
 
             for (const localEntry of await readDir(dir)) {
                 if (localEntry.name.includes("screenshot")) {
-                    getLauncher(name).getFunctions().preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name), name, dir, localEntry.name, name, true);
-                    getLauncher(name).getFunctions().preload[localEntry.name].classList.add("preload-image")
+                    list.preload[localEntry.name] = await createScreenshotDiv(await getImage(dir + fileTerminator + localEntry.name), name, dir, localEntry.name, name, true);
+                    list.preload[localEntry.name].classList.add("preload-image")
                     images++
 
                     if (images >= 2) {
@@ -927,7 +955,7 @@ async function addMod(name) {
             return name
         },
         resetOrder: () => {
-            sidetext.style.order = getLauncher(name).getFunctions().getOrder()
+            sidetext.style.order = getLauncher(name).getFunctions().getOrder().toString()
         },
         setPinned: async (pinnedState) => {
             if (pinnedState === undefined) {
@@ -1104,19 +1132,21 @@ async function addMod(name) {
                 await taskPromise;
             }
 
-            for (const localEntry of taskFiles) {
-                if (localEntry.name.startsWith("screenshot")) {
-                    screenshots = true;
+            DOMBatch.batchRender("screenshots", (frag) => {
+                for (const localEntry of taskFiles) {
+                    if (localEntry.name.startsWith("screenshot")) {
+                        screenshots = true;
 
-                    if (getLauncher(name).getFunctions().preload[localEntry.name] !== undefined) {
-                        Hud.ofId("screenshots").appendChild(getLauncher(name).getFunctions().preload[localEntry.name]);
-                        continue;
+                        if (getLauncher(name).getFunctions().preload[localEntry.name] !== undefined) {
+                            frag.appendChild(getLauncher(name).getFunctions().preload[localEntry.name]);
+                            continue;
+                        }
+                        images.push(
+                            localEntry.name
+                        )
                     }
-                    images.push(
-                        localEntry.name
-                    )
                 }
-            }
+            })
 
             renpy = name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && !STRINGS.isEmpty(gameExePath) && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX_OTHER)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!");
             Hud.ofId("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
@@ -1162,21 +1192,25 @@ async function addMod(name) {
                 Hud.ofId("setinfo-header").style.left = "16rem";
             } else {
                 Hud.ofId("screenshots").scrollLeft = 0;
-                Hud.ofId("screenshots").onscroll = async () => {
+                Hud.ofId("screenshots").onscroll = () => {
                     Hud.ofId("screenshots").onscroll = null
 
-                    for (const image_url of images) {
-                        let imageS = createScreenshotDiv(await getImage(dir + fileTerminator + image_url, true), name, dir, image_url, name, false)
-                        Hud.ofId("screenshots").appendChild(
-                            imageS
-                        );
-                        imageS.getElementsByClassName("screenshots-image")[0].decode().then(() => {
-                            lazyDeref(imageS.getElementsByClassName("screenshots-image")[0].src);
-                            caches.delete(imageS.getElementsByClassName("screenshots-image")[0].src);
-                        }).catch(err => {
-                            Logger.warn("Failed To Load Image: " + dir + fileTerminator + image_url + " Error: " + err)
-                        })
-                    }
+                    DOMBatch.batchRender("screenshots", async (frag) => {
+                        for (const image_url of images) {
+                            let imageS = createScreenshotDiv(await getImage(dir + fileTerminator + image_url, true), name, dir, image_url, name, false)
+                            frag.appendChild(
+                                imageS
+                            );
+			    const clazz_children = imageS.getElementsByClassName("screenshots-image")
+			    if (clazz_children.length === 0) continue;
+			    clazz_children[0].decode().then(() => {
+				lazyDeref(clazz_children[0].src);
+				caches.delete(clazz_children[0].src);
+			    }).catch(err => {
+				Logger.warn("Failed To Unload Image: " + dir + fileTerminator + image_url + " Error: " + err)
+			    })
+                        }
+                    })
                 }
 
                 Hud.show("screenshots-header")
@@ -1191,14 +1225,9 @@ async function addMod(name) {
     })
 
     addLauncher(name, launcher)
-    await launcher.getFunctions().preloadImages();
+    launcher.getFunctions().preloadImages().then(() => {});
 
-    sidetext.addEventListener("click", async () => {
-        if (currentEntry === name) return;
-        await launcher.getFunctions().leftClick();
-    })
-
-    Hud.ofId("modlist").appendChild(sidetext)
+    return sidetext
 }
 
 /**
@@ -1401,14 +1430,14 @@ function gotoHomePage() {
 
 async function setAuthor() {
     if (currentEntry === STRINGS.EMPTY) return;
-    Hud.ofId("authinput").blur()
     let value = Hud.ofId("authinput").value.trimEnd();
+    Hud.ofId("authinput").blur()
+
     if (value === STRINGS.EMPTY) {
         const author = (await getLauncher(currentEntry).getFunctions().getData()).author;
         Hud.ofId("authinput").value = author;
         Hud.ofId("authinput").placeholder = author;
         Hud.ofId("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
-
     } else {
         await getLauncher(currentEntry).getFunctions().setAuthor(value);
         await getLauncher(currentEntry).getFunctions().leftClick();
@@ -1434,6 +1463,7 @@ async function sendKeepAlive() {
 async function mainTicker() {
     Hud.tick()
     DownloadsManager.tick()
+    Logger.tick()
     await updateConcurrentGameInfo()
 }
 
@@ -2055,7 +2085,7 @@ async function onLoad() {
         } else {
             Logger.warn(goal + " Not Found!")
         }
-        alertPath = undefined;
+
         showContainers(true)
     })
 
@@ -2132,6 +2162,7 @@ async function onLoad() {
 
     await listen("pathRespond", async (event) => {
         if (!loadingStage2) {
+            Hud.ofId("loadingsub").textContent = "Starting Second Stage"
             Logger.log("Start Loading Pt. 2 (" + (Date.now() - onLoadStartTime) + "ms).")
 
             let payloadPath = event.payload.path;
@@ -2143,7 +2174,7 @@ async function onLoad() {
             Logger.log("Version Check (" + (Date.now() - onLoadStartTime) + "ms).")
 
             if (newest_version.split("\n")[0] !== CLIENT_VERSION) {
-                Logger.warn("NOT UP TO DATE " + newest_version + " > " + CLIENT_VERSION)
+                Logger.warn("NOT UP TO DATE: LATEST_ONLINE_VERSION=" + newest_version + " > " + CLIENT_VERSION + "=CLIENT_VERSION")
                 Hud.ofId("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
                 if (navigator.onLine) {
                     if (TranslationUtil.getLanguage() === STRINGS.EMPTY) {
@@ -2177,7 +2208,7 @@ async function onLoad() {
                     Logger.warn("You are currently offline. Update will not be requested.")
                 }
             } else {
-                Logger.log(CLIENT_VERSION, localConfig.config.get("version"))
+                Logger.log("Installed Version?: " + CLIENT_VERSION, "Latest Online Version?: " + localConfig.config.get("version"))
                 Hud.ofId("version").textContent = `(${CLIENT_VERSION})`
                 if (localConfig.config.get("version") !== CLIENT_VERSION) {
                     if (TranslationUtil.getLanguage() === STRINGS.EMPTY) {
@@ -2249,7 +2280,9 @@ async function onLoad() {
 
             Logger.log("Theme (" + (Date.now() - onLoadStartTime) + "ms).")
             await setTheme(localConfig.config.get("theme"), true)
-            Logger.log("Covers (" + (Date.now() - onLoadStartTime) + "ms).")
+            Logger.log("Sync Covers (" + (Date.now() - onLoadStartTime) + "ms).")
+            await syncCovers()
+            Logger.log("Load Covers (" + (Date.now() - onLoadStartTime) + "ms).")
             await updateCoverImages(true)
             Logger.log("Main (" + (Date.now() - onLoadStartTime) + "ms).")
             gotoHomePage()
@@ -2867,7 +2900,25 @@ async function onLoad() {
             }
 
         }
+    })
 
+    Hud.ofId("modlist").addEventListener("click", async (e) => {
+	let target = e.target;
+	if (target.nodeName === "SPAN") {
+	    target = target.parentElement;
+	}
+	if (!Hud.isVoid(target)) {
+	    const id = target.id;
+	    if (!id.startsWith("mod-")) return;
+
+	    const realId = id.substring(4)
+	    if (realId === currentEntry) return;
+
+	    const launcher = getLauncher(realId)
+	    if (Hud.isVoid(launcher)) return;
+
+	    await launcher.getFunctions().leftClick();
+	}
     })
 
     Hud.ofId("extract").addEventListener("mouseup", async () => {
@@ -3239,8 +3290,8 @@ async function onLoad() {
     Logger.log("Finished Loading Listeners (" + (Date.now() - onLoadStartTime) + "ms).")
     Logger.log("Loading Intervals.")
 
-    setInterval(mainTicker, 1000)
-    setInterval(sendKeepAlive, 300_000)
+    setInterval(mainTicker, Units.MillisMap.SECOND)
+    setInterval(sendKeepAlive, Units.MillisMap.MINUTE * 5)
 
     Hud.ofId("pin-holder").addEventListener("mousedown", async () => {
         if (getLauncher(currentEntry)) {
@@ -3270,7 +3321,7 @@ async function onLoad() {
             if (Date.now() - pinDragStart < 150) {
                 Hud.ofId("pin-holder").style.removeProperty("left")
                 Hud.ofId("pin-holder").style.removeProperty("top")
-                getLauncher(currentEntry).getFunctions().setPinned()
+                await getLauncher(currentEntry).getFunctions().setPinned()
             } else {
                 const minX = Hud.ofId("cove").getBoundingClientRect().x;
                 const minY = Hud.ofId("cove").getBoundingClientRect().y;
@@ -3278,17 +3329,29 @@ async function onLoad() {
                 const maxY = minY + Hud.ofId("cove").getBoundingClientRect().height;
 
                 if (mouse.clientX >= minX && mouse.clientX <= maxX && mouse.clientY >= minY && mouse.clientY <= maxY) {
-                    getLauncher(currentEntry).getFunctions().setPinned(true)
+                    await getLauncher(currentEntry).getFunctions().setPinned(true)
                 } else {
                     Hud.ofId("pin-holder").style.removeProperty("left")
                     Hud.ofId("pin-holder").style.removeProperty("top")
-                    getLauncher(currentEntry).getFunctions().setPinned(false)
+                    await getLauncher(currentEntry).getFunctions().setPinned(false)
                 }
             }
         }
     })
 
+    await getCurrentWindow().onFocusChanged(async (
+        {payload: isFocused}
+    ) => {
+        onWindowFocusChanged(isFocused)
+        if (isFocused) {
+            SeasonsManager.focus(CURRENT.SEASON)
+        } else {
+            SeasonsManager.unfocus(CURRENT.SEASON)
+        }
+    });
+
     Logger.log("Finished Loading PT. 1 (" + (Date.now() - onLoadStartTime) + "ms).")
+    Hud.ofId("loadingsub").textContent = "Waiting For Backend Response"
     await invoke("request_path")
 
     let loop = setInterval(async () => {

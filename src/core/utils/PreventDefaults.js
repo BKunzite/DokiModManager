@@ -1,5 +1,11 @@
 class PreventDefaultsObject {
     init() {
+        /*
+            Defaults Prevented:
+
+            - Right Click (Context Menu)
+            - CTRL + F (Find)
+         */
         document.oncontextmenu = document.body.oncontextmenu = function () {
             return false;
         }

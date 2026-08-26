@@ -1,4 +1,3 @@
-import {getCurrentWindow} from "@tauri-apps/api/window";
 import jingle from "../../../assets/jingle_punks_copyrightfree.mp3";
 
 let jingle_audio = new Audio(jingle);
@@ -10,18 +9,17 @@ class Christmas {
 
     async init() {
         setInterval(this.snowflake, 100)
-        await getCurrentWindow().onFocusChanged(async (
-            {payload: isFocused}
-        ) => {
-            if (isFocused) {
-                await jingle_audio.play()
-            } else {
-                jingle_audio.pause()
-            }
-        });
         jingle_audio.volume = 0.5;
         jingle_audio.loop = true;
         await jingle_audio.play()
+    }
+
+    unfocus() {
+        jingle_audio.pause()
+    }
+
+    focus() {
+        jingle_audio.play().then(r => {})
     }
 
     /**

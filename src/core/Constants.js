@@ -2,7 +2,6 @@ import SeasonsManager from "./seasonal/SeasonsManager";
 
 export const CURRENT = {
     SEASON: SeasonsManager.SEASON.NONE
-
 }
 
 export const WARN_GENERIC_DATA_PATHS = [
