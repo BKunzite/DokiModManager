@@ -2,7 +2,7 @@ let language = "";
 
 /**
  * TranslationUtil table for strings used.
- * @type {Object.<string, Object.<string, string>>}
+ * @type {Object.<string, Object.<string, string | Object.<string, string>>>}
  */
 export const TRANSLATION_TABLE = import.meta.glob('../../assets/Translations/*.json', {eager: true})["../../assets/Translations/Translations.json"].default;
 

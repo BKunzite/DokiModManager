@@ -1,6 +1,6 @@
 {
   "en": {
-    "data": {
+    "metadata": {
       "flag": "english.png",
       "name": "English"
     },
@@ -90,7 +90,7 @@
     "unknown": "Unknown"
   },
   "ru": {
-    "data": {
+    "metadata": {
       "flag": "russia.svg",
       "name": "Русский"
     },
@@ -180,7 +180,7 @@
     "unknown": "Неизвестно"
   },
   "pt": {
-    "data": {
+    "metadata": {
       "flag": "pt.png",
       "name": "Português"
     },
@@ -270,7 +270,7 @@
     "unknown": "Desconhecido"
   },
   "es": {
-    "data": {
+    "metadata": {
       "flag": "spain.png",
       "name": "Español"
     },
@@ -360,7 +360,7 @@
     "unknown": "Desconocido"
   },
   "fr": {
-    "data": {
+    "metadata": {
       "flag": "france.png",
       "name": "Français"
     },
@@ -450,7 +450,7 @@
     "unknown": "Inconnu"
   },
   "zh-HK": {
-    "data": {
+    "metadata": {
       "flag": "hong-kong.png",
       "name": "繁中"
     },
@@ -540,7 +540,7 @@
     "unknown": "未知"
   },
   "jp": {
-    "data": {
+    "metadata": {
       "flag": "japan.png",
       "name": "日本語"
     },
@@ -630,7 +630,7 @@
     "unknown": "不明"
   },
   "it": {
-    "data": {
+    "metadata": {
       "flag": "italy.svg",
       "name": "Italiano"
     },
@@ -720,7 +720,7 @@
     "unknown": "Sconosciuto"
   },
   "pl": {
-    "data": {
+    "metadata": {
       "flag": "poland.svg",
       "name": "Polski"
     },

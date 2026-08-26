@@ -33,3 +33,4 @@ Migration from unrar/zip to unarc-rs
 ToDo:
  - macOS Support
  - Arch Linux / Wayland Fix
+ - Copy Latest Log Button

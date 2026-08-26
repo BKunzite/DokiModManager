@@ -1,8 +1,18 @@
 import SeasonsManager from "./seasonal/SeasonsManager";
 
+/*
+    Config
+ */
+
 export const CURRENT = {
     SEASON: SeasonsManager.SEASON.NONE
 }
+
+export const PROGRAM_NAME = "Doki Doki Mod Manager";
+
+/*
+    Static Data
+ */
 
 export const WARN_GENERIC_DATA_PATHS = [
     "DDLC-1454445547",

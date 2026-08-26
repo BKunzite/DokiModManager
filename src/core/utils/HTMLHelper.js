@@ -168,5 +168,23 @@ class HTMLHelperObject {
     onClick(elementId, consumer) {
         this.ofId(elementId).addEventListener("click", consumer)
     }
+
+    /**
+     * Set Loading SubTitle
+     * @param {string} subtitle
+     */
+
+    setLoadingSubtitle(subtitle) {
+        this.ofId("loadingsub").textContent = subtitle
+    }
+
+    /**
+     * Gets The Bounding Box For An Element Id
+     * @param {string} elementId
+     * @return DOMRect
+     */
+    getBoundingBoxOf(elementId) {
+        return this.ofId(elementId).getBoundingClientRect()
+    }
 }
 export default new HTMLHelperObject()

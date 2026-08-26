@@ -5,7 +5,7 @@ import {
 import {
     USE_CACHED_IMAGING
 } from "../Constants"
-import OSUtil, {OS, getOSType} from "./OSUtil";
+import {OS, getOSType} from "./OSUtil";
 
 let cache = {}
 let localPreloadCovers = {}

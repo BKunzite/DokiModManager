@@ -47,7 +47,7 @@ import {
     CLIENT_THEMES,
     CLIENT_THEME_ENUM,
     WARN_GENERIC_DATA_PATHS,
-    CURRENT, CLIENT_START, DDLC_FOLDER_NAME
+    CURRENT, CLIENT_START, DDLC_FOLDER_NAME, PROGRAM_NAME
 } from "./core/Constants";
 import {getOSType, OS} from "./core/utils/OSUtil";
 import {fileTerminator, supportedModPackage, terminatePath} from "./core/utils/FileSystem";
@@ -253,7 +253,7 @@ async function loadConfig(path) {
             Hud.ofId("changelog-text").textContent = "File: " + configPath + "\n\n" + e + "\n\nData:\n" + (await readTextFile(configPath)).split("\n").map((line, index) => index + "|  " + line).join("\n")
             Hud.ofId("changelog-update").textContent = TranslationUtil.of("update")
             Hud.ofId("changelog-ignore").textContent = TranslationUtil.of("end")
-            Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").getBoundingClientRect().width + "px)"
+            Hud.getBoundingBoxOf("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
 
             let response = await new Promise(resolve => {
                 Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -555,7 +555,7 @@ function exitProgram() {
     Hud.show("loader")
     Hud.hide("main")
     Hud.ofId("loadinghead").textContent = "Closing..."
-    Hud.ofId("loadingsub").textContent = "Saving Data..."
+    Hud.setLoadingSubtitle("Saving Data...")
     Hud.setLoadingBar(0, false)
     Hud.setLoadingBar(100, true)
 
@@ -678,7 +678,7 @@ async function requestDirectory(directoryPath = undefined) {
         let mods_to_complete = 0;
         let finished = []
         let working_mods_count = 0
-	    let docFrag = DOMBatch.inline("modlist")
+        let docFrag = DOMBatch.inline("modlist")
 
         for (const entry of files) {
             if (entry.isDirectory) {
@@ -689,7 +689,7 @@ async function requestDirectory(directoryPath = undefined) {
                         finished_mods++;
                         if (val === undefined) return
                         working_mods_count++;
-			docFrag.append(val)
+                        docFrag.append(val)
                     })
                     .catch(err => {
                         finished_mods++;
@@ -701,11 +701,11 @@ async function requestDirectory(directoryPath = undefined) {
         let interval = setInterval(async () => {
             if (finished_mods === mods_to_complete) {
                 clearInterval(interval)
-		docFrag.finalize()
+                docFrag.finalize()
 
                 Hud.setLoadingBar(100)
                 Hud.ofId("nummods").textContent = working_mods_count.toString();
-                Hud.ofId("loadingsub").textContent = "Loaded Mods | Loading GUI"
+                Hud.setLoadingSubtitle("Loaded Mods | Loading GUI")
                 Logger.log("Finished Loading DDMM - Enjoy!")
 
                 setTimeout(() => {
@@ -715,7 +715,7 @@ async function requestDirectory(directoryPath = undefined) {
                 }, 500)
             } else {
                 Hud.setLoadingBar((finished_mods / mods_to_complete) * 100)
-                Hud.ofId("loadingsub").textContent = "Loaded " + finished_mods + "/" + mods_to_complete + " Mods -> " + finished.join(" | ")
+                Hud.setLoadingSubtitle("Loaded " + finished_mods + "/" + mods_to_complete + " Mods -> " + finished.join(" | "))
                 finished = []
 
             }
@@ -999,7 +999,7 @@ async function addMod(name) {
             Hud.show("pill")
             Hud.show("pill-files")
             Hud.show("pill-contains")
-            if (!Hud.isVoid(covers.get(configData.coverId),  preloadCovers.ofCover(configData.coverId))) {
+            if (!Hud.isVoid(covers.get(configData.coverId), preloadCovers.ofCover(configData.coverId))) {
                 Hud.ofId("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(configData.coverId).src + '")';
             } else {
                 Hud.ofId("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(0).src + '")';
@@ -1201,14 +1201,14 @@ async function addMod(name) {
                             frag.appendChild(
                                 imageS
                             );
-			    const clazz_children = imageS.getElementsByClassName("screenshots-image")
-			    if (clazz_children.length === 0) continue;
-			    clazz_children[0].decode().then(() => {
-				lazyDeref(clazz_children[0].src);
-				caches.delete(clazz_children[0].src);
-			    }).catch(err => {
-				Logger.warn("Failed To Unload Image: " + dir + fileTerminator + image_url + " Error: " + err)
-			    })
+                            const clazz_children = imageS.getElementsByClassName("screenshots-image")
+                            if (clazz_children.length === 0) continue;
+                            clazz_children[0].decode().then(() => {
+                                lazyDeref(clazz_children[0].src);
+                                caches.delete(clazz_children[0].src);
+                            }).catch(err => {
+                                Logger.warn("Failed To Unload Image: " + dir + fileTerminator + image_url + " Error: " + err)
+                            })
                         }
                     })
                 }
@@ -1225,7 +1225,8 @@ async function addMod(name) {
     })
 
     addLauncher(name, launcher)
-    launcher.getFunctions().preloadImages().then(() => {});
+    launcher.getFunctions().preloadImages().then(() => {
+    });
 
     return sidetext
 }
@@ -1527,7 +1528,7 @@ async function renameMod() {
         try {
             Hud.show("loader")
             Hud.hide("main")
-            Hud.ofId("loadingsub").textContent = "Renaming Mod"
+            Hud.setLoadingSubtitle("Renaming Mod")
             Hud.setLoadingBar(0, false)
             Hud.setLoadingBar(100, true)
             await invoke("rename_dir", {
@@ -1978,7 +1979,7 @@ async function updateClient() {
         await Logger.sendEvent("update_launcher", {
             from: CLIENT_VERSION
         })
-        Hud.ofId("loadingsub").textContent = TranslationUtil.of("updating") + " Doki Doki Mod Manager"
+        Hud.setLoadingSubtitle(TranslationUtil.of("updating") + " " + PROGRAM_NAME)
         await invoke("update_exe")
     } else {
         Logger.warn("Already Up To Date (" + CLIENT_VERSION + ")")
@@ -2015,7 +2016,7 @@ async function launchDesktop() {
     }
 
     Hud.ofId("console").scrollTo(0, Hud.ofId("console").scrollHeight)
-    Hud.ofId("desktop-version").textContent = "Doki Doki Mod Manager " + CLIENT_VERSION
+    Hud.ofId("desktop-version").textContent = PROGRAM_NAME + " " + CLIENT_VERSION
     Hud.ofId("desktop-launch").addEventListener("mouseup", () => {
         window.location.reload()
     })
@@ -2139,7 +2140,7 @@ async function onLoad() {
         Logger.log(event.payload)
 
         if (event.payload.path !== undefined) {
-            const url = event.payload.path.replaceAll("\\\\","\\")
+            const url = event.payload.path.replaceAll("\\\\", "\\")
             const downloadingObject = DownloadsManager.getDownload(url)
             if (!Hud.isVoid(downloadingObject)) {
                 downloadingObject.setPercent(number)
@@ -2162,7 +2163,7 @@ async function onLoad() {
 
     await listen("pathRespond", async (event) => {
         if (!loadingStage2) {
-            Hud.ofId("loadingsub").textContent = "Starting Second Stage"
+            Hud.setLoadingSubtitle("Starting Second Stage")
             Logger.log("Start Loading Pt. 2 (" + (Date.now() - onLoadStartTime) + "ms).")
 
             let payloadPath = event.payload.path;
@@ -2187,7 +2188,7 @@ async function onLoad() {
                     Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
                     Hud.ofId("changelog-update").textContent = TranslationUtil.of("update")
                     Hud.ofId("changelog-ignore").textContent = TranslationUtil.of("ignore")
-                    Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").getBoundingClientRect().width + "px)"
+                    Hud.getBoundingBoxOf("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
 
                     let response = await new Promise(resolve => {
                         Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -2222,7 +2223,7 @@ async function onLoad() {
                     Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
                     Hud.hide("changelog-ignore")
                     Hud.ofId("changelog-update").textContent = TranslationUtil.of("ignore")
-                    Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").getBoundingClientRect().width + "px)"
+                    Hud.getBoundingBoxOf("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
 
                     await new Promise(resolve => {
                         Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -2262,7 +2263,7 @@ async function onLoad() {
             Logger.log("DDLC Check (" + (Date.now() - onLoadStartTime) + "ms).")
 
             if (!await isDir(localPath + fileTerminator + "store" + fileTerminator + "ddlc")) {
-                Hud.ofId("loadingsub").textContent = TranslationUtil.of("select_zip")
+                Hud.setLoadingSubtitle(TranslationUtil.of("select_zip"))
                 Hud.show("select-zip")
                 let listener = async () => {
                     await openUrl("https://ddlc.moe")
@@ -2348,7 +2349,7 @@ async function onLoad() {
 
     await listen('substring', async (event) => {
         if (event.payload.text.includes("|ppathIdentifier|")) {
-            const url = event.payload.text.split("|ppathIdentifier|").pop().replaceAll("\\\\","\\");
+            const url = event.payload.text.split("|ppathIdentifier|").pop().replaceAll("\\\\", "\\");
             const downloadingObject = DownloadsManager.getDownload(url)
             if (!Hud.isVoid(downloadingObject)) {
                 downloadingObject.setUpdateString(event.payload.text.split("|ppathIdentifier|")[0])
@@ -2356,9 +2357,9 @@ async function onLoad() {
             }
         }
         if (event.payload.text.startsWith("Extracting")) {
-            Hud.ofId("loadingsub").textContent = event.payload.text.replace("Extracting", TranslationUtil.of("extracting"))
+            Hud.setLoadingSubtitle(event.payload.text.replace("Extracting", TranslationUtil.of("extracting")))
         } else {
-            Hud.ofId("loadingsub").textContent = event.payload.text
+            Hud.setLoadingSubtitle(event.payload.text)
         }
     });
 
@@ -2640,18 +2641,18 @@ async function onLoad() {
             title: 'Select DDLC Zip File'
         });
         try {
-            Hud.ofId("loadingsub").textContent = TranslationUtil.of("importing_zip")
+            Hud.setLoadingSubtitle(TranslationUtil.of("importing_zip"))
             Hud.hide("select-zip")
             Hud.setLoadingBar(100, true)
             await invoke("set_ddlc_zip", {
                 path: p
             })
-	    ddlcSelected = true
-            Hud.ofId("loadingsub").textContent = "Done!"
+            ddlcSelected = true
+            Hud.setLoadingSubtitle("Done!")
         } catch (Exception) {
             Hud.setLoadingBar(0, false)
             Hud.show("select-zip")
-            Hud.ofId("loadingsub").textContent = TranslationUtil.of("select_zip")
+            Hud.setLoadingSubtitle(TranslationUtil.of("select_zip"))
         }
     })
 
@@ -2703,7 +2704,7 @@ async function onLoad() {
 
     Hud.show("loader")
     Hud.hide("main")
-    Hud.ofId("loadingsub").textContent = "Installing DDLC-Vanilla (If nothing happens after 20s, please restart the program)"
+    Hud.setLoadingSubtitle("Installing DDLC-Vanilla (If nothing happens after 20s, please restart the program)")
 
     Logger.log("Loading Drag/Drop")
 
@@ -2830,70 +2831,78 @@ async function onLoad() {
         if (currentEntry !== STRINGS.EMPTY) {
             Hud.show("profile-blur")
 
-            let final = getLauncher(currentEntry).getFunctions().absolute_location;
-            let path = final + fileTerminator + terminatePath("game\\scripts.rpa");
-            if (!await isExist(path)) {
-                path = final + fileTerminator + terminatePath("game\\options.rpyc");
-                if (!await isExist(path)) {
+            let absoluteLocation = getLauncher(currentEntry).getFunctions().absolute_location;
+            let scriptsPath = absoluteLocation + fileTerminator + terminatePath("game\\scripts.rpa");
+            if (!await isExist(scriptsPath)) {
+                scriptsPath = absoluteLocation + fileTerminator + terminatePath("game\\options.rpyc");
+                if (!await isExist(scriptsPath)) {
                     Logger.warn("No save found!")
                     await confirm("No save found!")
                     return;
                 }
             }
-            const loc = await invoke("rpa_data", {
-                path: path,
-                out: final,
+
+            /**
+             * @type {string}
+             */
+            const renpySaveDataLocation = await invoke("rpa_data", {
+                path: scriptsPath,
+                out: absoluteLocation,
                 option: "save_directory"
             })
-            const dat = await invoke("rpa_data", {
-                path: path,
-                out: final,
+
+            const modName = await invoke("rpa_data", {
+                path: scriptsPath,
+                out: absoluteLocation,
                 option: "config.name"
             })
-            const loc2 = final + fileTerminator + "game" + fileTerminator + "saves"
-            const loc3 = localPath + fileTerminator + terminatePath("store\\save_data_secondary")
-            let secondary = dat === STRINGS.EMPTY ? loc3 + fileTerminator + currentEntry : dat + "_DDMM_data"
-            let data = false
 
-            Logger.log(loc2, loc3, loc, dat)
+            const localDataLocation = absoluteLocation + fileTerminator + "game" + fileTerminator + "saves"
+            const backupDataLocation = localPath + fileTerminator + terminatePath("store\\save_data_secondary")
+            let backupDataName = modName === STRINGS.EMPTY ? backupDataLocation + fileTerminator + currentEntry : modName + "_DDMM_data"
+            let canUseBackupLocation = false
 
-            if (loc === STRINGS.EMPTY) {
-                let secondary_name = secondary.split(fileTerminator).pop()
+            Logger.log(localDataLocation, backupDataLocation, renpySaveDataLocation, modName)
+
+            if (renpySaveDataLocation === STRINGS.EMPTY) {
+                let secondary_name = backupDataName.split(fileTerminator).pop()
                 if (secondary_name.match(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/g) || secondary_name.match(/^(con|prn|aux|nul|com\d|lpt\d)$/i)) {
                     secondary_name = secondary_name.replace(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/gi, STRINGS.EMPTY)
                     secondary_name = secondary_name.replace(/^(con|prn|aux|nul|com\d|lpt\d)$/gi, STRINGS.EMPTY)
-                    let comps = secondary.split(fileTerminator)
+                    let comps = backupDataName.split(fileTerminator)
                     comps.pop()
-                    secondary = comps.join(fileTerminator) + fileTerminator + secondary_name
+                    backupDataName = comps.join(fileTerminator) + fileTerminator + secondary_name
                 }
 
-                Logger.warn(secondary)
-                data = await isExist(secondary)
+                Logger.warn(backupDataName)
+                canUseBackupLocation = await isExist(backupDataName)
 
-                if (!await isExist(loc3)) {
-                    await mkdir(loc3)
+                if (!await isExist(backupDataLocation)) {
+                    await mkdir(backupDataLocation)
                 }
 
-                if (await isExist(loc2)) {
-                    data = data || (await readDir(loc2)).length !== 0
+                if (await isExist(localDataLocation)) {
+                    canUseBackupLocation = canUseBackupLocation || (await readDir(localDataLocation)).length !== 0
                 }
             } else {
                 for (const e of WARN_GENERIC_DATA_PATHS) {
-                    if (loc.endsWith(e)) {
+                    if (renpySaveDataLocation.endsWith(e)) {
                         await confirm("This mod uses a generic save folder name '" + e + "'. Mod data will be shared across mods with the same generic config folder. Consider making a profile with that name and loading it every time you play.")
                     }
                 }
             }
 
-            Logger.log(loc, data)
+            Logger.log(renpySaveDataLocation, canUseBackupLocation)
 
-            if (loc !== STRINGS.EMPTY || data) {
-                const name = loc === STRINGS.EMPTY ? secondary : loc
-                if (!await isExist(name)) {
-                    await mkdir(name)
+            if (renpySaveDataLocation !== STRINGS.EMPTY || canUseBackupLocation) {
+                const finalSaveDataLocation = renpySaveDataLocation === STRINGS.EMPTY ? backupDataName : renpySaveDataLocation
+
+                if (!await isExist(finalSaveDataLocation)) {
+                    await mkdir(finalSaveDataLocation)
                 }
+
                 Hud.show("profile-blur")
-                await updateProfiles(name)
+                await updateProfiles(finalSaveDataLocation)
             } else {
                 Hud.hide("profile-blur")
                 await confirm("Unknown Save Data Location!")
@@ -2903,29 +2912,29 @@ async function onLoad() {
     })
 
     Hud.ofId("modlist").addEventListener("click", async (e) => {
-	let target = e.target;
-	if (target.nodeName === "SPAN") {
-	    target = target.parentElement;
-	}
-	if (!Hud.isVoid(target)) {
-	    const id = target.id;
-	    if (!id.startsWith("mod-")) return;
+        let target = e.target;
+        if (target.nodeName === "SPAN") {
+            target = target.parentElement;
+        }
+        if (!Hud.isVoid(target)) {
+            const id = target.id;
+            if (!id.startsWith("mod-")) return;
 
-	    const realId = id.substring(4)
-	    if (realId === currentEntry) return;
+            const realId = id.substring(4)
+            if (realId === currentEntry) return;
 
-	    const launcher = getLauncher(realId)
-	    if (Hud.isVoid(launcher)) return;
+            const launcher = getLauncher(realId)
+            if (Hud.isVoid(launcher)) return;
 
-	    await launcher.getFunctions().leftClick();
-	}
+            await launcher.getFunctions().leftClick();
+        }
     })
 
     Hud.ofId("extract").addEventListener("mouseup", async () => {
         if (currentEntry !== STRINGS.EMPTY) {
             let final = getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + terminatePath("game\\scripts.rpa");
             Logger.log(final)
-            Hud.ofId("loadingsub").textContent = "Extracting (This will take 20-40s)"
+            Hud.setLoadingSubtitle("Extracting (This will take 20-40s)")
             Hud.show("loader")
             Hud.hide("main")
             if (await isExist(final)) {
@@ -3073,15 +3082,15 @@ async function onLoad() {
             return
         }
 
-        let lowerTarget = event.target.value.toLowerCase();
-        const length = lowerTarget.length;
-        const ignoreInvis = length > lastInputLength;
+        const lowercaseInput = event.target.value.toLowerCase();
+        const inputLength = lowercaseInput.length;
+        const ignoreHidden = inputLength > lastInputLength;
         let names = []
 
         for (const index in getLaunchers()) {
             const element = getLauncher(index).getFunctions();
 
-            if (ignoreInvis && element.item.classList.contains("hide2")) {
+            if (ignoreHidden && element.item.classList.contains("hide2")) {
                 continue;
             }
 
@@ -3090,17 +3099,17 @@ async function onLoad() {
         }
 
         const fzf_list = new Fzf(names)
-        const entries = fzf_list.find(lowerTarget)
+        const entries = fzf_list.find(lowercaseInput)
 
         entries.forEach(e => {
             getLauncher(e.item).getFunctions().item.classList.remove("hide2")
         })
 
-        lastInputLength = length;
+        lastInputLength = inputLength;
     })
 
     for (const language in TRANSLATION_TABLE) {
-        const data = TRANSLATION_TABLE[language]
+        const translation = TRANSLATION_TABLE[language]
         const button = document.createElement("button")
         const flag = document.createElement("img")
         const name = document.createElement("span")
@@ -3109,8 +3118,8 @@ async function onLoad() {
         flag.classList.add("language-flag-list")
         name.classList.add("language-text-list")
 
-        flag.src = await getImage("Flags/" + data.data.flag)
-        name.textContent = data.data.name
+        flag.src = await getImage("Flags/" + translation.metadata.flag)
+        name.textContent = translation.metadata.name
 
         button.appendChild(flag)
         button.appendChild(name)
@@ -3152,11 +3161,11 @@ async function onLoad() {
                 tutorialPointer.classList.add("tutorial-pointer")
                 Hud.ofId("main").appendChild(tutorialPointer)
             }
-            tutorialPointer.style.width = Hud.ofId("modlist").getBoundingClientRect().width + "px";
-            tutorialPointer.style.height = Hud.ofId("modlist").getBoundingClientRect().height + "px";
+            tutorialPointer.style.width = Hud.getBoundingBoxOf("modlist").width + "px";
+            tutorialPointer.style.height = Hud.getBoundingBoxOf("modlist").height + "px";
             tutorialPointer.style.borderRadius = "10px"
-            tutorialPointer.style.top = (Hud.ofId("modlist").getBoundingClientRect().y + (Hud.ofId("modlist").getBoundingClientRect().height / 2)) + "px"
-            tutorialPointer.style.left = (Hud.ofId("modlist").getBoundingClientRect().x + (Hud.ofId("modlist").getBoundingClientRect().width / 2)) + "px"
+            tutorialPointer.style.top = (Hud.getBoundingBoxOf("modlist").y + (Hud.getBoundingBoxOf("modlist").height / 2)) + "px"
+            tutorialPointer.style.left = (Hud.getBoundingBoxOf("modlist").x + (Hud.getBoundingBoxOf("modlist").width / 2)) + "px"
             Hud.ofId("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(4).of("title");
             Hud.ofId("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(4).of("context");
             await confirm(TranslationUtil.sub("tutorial").of("select"))
@@ -3172,8 +3181,8 @@ async function onLoad() {
                 if (tutorialPointer == null) {
                     tutorialPointer = document.createElement("div")
                     tutorialPointer.classList.add("tutorial-pointer")
-                    tutorialPointer.style.top = (Hud.ofId("themeselect").getBoundingClientRect().y + (Hud.ofId("themeselect").getBoundingClientRect().height / 2)) + "px"
-                    tutorialPointer.style.left = (Hud.ofId("themeselect").getBoundingClientRect().x + (Hud.ofId("themeselect").getBoundingClientRect().width / 2)) + "px"
+                    tutorialPointer.style.top = (Hud.getBoundingBoxOf("themeselect").y + (Hud.getBoundingBoxOf("themeselect").height / 2)) + "px"
+                    tutorialPointer.style.left = (Hud.getBoundingBoxOf("themeselect").x + (Hud.getBoundingBoxOf("themeselect").width / 2)) + "px"
 
                     Hud.ofId("main").appendChild(tutorialPointer)
                 }
@@ -3186,11 +3195,11 @@ async function onLoad() {
                     tutorialPointer.classList.add("tutorial-pointer")
                     Hud.ofId("main").appendChild(tutorialPointer)
                 }
-                tutorialPointer.style.width = Hud.ofId("covers").getBoundingClientRect().width + "px";
-                tutorialPointer.style.height = Hud.ofId("covers").getBoundingClientRect().height + "px";
+                tutorialPointer.style.width = Hud.getBoundingBoxOf("covers").width + "px";
+                tutorialPointer.style.height = Hud.getBoundingBoxOf("covers").height + "px";
                 tutorialPointer.style.borderRadius = "10px"
-                tutorialPointer.style.top = (Hud.ofId("covers").getBoundingClientRect().y + (Hud.ofId("covers").getBoundingClientRect().height / 2)) + "px"
-                tutorialPointer.style.left = (Hud.ofId("covers").getBoundingClientRect().x + (Hud.ofId("covers").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.top = (Hud.getBoundingBoxOf("covers").y + (Hud.getBoundingBoxOf("covers").height / 2)) + "px"
+                tutorialPointer.style.left = (Hud.getBoundingBoxOf("covers").x + (Hud.getBoundingBoxOf("covers").width / 2)) + "px"
                 Hud.ofId("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(3).of("title");
                 Hud.ofId("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(3).of("context");
                 break;
@@ -3200,11 +3209,11 @@ async function onLoad() {
                     tutorialPointer.classList.add("tutorial-pointer")
                     Hud.ofId("main").appendChild(tutorialPointer)
                 }
-                tutorialPointer.style.width = Hud.ofId("reddit").getBoundingClientRect().width + "px";
-                tutorialPointer.style.height = Hud.ofId("reddit").getBoundingClientRect().height + "px";
+                tutorialPointer.style.width = Hud.getBoundingBoxOf("reddit").width + "px";
+                tutorialPointer.style.height = Hud.getBoundingBoxOf("reddit").height + "px";
                 tutorialPointer.style.borderRadius = "10px"
-                tutorialPointer.style.top = (Hud.ofId("reddit").getBoundingClientRect().y + (Hud.ofId("reddit").getBoundingClientRect().height / 2)) + "px"
-                tutorialPointer.style.left = (Hud.ofId("reddit").getBoundingClientRect().x + (Hud.ofId("reddit").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.top = (Hud.getBoundingBoxOf("reddit").y + (Hud.getBoundingBoxOf("reddit").height / 2)) + "px"
+                tutorialPointer.style.left = (Hud.getBoundingBoxOf("reddit").x + (Hud.getBoundingBoxOf("reddit").width / 2)) + "px"
                 Hud.ofId("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(4).of("title");
                 Hud.ofId("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(4).of("context");
                 break;
@@ -3214,11 +3223,11 @@ async function onLoad() {
                     tutorialPointer.classList.add("tutorial-pointer")
                     Hud.ofId("main").appendChild(tutorialPointer)
                 }
-                tutorialPointer.style.width = Hud.ofId("cove").getBoundingClientRect().width + "px";
-                tutorialPointer.style.height = Hud.ofId("cove").getBoundingClientRect().height + "px";
+                tutorialPointer.style.width = Hud.getBoundingBoxOf("cove").width + "px";
+                tutorialPointer.style.height = Hud.getBoundingBoxOf("cove").height + "px";
                 tutorialPointer.style.borderRadius = "10px"
-                tutorialPointer.style.top = (Hud.ofId("cove").getBoundingClientRect().y + (Hud.ofId("cove").getBoundingClientRect().height / 2)) + "px"
-                tutorialPointer.style.left = (Hud.ofId("cove").getBoundingClientRect().x + (Hud.ofId("cove").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.top = (Hud.getBoundingBoxOf("cove").y + (Hud.getBoundingBoxOf("cove").height / 2)) + "px"
+                tutorialPointer.style.left = (Hud.getBoundingBoxOf("cove").x + (Hud.getBoundingBoxOf("cove").width / 2)) + "px"
                 Hud.ofId("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(5).of("title");
                 Hud.ofId("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(5).of("context");
                 break;
@@ -3228,11 +3237,11 @@ async function onLoad() {
                     tutorialPointer.classList.add("tutorial-pointer")
                     Hud.ofId("main").appendChild(tutorialPointer)
                 }
-                tutorialPointer.style.width = Hud.ofId("modtitle").getBoundingClientRect().width + "px";
-                tutorialPointer.style.height = Hud.ofId("modtitle").getBoundingClientRect().height + "px";
+                tutorialPointer.style.width = Hud.getBoundingBoxOf("modtitle").width + "px";
+                tutorialPointer.style.height = Hud.getBoundingBoxOf("modtitle").height + "px";
                 tutorialPointer.style.borderRadius = "10px"
-                tutorialPointer.style.top = (Hud.ofId("modtitle").getBoundingClientRect().y + (Hud.ofId("modtitle").getBoundingClientRect().height / 2)) + "px"
-                tutorialPointer.style.left = (Hud.ofId("modtitle").getBoundingClientRect().x + (Hud.ofId("modtitle").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.top = (Hud.getBoundingBoxOf("modtitle").y + (Hud.getBoundingBoxOf("modtitle").height / 2)) + "px"
+                tutorialPointer.style.left = (Hud.getBoundingBoxOf("modtitle").x + (Hud.getBoundingBoxOf("modtitle").width / 2)) + "px"
                 Hud.ofId("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(6).of("title");
                 Hud.ofId("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(6).of("context");
                 break;
@@ -3242,11 +3251,11 @@ async function onLoad() {
                     tutorialPointer.classList.add("tutorial-pointer")
                     Hud.ofId("main").appendChild(tutorialPointer)
                 }
-                tutorialPointer.style.width = Hud.ofId("modinfo").getBoundingClientRect().width + "px";
-                tutorialPointer.style.height = Hud.ofId("modinfo").getBoundingClientRect().height + "px";
+                tutorialPointer.style.width = Hud.getBoundingBoxOf("modinfo").width + "px";
+                tutorialPointer.style.height = Hud.getBoundingBoxOf("modinfo").height + "px";
                 tutorialPointer.style.borderRadius = "10px"
-                tutorialPointer.style.top = (Hud.ofId("modinfo").getBoundingClientRect().y + (Hud.ofId("modinfo").getBoundingClientRect().height / 2)) + "px"
-                tutorialPointer.style.left = (Hud.ofId("modinfo").getBoundingClientRect().x + (Hud.ofId("modinfo").getBoundingClientRect().width / 2)) + "px"
+                tutorialPointer.style.top = (Hud.getBoundingBoxOf("modinfo").y + (Hud.getBoundingBoxOf("modinfo").height / 2)) + "px"
+                tutorialPointer.style.left = (Hud.getBoundingBoxOf("modinfo").x + (Hud.getBoundingBoxOf("modinfo").width / 2)) + "px"
                 Hud.ofId("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(7).of("title");
                 Hud.ofId("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(7).of("context");
                 break;
@@ -3302,8 +3311,8 @@ async function onLoad() {
 
     Hud.ofId("pin-holder").addEventListener("mousemove", async (x) => {
         if (currentEntry !== STRINGS.EMPTY && pinDragging) {
-            const absx = Hud.ofId("container").getBoundingClientRect().x;
-            const absy = Hud.ofId("container").getBoundingClientRect().y;
+            const absx = Hud.getBoundingBoxOf("container").x;
+            const absy = Hud.getBoundingBoxOf("container").y;
             Hud.ofId("pin-holder").style.left = x.clientX - absx + "px";
             Hud.ofId("pin-holder").style.top = x.clientY - absy + "px";
             Hud.ofId("pin-holder").classList.add("pin-holder-drag")
@@ -3323,10 +3332,10 @@ async function onLoad() {
                 Hud.ofId("pin-holder").style.removeProperty("top")
                 await getLauncher(currentEntry).getFunctions().setPinned()
             } else {
-                const minX = Hud.ofId("cove").getBoundingClientRect().x;
-                const minY = Hud.ofId("cove").getBoundingClientRect().y;
-                const maxX = minX + Hud.ofId("cove").getBoundingClientRect().width;
-                const maxY = minY + Hud.ofId("cove").getBoundingClientRect().height;
+                const minX = Hud.getBoundingBoxOf("cove").x;
+                const minY = Hud.getBoundingBoxOf("cove").y;
+                const maxX = minX + Hud.getBoundingBoxOf("cove").width;
+                const maxY = minY + Hud.getBoundingBoxOf("cove").height;
 
                 if (mouse.clientX >= minX && mouse.clientX <= maxX && mouse.clientY >= minY && mouse.clientY <= maxY) {
                     await getLauncher(currentEntry).getFunctions().setPinned(true)
@@ -3351,7 +3360,7 @@ async function onLoad() {
     });
 
     Logger.log("Finished Loading PT. 1 (" + (Date.now() - onLoadStartTime) + "ms).")
-    Hud.ofId("loadingsub").textContent = "Waiting For Backend Response"
+    Hud.setLoadingSubtitle("Waiting For Backend Response")
     await invoke("request_path")
 
     let loop = setInterval(async () => {
