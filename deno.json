@@ -4,6 +4,7 @@
     "dev": "deno run -A --node-modules-dir npm:vite dev",
     "build": "deno run -A --node-modules-dir npm:vite build",
     "build:linux": "deno run tauri build && bash src-tauri/scripts/patch-appimage-wayland.sh",
+    "build:mac": "deno run tauri build && codesign --force --deep --sign - \"./src-tauri/target/release/bundle/macos/Kunzite Doki Doki Mod Manager.app\" && rm -rf \"./src-tauri/target/release/bundle/macos/Kunzite Doki Doki Mod Manager.dmg\" && appdmg ./src-tauri/target/release/bundle/macos/dmg-data.json \"./src-tauri/target/release/bundle/macos/Kunzite Doki Doki Mod Manager.dmg\"",
     "tauri": "deno run -A --node-modules-dir npm:@tauri-apps/cli"
   }
 }

@@ -364,6 +364,10 @@
   transition: top ease-out 0.5s, box-shadow ease-out 0.5s;
 }
 
+[os-type="linux"] .tutorial-warn {
+  border-radius: 1.5rem;
+}
+
 .delete-warn {
   position: absolute;
   top: 50%;
@@ -481,6 +485,8 @@
   filter: blur(100px);
   z-index: -1;
 }
+
+
 
 .delete-warn::before {
   content: "";
@@ -756,6 +762,10 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
+}
+
+[os-type="linux"] .tutorial-warn::before, [os-type="linux"] .tutorial-warn::after {
+  border-radius: 1.5rem;
 }
 
 .alert::after {

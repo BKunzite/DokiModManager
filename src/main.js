@@ -49,7 +49,7 @@ import {
     WARN_GENERIC_DATA_PATHS,
     CURRENT, CLIENT_START, DDLC_FOLDER_NAME, PROGRAM_NAME
 } from "./core/Constants";
-import {getOSType, OS} from "./core/utils/OSUtil";
+import {getOSType, INVALID_MAC_BINARIES, OS} from "./core/utils/OSUtil";
 import {fileTerminator, supportedModPackage, terminatePath} from "./core/utils/FileSystem";
 import OSUtil from "./core/utils/OSUtil";
 import Logger from "./core/utils/Logger";
@@ -253,7 +253,7 @@ async function loadConfig(path) {
             Hud.ofId("changelog-text").textContent = "File: " + configPath + "\n\n" + e + "\n\nData:\n" + (await readTextFile(configPath)).split("\n").map((line, index) => index + "|  " + line).join("\n")
             Hud.ofId("changelog-update").textContent = TranslationUtil.of("update")
             Hud.ofId("changelog-ignore").textContent = TranslationUtil.of("end")
-            Hud.getBoundingBoxOf("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
+            Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
 
             let response = await new Promise(resolve => {
                 Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -752,7 +752,7 @@ async function addMod(name) {
     const localFiles = await readDir(dir);
 
     for (const localEntry of localFiles) {
-        if (localEntry.name === OS.EXECUTABLE.WINDOWS || localEntry.name === "renpy") {
+        if (localEntry.name === OS.EXECUTABLE.WINDOWS || localEntry.name === OS.EXECUTABLE.MAC || localEntry.name === "renpy") {
             isInDir = true;
             break;
         }
@@ -762,7 +762,7 @@ async function addMod(name) {
         dir = selectedPath + fileTerminator + name + fileTerminator + DDLC_FOLDER_NAME
         if (await isDir(dir)) {
             for (const localEntry of await readDir(dir)) {
-                if (localEntry.name === OS.EXECUTABLE.WINDOWS || localEntry.name === "renpy") {
+                if (localEntry.name === OS.EXECUTABLE.WINDOWS || localEntry.name === OS.EXECUTABLE.MAC || localEntry.name === "renpy") {
                     isInDir = true;
                     break;
                 }
@@ -811,6 +811,26 @@ async function addMod(name) {
                 if (localEntry.name.endsWith(".sh") && !localEntry.name.endsWith("-32.sh") && localEntry.name !== OS.EXECUTABLE.LINUX && localEntry.name !== OS.EXECUTABLE.LINUX_OTHER && gameExePath === undefined) {
                     gameExePath = localEntry.name;
                 }
+            } else if (getOSType() === OS.TYPE.MAC) {
+                if (localEntry.name.trim().endsWith(".app")) {
+                    Logger.log(localEntry.name + " Entrypoint Into " + name)
+                    const contentsFolder = fileTerminator + localEntry.name + fileTerminator + terminatePath("Contents/MacOS")
+                    if (!await isDir(dir + contentsFolder)) {
+                        Logger.warn("Invalid APP Found")
+                        continue
+                    }
+
+                    Logger.log("Contents Folder Gained From App " + (dir + contentsFolder))
+
+                    for (const contentEntry of await readDir(dir + contentsFolder)) {
+                        Logger.warn("Entrypoint found - " + contentEntry.name)
+                        if (!INVALID_MAC_BINARIES.includes(contentEntry.name) && contentEntry.isFile) {
+                            gameExePath = contentsFolder.substring(1) + fileTerminator + contentEntry.name
+                            Logger.warn("Final Entry Point - " + gameExePath)
+                            break
+                        }
+                    }
+                }
             }
 
             if (localEntry.name.toLowerCase().includes("credit") && modCredits === undefined) {
@@ -823,13 +843,20 @@ async function addMod(name) {
                 gameExePath = OS.EXECUTABLE.WINDOWS;
             } else if (getOSType() === OS.TYPE.LINUX) {
                 gameExePath = await isExist(dir + fileTerminator + OS.EXECUTABLE.LINUX_OTHER) ? OS.EXECUTABLE.LINUX_OTHER : OS.EXECUTABLE.LINUX
+            } else if (getOSType() === OS.TYPE.MAC) {
+                const contentsFolder = fileTerminator + "DDLC.app" + fileTerminator + terminatePath("Contents/MacOS/DDLC")
+                if (!await isExist(dir + contentsFolder)) {
+                    Logger.warn("Invalid APP Found")
+                } else {
+                    gameExePath = contentsFolder.substring(1);
+                }
             }
 
-            if (!await isExist(dir + fileTerminator + gameExePath)) {
+            if (gameExePath === undefined || !await isExist(dir + fileTerminator + gameExePath)) {
                 Logger.warn("No functional executable found in " + dir)
                 throw new Error("No executable found!\nPath: " + dir + "\nExecutable: " + gameExePath + "\nFiles: " + localFiles.map(v => v.name).join(", "))
             } else {
-                console.warn("Using DDLC.EXE For Mod: " + name + " (" + dir + ")")
+                console.warn("Using DDLC Executable For Mod: " + name + " (" + gameExePath + ")")
             }
         }
 
@@ -1095,7 +1122,7 @@ async function addMod(name) {
             await setCover(configData.coverId);
             Hud.setPinned(configData.pinned);
 
-            if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
+            if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.MAC && !gameExePath.endsWith(".app")) ||  (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
                 await searchGame()
             }
 
@@ -1148,7 +1175,7 @@ async function addMod(name) {
                 }
             })
 
-            renpy = name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && !STRINGS.isEmpty(gameExePath) && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX_OTHER)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!");
+            renpy = name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && !STRINGS.isEmpty(gameExePath) && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS) && !gameExePath.toString().endsWith("DDLC") && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX_OTHER)) ? "Yes | " + gameExePath : (getOSType() === OS.TYPE.MAC ? "No - Mod likely wont execute properly" : "No")) + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!");
             Hud.ofId("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
 
             new Promise(() => {
@@ -1253,11 +1280,15 @@ async function addMod(name) {
 
 async function getRenpy(dir) {
     let renpy = undefined;
-    const dirFiles = await readDir(dir + fileTerminator + "renpy");
+    const tld = getOSType() === OS.TYPE.MAC ? dir + terminatePath("/DDLC.app/Contents/Resources/autorun/renpy") : dir + fileTerminator + "renpy"
+    Logger.log("Fetching renpy for " + tld)
+    if (!await isDir(tld)) return undefined
+    const dirFiles = await readDir(tld);
+
     for (const localEntry of dirFiles) {
         switch (localEntry.name) {
             case "__init__.py": {
-                const code = await readTextFile(dir + fileTerminator + "renpy" + fileTerminator + localEntry.name);
+                const code = await readTextFile(tld + fileTerminator + localEntry.name);
                 const lines = code.split("\n");
                 for (const line of lines) {
                     if (line.startsWith("version_tuple = ") && !line.includes("*")) {
@@ -1271,7 +1302,7 @@ async function getRenpy(dir) {
                 break;
             }
             case "vc_version.py": {
-                const code = await readTextFile(dir + fileTerminator + "renpy" + fileTerminator + localEntry.name);
+                const code = await readTextFile(tld + fileTerminator + localEntry.name);
                 const lines = code.split("\n");
                 for (const line of lines) {
                     if (line.startsWith("version = ")) {
@@ -1284,6 +1315,7 @@ async function getRenpy(dir) {
         }
         if (renpy !== undefined) break;
     }
+
     return renpy
 }
 
@@ -2075,7 +2107,7 @@ async function onLoad() {
 
         Logger.log("Imported: " + alertPath + " AT: " + goal + " with URL: " + url)
 
-        await addMod(goal)
+        Hud.ofId("modlist").appendChild(await addMod(goal))
 
         Hud.hide("loader")
         Hud.show("main")
@@ -2187,7 +2219,7 @@ async function onLoad() {
                     Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
                     Hud.ofId("changelog-update").textContent = TranslationUtil.of("update")
                     Hud.ofId("changelog-ignore").textContent = TranslationUtil.of("ignore")
-                    Hud.getBoundingBoxOf("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
+                    Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
 
                     let response = await new Promise(resolve => {
                         Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -2222,7 +2254,7 @@ async function onLoad() {
                     Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
                     Hud.hide("changelog-ignore")
                     Hud.ofId("changelog-update").textContent = TranslationUtil.of("ignore")
-                    Hud.getBoundingBoxOf("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
+                    Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
 
                     await new Promise(resolve => {
                         Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -2415,6 +2447,10 @@ async function onLoad() {
     })
 
     Hud.onClick("backup-load-profile", async () => {
+        if (getOSType() === OS.TYPE.MAC) {
+            await confirm("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
+            return
+        }
         // create backup first -> failsafe
         let backup_select = await open({
             directory: false,
@@ -2827,6 +2863,10 @@ async function onLoad() {
     })
 
     Hud.ofId("delete-save").addEventListener("mouseup", async () => {
+        if (getOSType() === OS.TYPE.MAC) {
+            await confirm("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
+            return
+        }
         if (currentEntry !== STRINGS.EMPTY) {
             Hud.show("profile-blur")
 
@@ -2930,6 +2970,10 @@ async function onLoad() {
     })
 
     Hud.ofId("extract").addEventListener("mouseup", async () => {
+        if (getOSType() === OS.TYPE.MAC) {
+            await confirm("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
+            return
+        }
         if (currentEntry !== STRINGS.EMPTY) {
             let final = getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + terminatePath("game\\scripts.rpa");
             Logger.log(final)

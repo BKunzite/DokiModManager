@@ -42,6 +42,9 @@ use std::os::windows::process::CommandExt;
 #[cfg(target_os = "windows")]
 use window_vibrancy::apply_acrylic;
 
+#[cfg(target_os = "macos")]
+use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
 mod constants;
 mod discord_rpc;
 mod downloader;
@@ -55,7 +58,6 @@ use constants::*;
 use simple_logger::*;
 
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
-static DDLC_HASH: &str = "2a3dd7969a06729a32ace0a6ece5f2327e29bdf460b8b39e6a8b0875e545632e";
 static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
 static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
 static DOWNLOAD_STATE: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
@@ -406,7 +408,7 @@ fn rpa_archive_option(path_out: &Path, cmain: &str, option: &str) -> String {
                 .unwrap(),
         );
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
         exchild = Command::new(
             get_current_dir()
@@ -574,17 +576,17 @@ fn decrypt_rpa_dir(app: &AppHandle, root_path: &Path) {
 
     println!("Done!");
 }
-#[cfg(target_os = "linux")]
+#[cfg(not(target_os = "windows"))]
 fn chmod_x_file(path: &str) {
     let mut permissions = fs::metadata(&path).unwrap().permissions();
     if permissions.mode() & 0o111 == 0 {
         permissions.set_mode(permissions.mode() | 0o111);
         fs::set_permissions(path, permissions).unwrap();
-        println!("chmod +x {}", path);
+        stamp(format!("chmod +x {}", path).as_str());
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(not(target_os = "windows"))]
 fn chmod_x_directory(execs: &PathBuf) {
     for entry in WalkDir::new(&execs)
         .skip_hidden(false)
@@ -651,12 +653,21 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
             }
         }
     }
-
-    let mut launch_result = Command::new(path)
-        .current_dir(&dir)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+    #[cfg(target_os = "macos")]
+    chmod_x_directory(&PathBuf::from(&dir));
+    let mut launch_result = if cfg!(target_os = "macos") {
+        Command::new(path)
+            .current_dir(&dir)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+    } else {
+        Command::new(path)
+            .current_dir(&dir)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+    };
 
     match launch_result {
         Ok(process) => {
@@ -929,39 +940,87 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     )
     .unwrap();
 
-    if path.ends_with(".rpa") {
-        let file_content = fs::read(&source_file).unwrap();
-        fs::write(
-            target_dir.join(format!(
-                "game/{}",
-                &source_file.file_name().unwrap().to_str().unwrap()
-            )),
-            &file_content,
-        )
-        .unwrap();
-    } else {
-        let nest_check = detect_nest(&source_file).expect("Failed to get nest");
-        let mut is_game = false;
+    if cfg!(target_os = "macos") {
+        let app_contents = target_dir.join("DDLC.app/Contents");
+        let regular_contents = app_contents.join("Resources/autorun");
+        let macos_contents = app_contents.join("MacOS");
+        create_dir_all(&macos_contents).expect("Failed to create temp extract");
+        create_dir_all(&regular_contents).expect("Failed to create temp extract");
 
-        is_archive = true;
+        if path.ends_with(".rpa") {
 
-        if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder") {
-            target_dir = target_dir.join("game");
-            is_game = true;
-        }
-
-        if !is_game && nest_check.clone().is_some() {
-            if is_archive_game_folder(&source_file, &nest_check.clone().unwrap())
-                .expect("Failed to get archive game folder")
-            {
-                target_dir = target_dir.join("game");
-            }
-            stamp("Importing Archive Without Toplevel");
-            extract_archive_without_tld(&source_file, &target_dir, &nest_check.unwrap())
-                .map_err(|e| e.to_string())?;
         } else {
-            stamp("Importing Archive");
-            extract_archive(&source_file, &target_dir).map_err(|e| e.to_string())?;
+            let nest_check = detect_nest(&source_file).expect("Failed to get nest");
+            let mut is_game = false;
+
+            is_archive = true;
+
+            if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder") {
+                target_dir = target_dir.join("game");
+                is_game = true;
+            }
+
+            if !is_game && nest_check.clone().is_some() {
+                if is_archive_game_folder(&source_file, &nest_check.clone().unwrap())
+                    .expect("Failed to get archive game folder")
+                {
+                    target_dir = target_dir.join("game");
+                }
+                stamp("Importing Archive Without Toplevel");
+                extract_archive_without_tld(&source_file, &regular_contents, &nest_check.unwrap())
+                    .map_err(|e| e.to_string())?;
+            } else {
+                stamp("Importing Archive");
+                extract_archive(&source_file, &regular_contents).map_err(|e| e.to_string())?;
+            }
+
+            for entry in WalkDir::new(&regular_contents).into_iter().filter_map(|e| e.ok()) {
+                if entry.file_name().to_string_lossy().ends_with(".app") {
+                    stamp("Found Executable!");
+                    stamp(&entry.path().to_string_lossy());
+                    let entry_contents = entry.path().join("Contents");
+                    if entry_contents.exists() {
+                        copy_dir_recursive(&entry_contents, &app_contents).expect("Failed to copy dir");
+                        break;
+                    }
+                }
+            }
+        }
+    } else {
+        if path.ends_with(".rpa") {
+            let file_content = fs::read(&source_file).unwrap();
+            fs::write(
+                target_dir.join(format!(
+                    "game/{}",
+                    &source_file.file_name().unwrap().to_str().unwrap()
+                )),
+                &file_content,
+            )
+                .unwrap();
+        } else {
+            let nest_check = detect_nest(&source_file).expect("Failed to get nest");
+            let mut is_game = false;
+
+            is_archive = true;
+
+            if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder") {
+                target_dir = target_dir.join("game");
+                is_game = true;
+            }
+
+            if !is_game && nest_check.clone().is_some() {
+                if is_archive_game_folder(&source_file, &nest_check.clone().unwrap())
+                    .expect("Failed to get archive game folder")
+                {
+                    target_dir = target_dir.join("game");
+                }
+                stamp("Importing Archive Without Toplevel");
+                extract_archive_without_tld(&source_file, &target_dir, &nest_check.unwrap())
+                    .map_err(|e| e.to_string())?;
+            } else {
+                stamp("Importing Archive");
+                extract_archive(&source_file, &target_dir).map_err(|e| e.to_string())?;
+            }
         }
     }
 
@@ -977,7 +1036,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     )
     .unwrap();
 
-    if is_archive {
+    if is_archive && cfg!(not(target_os = "macos")) {
         loop {
             let mut is_game = false;
             let nested = &fallback_legacy_nest_check(

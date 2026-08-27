@@ -1,0 +1,73 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Kunzite Doki Doki Mod Manager",
+  "version": "1.8.0",
+  "identifier": "com.bkunzite.dokimodmanager",
+  "build": {
+    "beforeDevCommand": "deno run dev",
+         "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "deno run build",
+    "frontendDist": "../dist",
+    "removeUnusedCommands": true
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "title": "Doki Doki Mod Manager",
+        "width": 1200,
+        "height": 600,
+        "decorations": false,
+        "maximized": false,
+        "resizable": false,
+        "hiddenTitle": true,
+        "transparent": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob: ipc://localhost; connect-src 'self' http://ipc.localhost https://raw.githubusercontent.com;",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
+    },
+    "withGlobalTauri": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": "app",
+    "icon": [
+      "icons/32x32.png",
+      "icons/64x64.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "dmg": {
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        },
+        "windowSize": {
+          "height": 1200,
+          "width": 660
+        }
+      },
+      "entitlements": "./Entitlements.plist",
+      "files": {},
+      "hardenedRuntime": true,
+      "minimumSystemVersion": "10.13"
+    }
+  },
+  "plugins": {
+    "fs": {
+      "requireLiteralLeadingDot": false
+    }
+  }
+}

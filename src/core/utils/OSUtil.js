@@ -12,8 +12,18 @@ export const OS = {
         WINDOWS: "DDLC.exe",
         LINUX: "DDLC.sh",
         LINUX_OTHER: "LinuxLauncher.sh",
+        MAC: "DDLC.app"
     },
 };
+
+export const INVALID_MAC_BINARIES = [
+    "DDLC",
+    "python",
+    "pythonw",
+    "zsync",
+    "zsyncmake",
+    "librenpython.dylib"
+]
 
 export function getOSType() {
     if (os_type !== undefined) return os_type;
@@ -29,9 +39,9 @@ export function getOSType() {
 
 class DefaultClass {
     Init() {
-        document.documentElement.setAttribute("os-type", getOSType());
+
         Logger.log("Running on OS.TYPE-" + getOSType().toUpperCase());
-        if (getOSType() === OS.TYPE.LINUX) {
+        if (getOSType() === OS.TYPE.LINUX || getOSType() === OS.TYPE.MAC) {
             /*
                       Reloading the webpage is broken on webkit! We love webkit!
                    */
@@ -41,6 +51,7 @@ class DefaultClass {
                     location.reload();
                 }
             });
+            document.documentElement.setAttribute("os-type", "linux");
         }
     }
 }
