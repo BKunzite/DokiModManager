@@ -1,158 +1,157 @@
 :root {
-    --bar-position: 0%;
+  --bar-position: 0%;
 }
 
 #app {
-    aspect-ratio: 2/1;
+  aspect-ratio: 2/1;
 }
 
 .taskbar {
-    width: 100vw;
-    height: 7vh;
-    left: 0;
-    bottom: 0;
-    position: absolute;
-    padding: 0;
-    background-color: rgb(40, 40, 40);
+  width: 100vw;
+  height: 7vh;
+  left: 0;
+  bottom: 0;
+  position: absolute;
+  padding: 0;
+  background-color: rgb(40, 40, 40);
 }
 
 .icon-holder {
-    width: 5vw;
-    height: 12.5vh;
-    border-radius: 5px;
+  width: 5vw;
+  height: 12.5vh;
+  border-radius: 5px;
 }
 
 .icon-holder:hover {
-    background-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(255, 255, 255, 0.25);
 }
 
 .icon-image {
-    width: 4vw;
-    height: 4vw;
-    left: 50%;
-    position: absolute;
-    transform: translateX(-50%) translateY(5px);
+  width: 4vw;
+  height: 4vw;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%) translateY(5px);
 }
 
 .icon-text {
-    font: 1vw "Aller";
-    color: white;
-    text-align: center;
-    transform: translateY(10vh);
+  font: 1vw "Aller";
+  color: white;
+  text-align: center;
+  transform: translateY(10vh);
 }
 
 .desktop-close {
-    left: 1vh;
-    top: 1vh;
-    width: 5vh;
-    height: 5vh;
-    position: absolute;
-    cursor: grab;
+  left: 1vh;
+  top: 1vh;
+  width: 5vh;
+  height: 5vh;
+  position: absolute;
+  cursor: grab;
 }
 
 .icons {
-    position: absolute;
-    left: 2vw;
-    top: 2vw;
-    display: grid;
-    grid-auto-flow: row;
-    gap: 2vw;
+  position: absolute;
+  left: 2vw;
+  top: 2vw;
+  display: grid;
+  grid-auto-flow: row;
+  gap: 2vw;
 }
 
 .update-version {
-    font: 2.75vw "Aller";
-    font-weight: bold;
-    color: rgb(255, 157, 198);
-    text-shadow: -9px 9px 5px rgba(255, 157, 198, 0.5);
+  font: 2.75vw "Aller";
+  font-weight: bold;
+  color: rgb(255, 157, 198);
+  text-shadow: -9px 9px 5px rgba(255, 157, 198, 0.5);
 }
 
 .update-heaader {
-    font: 2.25vw "Aller";
-    font-weight: bold;
-    color: white;
-    padding-top: 1.5vw;
-    padding-bottom: 0.5vw;
-    text-shadow: -7px 7px 5px rgba(255, 255, 255, 0.5);
+  font: 2.25vw "Aller";
+  font-weight: bold;
+  color: white;
+  padding-top: 1.5vw;
+  padding-bottom: 0.5vw;
+  text-shadow: -7px 7px 5px rgba(255, 255, 255, 0.5);
 }
 
 .update-text {
-    font: 1.25vw "Aller";
-    color: white;
-    text-shadow: -5px 5px 5px rgba(255, 255, 255, 0.5);
+  font: 1.25vw "Aller";
+  color: white;
+  text-shadow: -5px 5px 5px rgba(255, 255, 255, 0.5);
 }
 
 .updates {
-    position: absolute;
-    right: 2vw;
-    top: 2vw;
-    display: list-item;
-    justify-items: right;
-    gap: 2vw;
-    list-style: none;
+  position: absolute;
+  right: 2vw;
+  top: 2vw;
+  display: list-item;
+  justify-items: right;
+  gap: 2vw;
+  list-style: none;
 }
 
 .console-bg {
-    position: absolute;
-    background: rgb(40, 40, 40);
-    width: 50vw;
-    height: 70vh;
-    left: 50vw;
-    top: 50vh;
-    border: rgb(150, 150, 150) solid 0.1vh;
-    transform: translate(-50%, -50%);
-
+  position: absolute;
+  background: rgb(40, 40, 40);
+  width: 50vw;
+  height: 70vh;
+  left: 50vw;
+  top: 50vh;
+  border: rgb(150, 150, 150) solid 0.1vh;
+  transform: translate(-50%, -50%);
 }
 
 .console-texts {
-    position: absolute;
-    width: 50vw;
-    top: calc(5vh + 1.5vw);
-    height: calc(65vh - 1.5vw);
-    overflow-y: scroll;
-    scrollbar-width: none;
-    display: flex;
-    flex-direction: column;
-    flex-flow: column;
-    list-style: none;
-    vertical-align: bottom;
+  position: absolute;
+  width: 50vw;
+  top: calc(5vh + 1.5vw);
+  height: calc(65vh - 1.5vw);
+  overflow-y: scroll;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  flex-flow: column;
+  list-style: none;
+  vertical-align: bottom;
 }
 
 .console-bar {
-    position: absolute;
-    width: 100%;
-    height: 5vh;
-    background: rgb(60, 60, 60);
+  position: absolute;
+  width: 100%;
+  height: 5vh;
+  background: rgb(60, 60, 60);
 }
 
 .console-text-holder {
-    width: 100%;
-    height: auto;
+  width: 100%;
+  height: auto;
 }
 
 .console-warn {
-    background-color: rgba(200, 200, 0, 0.5);
+  background-color: rgba(200, 200, 0, 0.5);
 }
 
 .console-text {
-    position: relative;
-    font: 1.5vw "Aller";
-    padding-top: 1vw;
-    padding-bottom: 1vw;
-    text-align: left;
-    color: white;
-    left: 1.5vw;
-    width: calc(100% - 12vw);
-    height: auto;
-    word-wrap: break-word;
+  position: relative;
+  font: 1.5vw "Aller";
+  padding-top: 1vw;
+  padding-bottom: 1vw;
+  text-align: left;
+  color: white;
+  left: 1.5vw;
+  width: calc(100% - 12vw);
+  height: auto;
+  word-wrap: break-word;
 }
 
 .console-text-right {
-    position: absolute;
-    font: 1vw "Aller";
-    color: rgb(200, 200, 200);
-    width: 95%;
-    height: 5vh;
-    right: 1vw;
-    text-align: right;
-    transform: translateY(-5vh);
+  position: absolute;
+  font: 1vw "Aller";
+  color: rgb(200, 200, 200);
+  width: 95%;
+  height: 5vh;
+  right: 1vw;
+  text-align: right;
+  transform: translateY(-5vh);
 }

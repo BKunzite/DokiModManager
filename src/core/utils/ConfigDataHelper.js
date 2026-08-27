@@ -1,7 +1,7 @@
-import {CLIENT_THEME_ENUM} from "../Constants"
+import {CLIENT_THEME_ENUM} from "../Constants";
 
 export class ProgramData {
-    #unmappedData = {}
+    #unmappedData = {};
 
     constructor(username = "") {
         this.#unmappedData = {
@@ -12,17 +12,16 @@ export class ProgramData {
             language: "",
             version: "0.0.0-release",
             bg_offset: 0,
-            user_name: username
-        }
+            user_name: username,
+        };
     }
 
     /**
-     *
      * @param {"coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name"} id
      * @returns {*}
      */
     get(id) {
-        return this.#unmappedData[id]
+        return this.#unmappedData[id];
     }
 
     /**
@@ -31,18 +30,19 @@ export class ProgramData {
      * @returns {ProgramData}
      */
     set(id, val) {
-        this.#unmappedData[id] = val
-        return this
+        this.#unmappedData[id] = val;
+        return this;
     }
+
     /**
      * @param {{coverId: number, totalTime: number, version: string, tutorial: boolean, language: string, bg_offset: number, user_name: string}} map
      * @returns {ProgramData}
      */
     map(map) {
         for (const key in map) {
-            this.#unmappedData[key] = map[key]
+            this.#unmappedData[key] = map[key];
         }
-        return this
+        return this;
     }
 
     /**
@@ -51,22 +51,22 @@ export class ProgramData {
      * @returns {ProgramData}
      */
     default(id, val) {
-        const data = this.#unmappedData[id]
+        const data = this.#unmappedData[id];
         if (data === null || data === undefined) {
-            this.#unmappedData[id] = val
+            this.#unmappedData[id] = val;
         }
-        return this
+        return this;
     }
 
     setJSON(jsonData) {
-        this.#unmappedData = JSON.parse(jsonData)
+        this.#unmappedData = JSON.parse(jsonData);
     }
 
     post() {
-        return this.#unmappedData
+        return this.#unmappedData;
     }
 
     getJSON() {
-        return JSON.stringify(this.#unmappedData, null, "\t")
+        return JSON.stringify(this.#unmappedData, null, "\t");
     }
 }

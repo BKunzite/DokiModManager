@@ -11,8 +11,8 @@ const replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/g
 export const STRINGS = {
     SPACE: " ",
     EMPTY: "",
-    isEmpty: (str) => str === STRINGS.EMPTY
-}
+    isEmpty: (str) => str === STRINGS.EMPTY,
+};
 
 /**
  * Escapes HTML To Prevent Potential XSS Attacks
@@ -20,14 +20,14 @@ export const STRINGS = {
  * @returns {string} Escaped HTML Text
  */
 export function htmlEscape(text) {
-    let match_case = SHOULD_ESCAPE_HTML_PATTERN.exec(text)
+    let match_case = SHOULD_ESCAPE_HTML_PATTERN.exec(text);
     if (match_case === null) {
         return text;
     }
 
-    const startScan = match_case.index
-    const length = text.length
-    let string = ""
+    const startScan = match_case.index;
+    const length = text.length;
+    let string = "";
     let lastIndex = 0;
 
     for (let i = startScan; i < length; i++) {
@@ -60,7 +60,7 @@ export function htmlEscape(text) {
     }
 
     if (lastIndex !== length - 1) {
-        string += text.slice(lastIndex, length - 1)
+        string += text.slice(lastIndex, length - 1);
     }
 
     return string;
@@ -70,11 +70,11 @@ export function getFormattedDate() {
     const now = new Date();
 
     return now.getFullYear() + "y_" +
-        String(now.getMonth() + 1).padStart(2, '0') + "m_" +
-        String(now.getDate()).padStart(2, '0') + "d_" +
-        String(now.getHours()).padStart(2, '0') + "h_" +
-        String(now.getMinutes()).padStart(2, '0') + "min_" +
-        String(now.getSeconds()).padStart(2, '0') + "s";
+        String(now.getMonth() + 1).padStart(2, "0") + "m_" +
+        String(now.getDate()).padStart(2, "0") + "d_" +
+        String(now.getHours()).padStart(2, "0") + "h_" +
+        String(now.getMinutes()).padStart(2, "0") + "min_" +
+        String(now.getSeconds()).padStart(2, "0") + "s";
 }
 
 /**
@@ -85,7 +85,8 @@ export function getFormattedDate() {
  */
 
 export function getTextWidth(text, font) {
-    const canvas = getTextWidth.canvas || (getTextWidth.canvas = document.createElement("canvas"));
+    const canvas = getTextWidth.canvas ||
+        (getTextWidth.canvas = document.createElement("canvas"));
     const context = canvas.getContext("2d");
     context.font = font;
     const metrics = context.measureText(text);
@@ -95,8 +96,14 @@ export function getTextWidth(text, font) {
 export function formatModName(text) {
     return text.replace(/\b(ddlc|renpy7mod|renpy8mod)\b/gi, "")
         .replace(/[-_]/g, " ")
-        .trim()
+        .trim();
 }
+
+/**
+ * Converts all links into clickable hyperlinks
+ * @param inputText
+ * @return {*}
+ */
 
 export function linkify(inputText) {
     let replacedText = inputText.replace(replacePattern1, '<a href="$1" target="_blank" style="cursor: grab;">$1</a>');

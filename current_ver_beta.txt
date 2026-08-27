@@ -13,6 +13,7 @@ Linux Beta Fixes
     py3-linux-x86_64
     py2-linux-x86_64
   then it should now be fixed
+ - Linux beta will now go from beta -> RC (Release Candidate)
 
 App Logs
     - If you want to report a bug on the discord,

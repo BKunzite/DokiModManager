@@ -159,10 +159,10 @@ function loadTranslation(lang, first) {
         }
     }
 
-    getImage("Flags/" + TranslationUtil.sub("data").of("flag")).then(url => {
+    getImage("Flags/" + TranslationUtil.sub("metadata").of("flag")).then(url => {
         Hud.ofId("language-flag").src = url
     });
-    Hud.ofId("language-text").textContent = TranslationUtil.sub("data").of("name");
+    Hud.ofId("language-text").textContent = TranslationUtil.sub("metadata").of("name");
 
     if (currentEntry === STRINGS.EMPTY) {
         if (!first) {
@@ -583,8 +583,8 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
     const cover_text = document.createElement("button");
     const path_text = document.createElement("button");
     const fragment = document.createDocumentFragment();
-
     const cover_bg = document.createElement("div");
+
     newScreenshot.decoding = "async"
 
     if (!preload) {
@@ -678,7 +678,7 @@ async function requestDirectory(directoryPath = undefined) {
         let mods_to_complete = 0;
         let finished = []
         let working_mods_count = 0
-        let docFrag = DOMBatch.inline("modlist")
+	    let docFrag = DOMBatch.inline("modlist")
 
         for (const entry of files) {
             if (entry.isDirectory) {
@@ -689,7 +689,7 @@ async function requestDirectory(directoryPath = undefined) {
                         finished_mods++;
                         if (val === undefined) return
                         working_mods_count++;
-                        docFrag.append(val)
+			docFrag.append(val)
                     })
                     .catch(err => {
                         finished_mods++;
@@ -701,7 +701,7 @@ async function requestDirectory(directoryPath = undefined) {
         let interval = setInterval(async () => {
             if (finished_mods === mods_to_complete) {
                 clearInterval(interval)
-                docFrag.finalize()
+		docFrag.finalize()
 
                 Hud.setLoadingBar(100)
                 Hud.ofId("nummods").textContent = working_mods_count.toString();
@@ -999,7 +999,7 @@ async function addMod(name) {
             Hud.show("pill")
             Hud.show("pill-files")
             Hud.show("pill-contains")
-            if (!Hud.isVoid(covers.get(configData.coverId), preloadCovers.ofCover(configData.coverId))) {
+            if (!Hud.isVoid(covers.get(configData.coverId),  preloadCovers.ofCover(configData.coverId))) {
                 Hud.ofId("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(configData.coverId).src + '")';
             } else {
                 Hud.ofId("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(0).src + '")';
@@ -1201,14 +1201,14 @@ async function addMod(name) {
                             frag.appendChild(
                                 imageS
                             );
-                            const clazz_children = imageS.getElementsByClassName("screenshots-image")
-                            if (clazz_children.length === 0) continue;
-                            clazz_children[0].decode().then(() => {
-                                lazyDeref(clazz_children[0].src);
-                                caches.delete(clazz_children[0].src);
-                            }).catch(err => {
-                                Logger.warn("Failed To Unload Image: " + dir + fileTerminator + image_url + " Error: " + err)
-                            })
+			    const clazz_children = imageS.getElementsByClassName("screenshots-image")
+			    if (clazz_children.length === 0) continue;
+			    clazz_children[0].decode().then(() => {
+				lazyDeref(clazz_children[0].src);
+				caches.delete(clazz_children[0].src);
+			    }).catch(err => {
+				Logger.warn("Failed To Unload Image: " + dir + fileTerminator + image_url + " Error: " + err)
+			    })
                         }
                     })
                 }
@@ -1225,8 +1225,7 @@ async function addMod(name) {
     })
 
     addLauncher(name, launcher)
-    launcher.getFunctions().preloadImages().then(() => {
-    });
+    launcher.getFunctions().preloadImages().then(() => {});
 
     return sidetext
 }
@@ -2140,7 +2139,7 @@ async function onLoad() {
         Logger.log(event.payload)
 
         if (event.payload.path !== undefined) {
-            const url = event.payload.path.replaceAll("\\\\", "\\")
+            const url = event.payload.path.replaceAll("\\\\","\\")
             const downloadingObject = DownloadsManager.getDownload(url)
             if (!Hud.isVoid(downloadingObject)) {
                 downloadingObject.setPercent(number)
@@ -2349,7 +2348,7 @@ async function onLoad() {
 
     await listen('substring', async (event) => {
         if (event.payload.text.includes("|ppathIdentifier|")) {
-            const url = event.payload.text.split("|ppathIdentifier|").pop().replaceAll("\\\\", "\\");
+            const url = event.payload.text.split("|ppathIdentifier|").pop().replaceAll("\\\\","\\");
             const downloadingObject = DownloadsManager.getDownload(url)
             if (!Hud.isVoid(downloadingObject)) {
                 downloadingObject.setUpdateString(event.payload.text.split("|ppathIdentifier|")[0])
@@ -2647,7 +2646,7 @@ async function onLoad() {
             await invoke("set_ddlc_zip", {
                 path: p
             })
-            ddlcSelected = true
+	    ddlcSelected = true
             Hud.setLoadingSubtitle("Done!")
         } catch (Exception) {
             Hud.setLoadingBar(0, false)
@@ -2912,22 +2911,22 @@ async function onLoad() {
     })
 
     Hud.ofId("modlist").addEventListener("click", async (e) => {
-        let target = e.target;
-        if (target.nodeName === "SPAN") {
-            target = target.parentElement;
-        }
-        if (!Hud.isVoid(target)) {
-            const id = target.id;
-            if (!id.startsWith("mod-")) return;
+	let target = e.target;
+	if (target.nodeName === "SPAN") {
+	    target = target.parentElement;
+	}
+	if (!Hud.isVoid(target)) {
+	    const id = target.id;
+	    if (!id.startsWith("mod-")) return;
 
-            const realId = id.substring(4)
-            if (realId === currentEntry) return;
+	    const realId = id.substring(4)
+	    if (realId === currentEntry) return;
 
-            const launcher = getLauncher(realId)
-            if (Hud.isVoid(launcher)) return;
+	    const launcher = getLauncher(realId)
+	    if (Hud.isVoid(launcher)) return;
 
-            await launcher.getFunctions().leftClick();
-        }
+	    await launcher.getFunctions().leftClick();
+	}
     })
 
     Hud.ofId("extract").addEventListener("mouseup", async () => {

@@ -1,6 +1,6 @@
-import {getOSType, OS} from "./OSUtil";
+import { getOSType, OS } from "./OSUtil";
 
-export let fileTerminator = getOSType() === OS.TYPE.WINDOWS ? "\\" : "/"
+export let fileTerminator = getOSType() === OS.TYPE.WINDOWS ? "\\" : "/";
 const archiveRegex = /\.(zip|rar|tar|7z|gz)$/i;
 
 /**
@@ -10,9 +10,10 @@ const archiveRegex = /\.(zip|rar|tar|7z|gz)$/i;
  */
 
 export function terminatePath(path) {
-    return path.replace(/\\/g, fileTerminator);
+  return path.replace(/\\/g, fileTerminator);
 }
 
 export function supportedModPackage(selectedPath) {
-    return archiveRegex.test(selectedPath) || selectedPath.endsWith("scripts.rpa")
+  return archiveRegex.test(selectedPath) ||
+    selectedPath.endsWith("scripts.rpa");
 }

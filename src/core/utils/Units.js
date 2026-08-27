@@ -14,7 +14,7 @@ const MillisMap = {
     /**
      * 86_400_000ms = 1day
      */
-    DAY: 86_400_000
+    DAY: 86_400_000,
 };
 const ByteSizeMap = {
     /**
@@ -24,10 +24,10 @@ const ByteSizeMap = {
     /**
      * 1_048_600 bytes
      */
-    MB: 1_048_600
-}
+    MB: 1_048_600,
+};
 
 export default {
     ByteSizeMap: ByteSizeMap,
-    MillisMap: MillisMap
-}
+    MillisMap: MillisMap,
+};

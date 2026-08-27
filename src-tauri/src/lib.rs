@@ -22,7 +22,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, ProcessesToUpdate, System};
 use tauri::webview::{DownloadEvent, NewWindowResponse};
-use tauri::{AppHandle, Emitter, Listener, Manager, Size, Url, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Listener, Manager, Url, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_aptabase::EventTracker;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_fs_pro::{is_dir, is_file};
@@ -31,7 +31,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::task;
 
 #[cfg(target_os = "linux")]
-use tauri::{PhysicalSize, PixelUnit, WindowSizeConstraints};
+use tauri::{PhysicalSize, PixelUnit, WindowSizeConstraints, Size};
 #[cfg(target_os = "linux")]
 use tauri::webview::Color;
 #[cfg(target_os = "linux")]
@@ -1411,16 +1411,16 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
 
                 #[cfg(target_os = "linux")]
                 {
-                    if let Some(cancel_sender) = pending_fallbacks()
+                    match pending_fallbacks()
                         .lock()
                         .expect("pending_fallbacks mutex poisoned")
                         .remove(&url)
-                    {
+                    { Some(cancel_sender) => {
                         let _ = cancel_sender.send(());
                         println!("Fallback cancellation sent: {url}");
-                    } else {
+                    } _ => {
                         println!("No pending fallback to cancel: {url}");
-                    }
+                    }}
                 }
 
                 let app = webview.app_handle().clone();

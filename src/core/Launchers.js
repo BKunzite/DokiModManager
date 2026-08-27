@@ -1,7 +1,7 @@
-let launchers_list = {}
+let launchers_list = {};
 
 export class LauncherAbstract {
-    list = {}
+    list = {};
 
     constructor(list) {
         this.list = list;
@@ -27,15 +27,14 @@ export function getLaunchers() {
 }
 
 /**
- *
  * @param name
  * @return {LauncherAbstract | undefined}
  */
 
 export function getLauncher(name) {
-    return launchers_list[name]
+    return launchers_list[name];
 }
 
 export function clearLaunchers() {
-    launchers_list = {}
+    launchers_list = {};
 }
