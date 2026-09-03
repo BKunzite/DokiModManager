@@ -197,19 +197,8 @@ export function deref(url) {
 export async function preloadImageObject(src) {
   const img = new Image();
   img.decoding = "async";
+  img.src = await getImage(src, true);
 
-  /*
-        I LOVE WEBKIT ORDER ISSUES!!!!!
-     */
-
-  if (getOSType() === OS.TYPE.LINUX) {
-    img.src = await getImage(src, true);
-  } else {
-    getImage(src, true)
-      .then((resp) => {
-        img.src = resp;
-      });
-  }
   return img;
 }
 

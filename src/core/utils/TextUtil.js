@@ -1,5 +1,3 @@
-import {fileTerminator} from "./FileSystem";
-
 /**
  * REGEX pattern to check for HTML elements
  * @type {RegExp}

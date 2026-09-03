@@ -1,7 +1,6 @@
 import {STRINGS} from "./TextUtil";
 
 class HTMLHelperObject {
-    // Loading Bar
     #goal_slow_bar = -1
     #current_bar = 0
 
@@ -28,7 +27,7 @@ class HTMLHelperObject {
     /**
      * vals can include a modifier
      *
-     * by default it is ```HTMLHelper.conditionals.OR```
+     * by default, it is ```HTMLHelper.conditionals.OR```
      *
      * OR condition returns true if any value is null/undefined
      *
