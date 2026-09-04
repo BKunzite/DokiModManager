@@ -75,7 +75,7 @@ class HTMLHelperObject {
 
     /**
      * Adds 'Hide' From ClassList
-     * @param {HTMLElement} elementId
+     * @param {HTMLElement} element
      */
     hideElement(element) {
         element.classList.add("hide")
@@ -85,8 +85,8 @@ class HTMLHelperObject {
      * Removes 'Hide' From ClassList
      * @param {string} elementId
      */
-    showElement(element) {
-        element.classList.remove("hide")
+    showElement(elementId) {
+        this.ofId(elementId).classList.remove("hide")
     }
 
     /**
@@ -101,6 +101,7 @@ class HTMLHelperObject {
     /**
      * Toggle Whether A Element Is Visible
      * @param {string} elementId
+     * @param {boolean} visible
      */
     toggle(elementId, visible= undefined) {
         if ((document.getElementById(elementId).classList.contains("hide") && visible === undefined) || visible === false) {

@@ -3417,9 +3417,6 @@ async function onLoad() {
 	    const logsPath = localPath + fileTerminator + "store" + fileTerminator + "logs"
 	    const logs = await Optional.readDir(logsPath)
 	    if (logs.isSome()) {
-		/**
-		 * @type {DirEntry[]}
-		 */
 		const files = await logs.getResult()
 		const file = files[files.length - 1]
 		Logger.log("Latest log file: " + file.name)
