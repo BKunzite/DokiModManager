@@ -16,6 +16,8 @@ export const OS = {
     },
 };
 
+export const DDLC_FOLDER_REGEX = new RegExp((getOSType() === OS.TYPE.MAC ? OS.EXECUTABLE.MAC : OS.EXECUTABLE.WINDOWS) + "|renpy", "g");
+
 export const INVALID_MAC_BINARIES = [
     "DDLC",
     "python",

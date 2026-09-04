@@ -2,7 +2,7 @@ use dirs::{download_dir, home_dir};
 use futures_util::TryStreamExt;
 use include_dir::{include_dir, Dir};
 use jwalk::WalkDir;
-use rand::{rng, Rng};
+use rand::{rng, RngExt};
 use rayon::prelude::*;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use regex::Regex;
@@ -655,8 +655,11 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     }
     #[cfg(target_os = "macos")]
     chmod_x_directory(&PathBuf::from(&dir));
-    let mut launch_result = if cfg!(target_os = "macos") {
+    let mut launch_result = if (cfg!(target_os = "linux")) {
         Command::new(path)
+            .env_remove("DESKTOPINTEGRATION")
+            .env_remove("WEBKIT_DISABLE_DMABUF_RENDERER")
+            .env_remove("LD_PRELOAD")
             .current_dir(&dir)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -675,7 +678,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
             let output = process.wait_with_output().unwrap();
 
             if output.status.success() {
-                error = Some("exit code: 0".to_string());
+                error = Some("Exit code: 0 (Success)".to_string());
             } else {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 stamp(format!("Command failed with error:\n{}", stderr).as_str());
@@ -750,7 +753,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     }
 
     if let Some(msg) = error {
-        let success = msg.eq("exit code: 0");
+        let success = msg.eq("Exit code: 0 (Success)");
         if !success {
             app.track_event(
                 "Error",
@@ -1955,7 +1958,7 @@ async fn stamp_system_info() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
-    simple_logger::setup_logs();
+    setup_logs();
     push_stamp("<INIT>");
 
     stamp("Starting Doki Doki Mod Manager");

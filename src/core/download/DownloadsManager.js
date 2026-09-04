@@ -4,18 +4,18 @@ import { formatModName } from "../utils/TextUtil";
 import { TranslationUtil } from "../utils/TranslationUtil";
 
 class DownloadingObject {
+  #div;
   #url = "";
   #file = "";
   #path = "";
-  #percent = 0;
-  #percentGoal = 0;
-  #updateString = "";
-  #div;
   #header;
-  #subheader;
-  #progressBar;
-  #progressBarFill;
   #cancel;
+  #percent = 0;
+  #subheader;
+  #percentGoal = 0;
+  #progressBar;
+  #updateString = "";
+  #progressBarFill;
 
   constructor(url, path, percent) {
     this.#url = url;
@@ -104,20 +104,19 @@ class DownloadingObject {
   }
 
   complete() {
-    this.#percent = 100;
-    this.#div.remove();
     this.#progressBarFill.remove();
     this.#progressBar.remove();
-    this.#header.remove();
     this.#subheader.remove();
+    this.#header.remove();
     this.#cancel.remove();
-
-    this.#div = undefined;
-    this.#header = undefined;
-    this.#subheader = undefined;
-    this.#progressBar = undefined;
-    this.#progressBarFill = undefined;
-    this.#cancel = undefined;
+    this.#div.remove();
+    this.#div = null;
+    this.#header = null;
+    this.#cancel = null;
+    this.#percent =  100;
+    this.#subheader = null;
+    this.#progressBar = null;
+    this.#progressBarFill = null;
 
     const noneOf = document.getElementById("downloads-none");
     if (noneOf === null) {

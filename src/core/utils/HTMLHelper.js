@@ -5,8 +5,8 @@ class HTMLHelperObject {
     #current_bar = 0
 
     CONDITIONALS = {
-        OR: "#htmlhelper:modifier:or",
-        AND: "#htmlhelper:modifier:and",
+        OR: "|",
+        AND: "&",
     }
 
     /**

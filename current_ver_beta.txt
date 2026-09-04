@@ -1,4 +1,5 @@
-2.8.0-beta
+2.8.0-final-rc
+Recommended
 
 Multiple Downloads/Imports At Once
 Translations
@@ -14,11 +15,14 @@ Linux Beta Fixes
     py2-linux-x86_64
   then it should now be fixed
  - Linux beta will now go from beta -> RC (Release Candidate)
+ - Arch should now be properly supported
 
 App Logs
     - If you want to report a bug on the discord,
-    please press Updates (Desktop) -> Copy Latest Log
-    and paste it into the Discord Ticket
+    Make a ticket, then please press [Shift + Control + L] in the program and:
+        - open the selected file and copy its contents
+          into the ticket or
+        - copy the entire file into the ticket
 
 Performance Improvements
     - Technical -
@@ -31,7 +35,10 @@ Performance Improvements
 Migration from unrar/zip to unarc-rs
  - Better RAR Archive Support
 
-ToDo:
- - macOS Support
- - Arch Linux / Wayland Fix
- - Copy Latest Log Button
+MacOS Support Goes Into Alpha (With a caveat)!
+ - The MacOS app will not be signed
+    To be signed, I have to pay a 99$/year subscription
+    So for now, the app will not be signed
+    This means you have to allow the app through gatekeeper
+ - Follow this guide to allow the app through gatekeeper:
+    https://tinyurl.com/4cjw2md7

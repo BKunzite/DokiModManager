@@ -1,10 +1,9 @@
 import Christmas from "./Seasons/Christmas";
-import Logger from "../utils/Logger";
 
 class SeasonsManager {
     SEASON = {
-        "NONE": "None",
-        "CHRISTMAS": "Christmas",
+        "NONE": "0",
+        "CHRISTMAS": "1",
     };
 
     async init(season = this.SEASON.NONE) {
