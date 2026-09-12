@@ -8,12 +8,15 @@
     <div class="background"></div>
     <button class="import-zip hide" id="select-zip">Import Zip</button>
     <header class="load-subtitle" id="loadingsub">PLEASE REFRESH THIS APPLICATION (Control + R)</header>
-    <header class="load-title" id="loadinghead">Doki Doki Mod Manager</header>
+    <header class="load-title" id="loadinghead">Doki Doki Mod Manager <span class="load-title-version" id="load-title-version">/ 1.8.0</span></header>
+
     <div class="wheel" id="throbber"></div>
     <div class="loading-bar">
       <div class="loading-bar-side"></div>
       <div class="loading-bar-side loading-bar-right"></div>
-      <div id="loading-bar-fill" class="loading-bar-fill"></div>
+      <div id="loading-bar-fill" class="loading-bar-fill">
+        <div class="loading-bar-chibi" id="loading-chibi"></div>
+      </div>
     </div>
 
   </div>

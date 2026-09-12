@@ -916,6 +916,12 @@
   top: 5vw;
   text-align: left;
   line-height: 2rem;
+  text-wrap: nowrap;
+}
+
+.load-title-version {
+  font-size: 2rem;
+  color: rgb(200,200,200);
 }
 
 .wheel {
@@ -2411,6 +2417,17 @@ body {
   position: absolute;
   transform: translateY(-50%);
   transition: width 0.5s ease-in-out;
+}
+
+.loading-bar-chibi {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  width: 20px;
+  height: 20px;
+  top: 50%;
+  right: 0;
+  transform: translate(50%,-120%);
 }
 
 .loading-bar-side {

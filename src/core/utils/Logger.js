@@ -40,7 +40,7 @@ Logger.tick = () => {
     if (batchedLogs.length === 0) return;
     let temp = batchedLogs;
     batchedLogs = [];
-    invoke("sync_log", {msgs: temp}).then((r) => {
+    invoke("sync_log", {msgs: temp}).then(() => {
     });
 };
 
@@ -61,4 +61,4 @@ export default Logger;
 console.log = (...args) => Logger.log("(Silent)", getTimeStamp(), ...args);
 console.warn = (...args) => Logger.warn("(SilentWarn)", getTimeStamp(), ...args);
 
-Logger.log("[MARKER] Debugger Attached.");
+Logger.log("[Logger.js/MARKER] Debugger Attached.");

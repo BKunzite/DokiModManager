@@ -1,5 +1,5 @@
 2.8.0-final-rc
-Recommended
+Recommended (Various Bug Fixes)
 
 Multiple Downloads/Imports At Once
 Translations
@@ -7,6 +7,12 @@ Translations
  - Added Polish
  - Language Translations
  - Report Button Auto Resizes
+
+Bug fixes
+    - Like a lot of bugs, so much in fact
+    that I could not list them all without missing some,
+    so if you want to find all bugs that were fixed,
+    check the commit history
 
 Linux Beta Fixes
  - Better Mod Support
@@ -20,17 +26,15 @@ Linux Beta Fixes
 App Logs
     - If you want to report a bug on the discord,
     Make a ticket, then please press [Shift + Control + L] in the program and:
-        - open the selected file and copy its contents
+        - Open the selected file and copy its contents
           into the ticket or
-        - copy the entire file into the ticket
+        - Copy the entire file into the ticket
 
 Performance Improvements
     - Technical -
         - Batch DOM Updates Via Document Fragments
         - Decrease CPU/GPU Usage Upon Window Unfocus
         - Launch Time Should Be Decreased (Slightly)
-            - (Windows Only)
-            - Image Preloading Is Now Async
 
 Migration from unrar/zip to unarc-rs
  - Better RAR Archive Support

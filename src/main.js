@@ -38,7 +38,18 @@ import {
 } from "./core/utils/ImageUtils";
 import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
 import {TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE, TranslationUtil} from "./core/utils/TranslationUtil"
-import {addLauncher, clearLaunchers, getLauncher, getLaunchers, LauncherAbstract} from "./core/Launchers"
+import {
+    addLauncher,
+    clearLaunchers,
+    deleteLauncher,
+    flagModLaunched,
+    getIsLaunchedFlag,
+    getLauncher,
+    getLaunchers,
+    LauncherAbstract,
+    removeModLaunchedFlag,
+    updateModCount
+} from "./core/Launchers"
 import {openWebview} from "./core/utils/WebviewWindowUtil";
 import {formatModName, getFormattedDate, getTextWidth, htmlEscape, linkify, STRINGS} from "./core/utils/TextUtil";
 import {
@@ -195,9 +206,24 @@ async function syncCovers() {
     )
 
     preloadCovers.reset()
+    let imageLoaded = 0
+    let imagePrepared = 0
 
     for (const cover of covers.asList()) {
-	preloadCovers.set(cover, await preloadImageObject(cover))
+	imagePrepared++
+	new Promise(async (resolve, reject) => {
+	    try {
+		const img = await preloadImageObject(cover)
+		preloadCovers.set(cover, img)
+		resolve()
+	    } catch (e) {
+		reject(e)
+	    }
+	}).then(() => {
+	    imageLoaded++
+	}).catch(() => {
+	    imageLoaded++
+	})
     }
 
     const pathOptional = await Optional.readDir(localPath + imageLocation)
@@ -207,10 +233,32 @@ async function syncCovers() {
 	    if (regexImageName(image.name)) {
 		const path = localPath + imageLocation + fileTerminator + image.name;
 		covers.add(path)
-		preloadCovers.set(path, await preloadImageObject(path))
+		imagePrepared++
+		new Promise(async (resolve, reject) => {
+		    try {
+			const img = await preloadImageObject(path)
+			preloadCovers.set(path, img)
+			resolve()
+		    } catch (e) {
+			reject(e)
+		    }
+		}).then(() => {
+		    imageLoaded++
+		}).catch(() => {
+		    imageLoaded++
+		})
 	    }
 	}
     }
+
+    await new Promise(resolve => {
+	let interval = setInterval(() => {
+	    if (imageLoaded === imagePrepared) {
+		clearInterval(interval);
+		resolve()
+	    }
+	}, 50)
+    })
 }
 
 function onWindowFocusChanged(focus) {
@@ -322,9 +370,7 @@ async function loadConfig(path) {
  */
 
 async function updateCoverImages(first_time = false) {
-    if (!first_time) {
-	await syncCovers()
-    }
+    if (!first_time) await syncCovers()
     const images = Hud.ofId("images")
 
     if (!first_time) {
@@ -542,7 +588,9 @@ async function setTheme(name, first) {
 	name = "NATSUKI";
     }
 
-    Hud.ofId("chibi").src = await getImage(CLIENT_THEMES[name].image);
+    const chibiImage = await getImage(CLIENT_THEMES[name].image);
+    Hud.ofId("chibi").src = chibiImage;
+    Hud.ofId("loading-chibi").style.backgroundImage = "url(" + chibiImage + ")";
     document.body.style.setProperty("--primary-color", CLIENT_THEMES[name].primary_color)
     document.body.style.setProperty("--primary-color-saturated", CLIENT_THEMES[name].primary_color_saturated)
 
@@ -587,8 +635,8 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
     const newScreenshot = document.createElement("img")
     const cover_text = document.createElement("button");
     const path_text = document.createElement("button");
-    const fragment = document.createDocumentFragment();
     const cover_bg = document.createElement("div");
+    const fragment = DOMBatch.inline(cover_bg)
 
     newScreenshot.decoding = "async"
 
@@ -622,14 +670,17 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
 	await getLauncher(entryName).getFunctions().path();
     })
 
-    path_text.classList.add("screenshots-path");
     path_text.innerHTML = "&#60792;"
-    cover_text.classList.add("screenshots-text");
     cover_text.innerHTML = "&#60450;"
-    fragment.appendChild(path_text)
-    fragment.appendChild(cover_text);
-    fragment.appendChild(newScreenshot);
-    cover_bg.appendChild(fragment);
+    path_text.classList.add("screenshots-path");
+    cover_text.classList.add("screenshots-text");
+
+    fragment
+	.append(path_text)
+	.append(cover_text)
+	.append(newScreenshot)
+	.finalize()
+
     cover_bg.classList.add("screenshots-cover");
     return cover_bg
 }
@@ -652,6 +703,20 @@ async function requestDirectory(directoryPath = undefined) {
 		multiple: false,
 		title: 'Select Your DDLC Directory'
 	    });
+
+	    /*
+
+	    If the user accidentally clicked "Set Install Location"
+	    on the home page, only ask once
+
+	    If the location of where the directory is does not exist,
+	    then ask persistently
+
+	     */
+
+	    if (!Hud.isVoid(selectedPath)) {
+		return
+	    }
 	}
 	selectedPath = chosenPath;
 	await invoke("path_select", {
@@ -1031,8 +1096,11 @@ async function addMod(name) {
 	    await Logger.sendEvent("game_launch", {
 		mod: name
 	    })
+
 	    showContainers(false)
 	    await mainTicker()
+	    flagModLaunched()
+
 	    Hud.show("pill")
 	    Hud.show("pill-files")
 	    Hud.show("pill-contains")
@@ -1058,9 +1126,7 @@ async function addMod(name) {
 		    id: name,
 		    renpy: configData.renpy || TranslationUtil.of("unknown")
 		})
-	    }, 1000)
-
-
+	    }, 500)
 	},
 	get_time: async () => {
 	    return Date.now() - launch_time;
@@ -1114,6 +1180,7 @@ async function addMod(name) {
 	    Hud.hide("pill-files")
 	    Hud.hide("pill-contains")
 
+	    removeModLaunchedFlag();
 	    await saveModData();
 	    await saveConfig()
 	    await getLauncher(name).getFunctions().leftClick();
@@ -1262,7 +1329,8 @@ async function addMod(name) {
     })
 
     addLauncher(name, launcher)
-    launcher.getFunctions().preloadImages().then(() => {});
+    launcher.getFunctions().preloadImages().then(() => {
+    });
 
     return sidetext
 }
@@ -1826,9 +1894,9 @@ function createProfile(profile, position) {
 
     const background = document.createElement("div");
     const name = document.createElement("header");
-    const b_delete = document.createElement("button");
-    const b_select = document.createElement("button");
-    const b_drag = document.createElement("button");
+    const buttonDelete = document.createElement("button");
+    const buttonSelect = document.createElement("button");
+    const buttonDrag = document.createElement("button");
     const onClick = () => {
 	for (const elm of document.getElementsByClassName("profile-button")) {
 	    if (elm.classList.contains("profile-button-active")) {
@@ -1847,24 +1915,24 @@ function createProfile(profile, position) {
     name.classList.add("profile-item-name")
     name.textContent = profile;
 
-    b_delete.classList.add("profile-item-delete", "profile-item-source")
-    b_select.classList.add("profile-item-select", "profile-item-source")
-    b_drag.classList.add("profile-item-drag", "profile-item-source")
+    buttonDelete.classList.add("profile-item-delete", "profile-item-source")
+    buttonSelect.classList.add("profile-item-select", "profile-item-source")
+    buttonDrag.classList.add("profile-item-drag", "profile-item-source")
 
-    b_delete.innerHTML = "&#60445;";
-    b_select.innerHTML = "&#60543;";
-    b_drag.innerHTML = "&#62782;";
+    buttonDelete.innerHTML = "&#60445;";
+    buttonSelect.innerHTML = "&#60543;";
+    buttonDrag.innerHTML = "&#62782;";
 
     background.appendChild(name)
-    background.appendChild(b_delete)
-    background.appendChild(b_select)
-    background.appendChild(b_drag)
+    background.appendChild(buttonDelete)
+    background.appendChild(buttonSelect)
+    background.appendChild(buttonDrag)
 
     if (selectedProfileName === background.id) {
 	background.classList.add("profile-button-active")
     }
 
-    b_select.addEventListener("click", (_) => {
+    buttonSelect.addEventListener("click", (_) => {
 	if (profile === "Default") {
 	    confirm(TranslationUtil.of("error-profile_setname")).then(() => {
 	    })
@@ -1879,7 +1947,7 @@ function createProfile(profile, position) {
 
     background.addEventListener("mousedown", onClick)
 
-    b_drag.addEventListener("mousedown", async (_) => {
+    buttonDrag.addEventListener("mousedown", async (_) => {
 	if (selectedProfileButton !== null) return;
 	selectedProfileName = background.id;
 	selectedProfileButton = document.createElement("div");
@@ -1896,7 +1964,7 @@ function createProfile(profile, position) {
 	Hud.ofId("profile-blur").appendChild(selectedProfileButton);
     })
 
-    b_delete.addEventListener("mousedown", async (_) => {
+    buttonDelete.addEventListener("mousedown", async (_) => {
 	if (profile === "Default") {
 	    await confirm(TranslationUtil.of("error-profile_delete"))
 	    return;
@@ -1928,7 +1996,6 @@ function createProfile(profile, position) {
     concurrentProfileData[profile] = {
 	files: {}
     }
-
 
     isExist(getProfilePath(profile)).then(r => {
 	Logger.log(profile, r)
@@ -1963,8 +2030,6 @@ function moveEntries(obj, fromIndex, toIndex) {
     return result;
 }
 
-// Save Profile Name
-
 function closeProfileRenamePrompt() {
     Hud.ofId("profile-bg").classList.remove("profile-bg-covered")
     Hud.hide("input-prompt")
@@ -1982,10 +2047,10 @@ async function saveProfileName() {
 	for (const profile in currentProfileData) {
 	    Logger.log(currentProfileData[profile])
 	    if (currentProfileData[profile] === null || currentProfileData[profile] === undefined) continue;
-	    const comperator = (currentProfileData[profile] + STRINGS.EMPTY).toLowerCase().replace("profile-", STRINGS.EMPTY);
-	    const comperason = name.toLowerCase().replace("profile-", STRINGS.EMPTY);
-	    Logger.log(comperator, comperason, comperator === comperason)
-	    if (comperason === comperator || name.toLowerCase().includes("profile-")) {
+	    const comparator = (currentProfileData[profile] + STRINGS.EMPTY).toLowerCase().replace("profile-", STRINGS.EMPTY);
+	    const comparison = name.toLowerCase().replace("profile-", STRINGS.EMPTY);
+	    Logger.log(comparator, comparison, comparator === comparison)
+	    if (comparison === comparator || name.toLowerCase().includes("profile-")) {
 		await confirm("The Name '" + name + "' is already taken!")
 		return;
 	    }
@@ -2087,22 +2152,12 @@ async function launchDesktop() {
 }
 
 /**
- * Called Upon DOM On-Load
- * @example ```javascript
- * document.addEventListener('DOMContentLoaded', onLoad);
- * ```
+ * Called During Loading Stage;
+ * Loads all connections between front-end and rust
+ * @param {number} onLoadStartTime
  * @returns {Promise<void>}
  */
-
-async function onLoad() {
-    let onLoadStartTime = Date.now();
-
-    Logger.log("Loading Observers");
-
-    PreventDefaults.init()
-    OSUtil.Init()
-    await SeasonsManager.init(CURRENT.SEASON)
-
+async function setupIPCListeners(onLoadStartTime) {
     await listen("import_done", async (event) => {
 	setTimeout(async () => {
 	    if (alertPath !== undefined) {
@@ -2129,7 +2184,13 @@ async function onLoad() {
 	Hud.hide("loader")
 	Hud.show("main")
 
+	// A Mod Is Currently Launched - Don't Change Current Screen
+	if (getIsLaunchedFlag()) {
+	    return
+	}
+
 	if (getLauncher(goal)) {
+	    updateModCount()
 	    await getLauncher(goal).getFunctions().leftClick();
 	} else {
 	    Logger.warn(goal + " Not Found!")
@@ -2215,25 +2276,25 @@ async function onLoad() {
 	    Logger.log("Start Loading Pt. 2 (" + (Date.now() - onLoadStartTime) + "ms).")
 
 	    let payloadPath = event.payload.path;
-	    let newest_version = await getLatest();
-	    let escape_clause_language = false;
+	    let newestReleaseVersion = await getLatest();
+	    let forcedEnglishTranslation = false;
 	    await loadConfig(event.payload.local_path)
 	    loadingStage2 = true;
 
 	    Logger.log("Version Check (" + (Date.now() - onLoadStartTime) + "ms).")
 
-	    if (newest_version.split("\n")[0] !== CLIENT_VERSION) {
-		Logger.warn("NOT UP TO DATE: LATEST_ONLINE_VERSION=" + newest_version + " > " + CLIENT_VERSION + "=CLIENT_VERSION")
+	    if (newestReleaseVersion.split("\n")[0] !== CLIENT_VERSION) {
+		Logger.warn("NOT UP TO DATE: LATEST_ONLINE_VERSION=" + newestReleaseVersion + " > " + CLIENT_VERSION + "=CLIENT_VERSION")
 		Hud.ofId("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
 		if (navigator.onLine) {
 		    if (TranslationUtil.getLanguage() === STRINGS.EMPTY) {
-			escape_clause_language = true;
+			forcedEnglishTranslation = true;
 		    }
 		    loadTranslation(TranslationUtil.getLanguage(), true)
 
 		    Hud.show("changelog")
-		    Hud.ofId("changelog-title").textContent = "New Update! | " + newest_version.split("\n")[0]
-		    Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
+		    Hud.ofId("changelog-title").textContent = "New Update! | " + newestReleaseVersion.split("\n")[0]
+		    Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newestReleaseVersion.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
 		    Hud.ofId("changelog-update").textContent = TranslationUtil.of("update")
 		    Hud.ofId("changelog-ignore").textContent = TranslationUtil.of("ignore")
 		    Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
@@ -2261,14 +2322,14 @@ async function onLoad() {
 		Hud.ofId("version").textContent = `(${CLIENT_VERSION})`
 		if (localConfig.config.get("version") !== CLIENT_VERSION) {
 		    if (TranslationUtil.getLanguage() === STRINGS.EMPTY) {
-			escape_clause_language = true;
+			forcedEnglishTranslation = true;
 		    }
 		    loadTranslation(TranslationUtil.getLanguage(), true)
 		    await saveConfig()
 
 		    Hud.show("changelog")
-		    Hud.ofId("changelog-title").textContent = "Update Complete! | " + newest_version.split("\n")[0]
-		    Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newest_version.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
+		    Hud.ofId("changelog-title").textContent = "Update Complete! | " + newestReleaseVersion.split("\n")[0]
+		    Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newestReleaseVersion.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
 		    Hud.hide("changelog-ignore")
 		    Hud.ofId("changelog-update").textContent = TranslationUtil.of("ignore")
 		    Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
@@ -2286,9 +2347,9 @@ async function onLoad() {
 		}
 	    }
 
-	    Logger.log("Language (" + (Date.now() - onLoadStartTime) + "ms). Current=" + TranslationUtil.getLanguage() + " | Escaped=" + escape_clause_language)
+	    Logger.log("Language (" + (Date.now() - onLoadStartTime) + "ms). Current=" + TranslationUtil.getLanguage() + " | Escaped=" + forcedEnglishTranslation)
 
-	    if (TranslationUtil.getLanguage() === STRINGS.EMPTY || escape_clause_language) {
+	    if (TranslationUtil.getLanguage() === STRINGS.EMPTY || forcedEnglishTranslation) {
 		TranslationUtil.setLanguage(STRINGS.EMPTY)
 		Hud.ofId("language-list").classList.remove("language-list-hide")
 		Hud.ofId("language-list").classList.add("language-list-force")
@@ -2296,8 +2357,8 @@ async function onLoad() {
 		let interval;
 		await new Promise(resolve => interval = setInterval(() => {
 		    if (TranslationUtil.getLanguage() !== STRINGS.EMPTY) {
-			resolve()
 			clearInterval(interval)
+			resolve()
 		    }
 		}, 100))
 
@@ -2326,17 +2387,21 @@ async function onLoad() {
 	    }
 
 	    Hud.ofId("select-zip").remove();
-
 	    Logger.log("Theme (" + (Date.now() - onLoadStartTime) + "ms).")
+	    Hud.setLoadingSubtitle("Loading com.ddmm.THEME")
 	    await setTheme(localConfig.config.get("theme"), true)
 	    Logger.log("Sync Covers (" + (Date.now() - onLoadStartTime) + "ms).")
+	    Hud.setLoadingSubtitle("Loading com.ddmm.SYNC_COVERS")
 	    await syncCovers()
 	    Logger.log("Load Covers (" + (Date.now() - onLoadStartTime) + "ms).")
+	    Hud.setLoadingSubtitle("Loading com.ddmm.LOAD_COVERS")
 	    await updateCoverImages(true)
 	    Logger.log("Main (" + (Date.now() - onLoadStartTime) + "ms).")
+	    Hud.setLoadingSubtitle("Loading com.ddmm.MAIN")
 	    gotoHomePage()
 	    Logger.log("Watcher (" + (Date.now() - onLoadStartTime) + "ms).")
-	    await watch(
+	    Hud.setLoadingSubtitle("Loading com.ddmm.WATCHER")
+	    watch(
 		event.payload.path,
 		async (event) => {
 		    for (const index in event.paths) {
@@ -2372,13 +2437,17 @@ async function onLoad() {
 		}, {
 		    delayMs: 500
 		}
-	    )
+	    ).then(() => {
+		Logger.log("Watcher Initialized")
+	    })
 
+	    Hud.setLoadingSubtitle("Finished Loading Core!")
 	    Logger.log("Finished Loading Core (" + (Date.now() - onLoadStartTime) + "ms).")
 	}
 	try {
-	    await requestDirectory(event.payload.final_data)
-	    gotoHomePage()
+	    requestDirectory(event.payload.final_data).then(() => {
+		gotoHomePage()
+	    })
 	} catch (e) {
 	    Logger.log(e)
 	}
@@ -2426,6 +2495,39 @@ async function onLoad() {
 	}
     })
 
+    Logger.log("Loading Drag/Drop")
+
+    // Drag Drop Handling
+    // This is for dragging and dropping images and mods
+
+    await listen('tauri://drag-drop', async (event) => {
+	let paths = event.payload.paths;
+	for (const path of paths) {
+	    if (supportedModPackage(path)) {
+		await Logger.sendEvent("manual_download")
+		DownloadsManager.startDownload(path, path)
+		Hud.show("downloads-list")
+		await importMod(path)
+	    } else if (regexImageName(path)) {
+		let dir = await readDir(localPath + fileTerminator + terminatePath("store\\images") + fileTerminator)
+		await writeFile(localPath + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
+	    } else {
+		await confirm("Unsupported Format " + (path.includes("\.") ? path.split("\.").pop() : "None") + "! {Supported: .zip, .rar, .rpa}")
+	    }
+	}
+	setTimeout(async () => {
+	    await updateCoverImages()
+	}, 1000)
+    });
+}
+
+/**
+ * Called During Loading Stage;
+ * Loads all connections between interactions and js
+ * @param {number} onLoadStartTime
+ * @returns {Promise<void>}
+ */
+async function setupHTMListeners(onLoadStartTime) {
     Hud.onClick("save-profile", async () => {
 	Hud.hide("profile-bg")
 	await saveProfile();
@@ -2469,7 +2571,7 @@ async function onLoad() {
 	    return
 	}
 	// create backup first -> failsafe
-	let backup_select = await open({
+	let backupSelector = await open({
 	    directory: false,
 	    multiple: false,
 	    filters: [{
@@ -2482,7 +2584,7 @@ async function onLoad() {
 
 	Hud.hide("profile-bg")
 	await saveProfile();
-	if (backup_select !== null && backup_select !== undefined) {
+	if (backupSelector !== null && backupSelector !== undefined) {
 	    if (!await isDir(localPath + fileTerminator + terminatePath("store\\backup"))) {
 		await mkdir(localPath + fileTerminator + terminatePath("store\\backup"));
 	    }
@@ -2491,7 +2593,7 @@ async function onLoad() {
 	    }
 	    await writeTextFile(localPath + fileTerminator + terminatePath("store\\backup\\autosave") + fileTerminator + profilePath.replaceAll("\\\\", "\\").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profilePath), null, "\t"));
 	    await delDir(profilePath);
-	    await loadProfileData(JSON.parse(await readTextFile(backup_select)), profilePath);
+	    await loadProfileData(JSON.parse(await readTextFile(backupSelector)), profilePath);
 	    Logger.log(currentGameDataPath)
 	    await updateProfiles(currentGameDataPath);
 	    await loadCurrentProfileData(true);
@@ -2550,29 +2652,29 @@ async function onLoad() {
 	    Hud.hide("profile-blur")
 	}
 	if (selectedProfileButton !== null) {
-	    let is_hovering = null;
+	    let isHovering = null;
 	    for (const elm of document.getElementsByClassName("profile-button")) {
 		if (elm.contains(e.target)) {
-		    is_hovering = elm;
+		    isHovering = elm;
 		    break;
 		}
 	    }
-	    if (is_hovering !== null) {
+	    if (isHovering !== null) {
 		let moveNext = 0;
-		let old_index = 0;
+		let oldIndex = 0;
 		for (const index in currentProfileData) {
 		    const data = currentProfileData[index];
-		    if (is_hovering.id === data) {
+		    if (isHovering.id === data) {
 			moveNext = parseInt(index);
 		    } else if (data === selectedProfileButton.id) {
-			old_index = parseInt(index);
+			oldIndex = parseInt(index);
 		    }
 		}
 
 		Logger.log(currentProfileData)
 
-		Logger.log("moving " + old_index + " to " + moveNext)
-		currentProfileData = moveEntries(currentProfileData, old_index, moveNext);
+		Logger.log("moving " + oldIndex + " to " + moveNext)
+		currentProfileData = moveEntries(currentProfileData, oldIndex, moveNext);
 		Logger.log(currentProfileData)
 		for (const index in currentProfileData) {
 		    const data = currentProfileData[index];
@@ -2580,8 +2682,8 @@ async function onLoad() {
 		    Logger.log(data, index)
 		    Hud.ofId(data).style.order = index;
 		}
-		selectedProfileButton.style.top = is_hovering.getBoundingClientRect().y + "px";
-		selectedProfileButton.style.left = is_hovering.getBoundingClientRect().x + "px";
+		selectedProfileButton.style.top = isHovering.getBoundingClientRect().y + "px";
+		selectedProfileButton.style.left = isHovering.getBoundingClientRect().x + "px";
 	    }
 	    setTimeout(() => {
 		const button = selectedProfileButton;
@@ -2597,51 +2699,22 @@ async function onLoad() {
 
     Hud.ofId("profile-blur").addEventListener("mousemove", (e) => {
 	if (selectedProfileButton !== null) {
-	    let is_hovering = null;
+	    let isHovering = null;
 	    for (const elm of document.getElementsByClassName("profile-button")) {
 		if (elm.contains(e.target)) {
-		    is_hovering = elm;
+		    isHovering = elm;
 		    break;
 		}
 	    }
-	    if (is_hovering === null) {
+	    if (isHovering === null) {
 		selectedProfileButton.style.top = e.pageY + "px";
 		selectedProfileButton.style.left = e.pageX + "px";
 	    } else {
-		selectedProfileButton.style.top = is_hovering.getBoundingClientRect().y + "px";
-		selectedProfileButton.style.left = is_hovering.getBoundingClientRect().x + "px";
+		selectedProfileButton.style.top = isHovering.getBoundingClientRect().y + "px";
+		selectedProfileButton.style.left = isHovering.getBoundingClientRect().x + "px";
 	    }
 	}
     })
-
-    // Used for sidebar animations
-
-    observer = new IntersectionObserver((entries) => {
-	if (observerAwait) return
-	let toRemove = []
-	let toAdd = []
-	entries.forEach(entry => {
-	    if (entry.isIntersecting) {
-		toAdd.push(entry.target)
-	    } else {
-		toRemove.push(entry.target)
-	    }
-	});
-	observerAwait = true;
-	requestAnimationFrame(() => {
-	    for (const entry of toAdd) {
-		entry.classList.add("sidevisible")
-	    }
-	    for (const entry of toRemove) {
-		entry.classList.remove("sidevisible")
-	    }
-	    observerAwait = false;
-	})
-    })
-
-    // Initiates Sidebar Animations
-
-    document.querySelectorAll(".sidebutton2").forEach(element => observer.observe(element));
 
     // Handles Horizontal Scrolling
 
@@ -2751,37 +2824,13 @@ async function onLoad() {
 	}
     })
 
-    Logger.log("Finished Loading Observers. Took " + (Date.now() - onLoadStartTime) + "ms.")
+    await setupObserver(onLoadStartTime)
+
     Logger.log("Loading Loading Screen")
 
     Hud.show("loader")
     Hud.hide("main")
     Hud.setLoadingSubtitle("Installing DDLC-Vanilla (If nothing happens after 20s, please restart the program)")
-
-    Logger.log("Loading Drag/Drop")
-
-    // Drag Drop Handling
-    // This is for dragging and dropping images and mods
-
-    await listen('tauri://drag-drop', async (event) => {
-	let paths = event.payload.paths;
-	for (const path of paths) {
-	    if (supportedModPackage(path)) {
-		await Logger.sendEvent("manual_download")
-		DownloadsManager.startDownload(path, path)
-		Hud.show("downloads-list")
-		await importMod(path)
-	    } else if (regexImageName(path)) {
-		let dir = await readDir(localPath + fileTerminator + terminatePath("store\\images") + fileTerminator)
-		await writeFile(localPath + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
-	    } else {
-		await confirm("Unsupported Format " + (path.includes("\.") ? path.split("\.").pop() : "None") + "! {Supported: .zip, .rar, .rpa}")
-	    }
-	}
-	setTimeout(async () => {
-	    await updateCoverImages()
-	}, 1000)
-    });
 
     Hud.ofId("update").addEventListener("mouseup", async () => {
 	AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)
@@ -2827,7 +2876,7 @@ async function onLoad() {
 		    path: getLauncher(currentEntry).getFunctions().location
 		});
 		getLauncher(currentEntry).getFunctions().item.remove();
-		delete getLauncher(currentEntry).getFunctions();
+		deleteLauncher(currentEntry);
 		showContainers(true)
 		gotoHomePage()
 	    }
@@ -3428,6 +3477,66 @@ async function onLoad() {
 	    }
 	}
     })
+}
+
+/**
+ * Called During Loading Stage;
+ * Sets up the observer
+ * @param {number} onLoadStartTime
+ * @returns {Promise<void>}
+ */
+
+async function setupObserver(onLoadStartTime) {
+    // Used for sidebar animations
+
+    observer = new IntersectionObserver((entries) => {
+	if (observerAwait) return
+	let toRemove = []
+	let toAdd = []
+	entries.forEach(entry => {
+	    if (entry.isIntersecting) {
+		toAdd.push(entry.target)
+	    } else {
+		toRemove.push(entry.target)
+	    }
+	});
+	observerAwait = true;
+	requestAnimationFrame(() => {
+	    for (const entry of toAdd) {
+		entry.classList.add("sidevisible")
+	    }
+	    for (const entry of toRemove) {
+		entry.classList.remove("sidevisible")
+	    }
+	    observerAwait = false;
+	})
+    })
+
+    // Initiates Sidebar Animations
+
+    document.querySelectorAll(".sidebutton2").forEach(element => observer.observe(element));
+    Logger.log("Finished Loading Observers. Took " + (Date.now() - onLoadStartTime) + "ms.")
+}
+
+/**
+ * Called Upon DOM On-Load
+ * @example ```javascript
+ * document.addEventListener('DOMContentLoaded', onLoad);
+ * ```
+ * @returns {Promise<void>}
+ */
+
+async function onLoad() {
+    let onLoadStartTime = Date.now();
+
+    Logger.log("Loading Observers");
+
+    PreventDefaults.init()
+    OSUtil.Init()
+    await SeasonsManager.init(CURRENT.SEASON)
+
+    await setupIPCListeners(onLoadStartTime)
+    await setupHTMListeners(onLoadStartTime)
 
     await getCurrentWindow().onFocusChanged(async (
 	{payload: isFocused}
@@ -3441,6 +3550,7 @@ async function onLoad() {
     });
 
     Logger.log("Finished Loading PT. 1 (" + (Date.now() - onLoadStartTime) + "ms).")
+    Hud.ofId("load-title-version").textContent = "/ " + CLIENT_VERSION
     Hud.setLoadingSubtitle("Waiting For Backend Response")
     await invoke("request_path")
 

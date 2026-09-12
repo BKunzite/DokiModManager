@@ -655,11 +655,9 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     }
     #[cfg(target_os = "macos")]
     chmod_x_directory(&PathBuf::from(&dir));
-    let mut launch_result = if (cfg!(target_os = "linux")) {
+    let mut launch_result = if cfg!(target_os = "linux") {
         Command::new(path)
-            .env_remove("DESKTOPINTEGRATION")
-            .env_remove("WEBKIT_DISABLE_DMABUF_RENDERER")
-            .env_remove("LD_PRELOAD")
+            .env_clear()
             .current_dir(&dir)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -683,15 +681,18 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 stamp(format!("Command failed with error:\n{}", stderr).as_str());
                 error = Some(format!("{}", stderr));
+                try_admin = true;
+                stamp("Failed to execute normally: running backup");
             }
         }
         Err(_) => {
             try_admin = true;
+            stamp("Failed to execute normally: running backup");
         }
     }
 
     #[cfg(windows)]
-    if try_admin {
+    if try_admin && Instant::now().duration_since(launch_time).as_secs() < 60 {
         app.emit("popup", StringData { text: "Running as normal user failed; re-running as admin. Do not give 'random mods' admin privileges. (3s)" }).expect("Popup Error");
         tokio::time::sleep(Duration::from_millis(3000)).await;
         launch_time = Instant::now();
@@ -715,13 +716,15 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     }
 
     #[cfg(target_os = "linux")]
-    if try_admin {
+    if try_admin && Instant::now().duration_since(launch_time).as_secs() < 60 {
+        stamp("Failed to execute normally: trying it as bash");
         app.emit("popup", StringData { text: "Running as script failed; trying to execute <file>.sh through bash. If it still doesnt run, this mod cannot be ran on linux." }).expect("Popup Error");
-        tokio::time::sleep(Duration::from_millis(3000)).await;
+        tokio::time::sleep(Duration::from_millis(1000)).await;
         launch_time = Instant::now();
 
         launch_result = Command::new("bash")
             .arg(path)
+            .env_clear()
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn();

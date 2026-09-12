@@ -14,9 +14,11 @@ class BatchObj {
 
     /**
      * @param {HTMLElement} element
+     * @returns {BatchObj}
      */
     append(element) {
         this.#frag.appendChild(element);
+        return this;
     }
 
     finalize() {
@@ -59,7 +61,7 @@ class DOMBatchObj {
             ? Hud.ofId(element)
             : element;
         if (elementObj === null) {
-            Logger.error("DOMBatch: Element not found!");
+            Logger.error("DOMBatch: Element '" + element + "' not found!");
             return null;
         }
         return new BatchObj(elementObj);

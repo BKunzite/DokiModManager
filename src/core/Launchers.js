@@ -1,4 +1,7 @@
+import Hud from "./utils/HTMLHelper";
+
 let launchers_list = {};
+let isGameRunning = false;
 
 export class LauncherAbstract {
     list = {};
@@ -16,6 +19,27 @@ export class LauncherAbstract {
     getFunctions() {
         return this.list;
     }
+}
+
+export function updateModCount() {
+    Hud.ofId("nummods").textContent = Object.keys(launchers_list).length.toString();
+}
+
+export function deleteLauncher(name) {
+    delete launchers_list[name];
+    updateModCount();
+}
+
+export function flagModLaunched() {
+    isGameRunning = true;
+}
+
+export function removeModLaunchedFlag() {
+    isGameRunning = false;
+}
+
+export function getIsLaunchedFlag() {
+    return isGameRunning;
 }
 
 export function addLauncher(name, launcher) {
