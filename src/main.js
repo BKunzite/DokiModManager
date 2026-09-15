@@ -1752,7 +1752,7 @@ async function saveProfileData() {
 	"profiles": sorted
     }
 
-    Logger.log(profiles_data, sorted)
+    Logger.log("profile data | sorted",profiles_data, sorted)
 
     writeTextFile(profilePath + fileTerminator + ".info.json", JSON.stringify(profiles_data, null, "\t")).then(_ => {
     });
@@ -1803,7 +1803,9 @@ async function loadCurrentProfileData(reload, reset_data) {
 	currentProfileData = Object.fromEntries(Object.entries(currentProfileData).sort((a, b) => parseInt(a[0]) - parseInt(b[0])));
 	concurrentProfileData = {}
     }
-    Logger.log(" should reload: " + reload + " file: " + currentProfile)
+
+    Logger.log("Should reload profile?: " + reload + "; File: " + currentProfile)
+
     if (reload) {
 	await delDir(currentGameDataPath);
 	await delDir(getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "game" + fileTerminator + "saves");
@@ -1818,7 +1820,6 @@ async function loadCurrentProfileData(reload, reset_data) {
 async function loadProfileData(self_data, upstream) {
     for (const f in self_data) {
 	const file = self_data[f]
-	Logger.log(typeof file)
 	if (typeof file === "object") {
 	    await mkdir(upstream + fileTerminator + f);
 	    await loadProfileData(file, upstream + fileTerminator + f)
@@ -1868,7 +1869,7 @@ async function delDir(path) {
 	return;
     }
     for (const file of await readDir(path)) {
-	Logger.log(path, file.name)
+	Logger.log("DELDIR!:", path, file.name)
 	if (file.isDirectory) {
 	    await delDir(path + fileTerminator + file.name)
 	}
@@ -2535,7 +2536,7 @@ async function setupHTMListeners(onLoadStartTime) {
 	Hud.hide("profile-bg")
     });
 
-    Hud.onClick("save-profile", async () => {
+    Hud.onClick("create-profile", async () => {
 	let newProfile = "Default 0";
 
 	while (Hud.exists("profile-" + newProfile)) {

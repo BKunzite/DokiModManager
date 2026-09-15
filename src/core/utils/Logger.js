@@ -9,9 +9,11 @@ const oldError = console.error;
 
 Logger.log = (...msg) => {
     batchedLogs.push(msg.join(" "));
-    oldLog(getTimeStamp(), msg.join(" "));
+    oldLog(getTimeStamp(), ...msg);
     addConstant(msg.join(" "), false, Date.now());
 };
+
+Logger.info = (...msg) => Logger.log(...msg);
 
 Logger.warn = (...msg) => {
     batchedLogs.push("(WARN) " + msg.join(" "));
@@ -43,6 +45,15 @@ Logger.tick = () => {
     invoke("sync_log", {msgs: temp}).then(() => {
     });
 };
+
+/**
+ * @deprecated
+ * @param args
+ * @constructor
+ */
+Logger.DEBUG_USE_ONLY = (...args) => {
+    oldLog(...args)
+}
 
 function getTimeStamp() {
     return "[" + new Date().toISOString().split("T")[1].replace("Z", "") + "]";
