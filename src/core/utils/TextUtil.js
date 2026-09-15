@@ -6,6 +6,7 @@ const SHOULD_ESCAPE_HTML_PATTERN = /["&'<>]/;
 const replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
 const replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
 const replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
+const nameFormatRegex = /\b(?:ddlc|renpy7mod|renpy8mod)\b\s*[-_\s]*|[-_]+|\s+/gi;
 export const STRINGS = {
     SPACE: " ",
     EMPTY: "",
@@ -64,6 +65,61 @@ export function htmlEscape(text) {
     return string;
 }
 
+/**
+ * Escapes HTML To Prevent Potential XSS Attacks and replaces newlines with line breaks
+ * @param {string} text HTML To Escape
+ * @returns {string} Escaped HTML Text
+ */
+export function formattedHtmlEscape(text) {
+    let match_case = SHOULD_ESCAPE_HTML_PATTERN.exec(text);
+    if (match_case === null) {
+        return text;
+    }
+
+    const startScan = match_case.index;
+    const length = text.length;
+    let string = "";
+    let lastIndex = 0;
+
+    for (let i = startScan; i < length; i++) {
+        let char = undefined;
+        switch (text.charCodeAt(i)) {
+            case 34: // Char: "
+                char = "&quot;";
+                break;
+            case 60: // Char: <
+                char = "&lt;";
+                break;
+            case 39: // Char: '
+                char = "&#039;";
+                break;
+            case 62: // Char: >
+                char = "&gt;";
+                break;
+            case 38: // Char: &
+                char = "&amp;";
+                break;
+            case 10: // Char: \n
+                char = "<br>";
+                break;
+            default:
+                break;
+        }
+
+        if (char !== undefined) {
+            const slice = text.slice(lastIndex, i);
+            string += slice + char;
+            lastIndex = i + 1;
+        }
+    }
+
+    if (lastIndex !== length - 1) {
+        string += text.slice(lastIndex, length - 1);
+    }
+
+    return string;
+}
+
 export function getFormattedDate() {
     const now = new Date();
 
@@ -92,9 +148,7 @@ export function getTextWidth(text, font) {
 }
 
 export function formatModName(text) {
-    return text.replace(/\b(ddlc|renpy7mod|renpy8mod)\b/gi, "")
-        .replace(/[-_]/g, " ")
-        .trim();
+    return text.replace(nameFormatRegex, " ").trim();
 }
 
 /**

@@ -51,7 +51,15 @@ import {
     updateModCount
 } from "./core/Launchers"
 import {openWebview} from "./core/utils/WebviewWindowUtil";
-import {formatModName, getFormattedDate, getTextWidth, htmlEscape, linkify, STRINGS} from "./core/utils/TextUtil";
+import {
+    formatModName,
+    formattedHtmlEscape,
+    getFormattedDate,
+    getTextWidth,
+    htmlEscape,
+    linkify,
+    STRINGS
+} from "./core/utils/TextUtil";
 import {
     CLIENT_START,
     CLIENT_THEME_ENUM,
@@ -756,9 +764,9 @@ async function requestDirectory(directoryPath = undefined) {
 		mods_to_complete++;
 		addMod(entry.name)
 		    .then((val) => {
-			finished.push(entry.name)
 			finished_mods++;
 			if (val === undefined) return
+			finished.push(entry.name)
 			working_mods_count++;
 			docFrag.append(val)
 		    })
@@ -937,7 +945,7 @@ async function addMod(name) {
 	configData.credits = modCredits;
 
 	if (modCredits !== undefined) {
-	    escapedModCredits = htmlEscape(modCredits).replaceAll("\n", "<br>")
+	    escapedModCredits = formattedHtmlEscape(modCredits)
 	}
 	await saveModData();
     }
@@ -974,7 +982,7 @@ async function addMod(name) {
 	await searchGame();
     } else {
 	gameExePath = configData.executable;
-	escapedModCredits = configData.credits !== undefined ? htmlEscape(configData.credits).replaceAll("\n", "<br>") : undefined;
+	escapedModCredits = configData.credits !== undefined ? formattedHtmlEscape(configData.credits) : undefined;
     }
 
     if (Hud.isVoid(configData.coverId)) {
@@ -983,7 +991,8 @@ async function addMod(name) {
 
     const shorthand = formatModName(name)
     const elementId = "mod-" + name
-    const char_code = shorthand.toLowerCase().charCodeAt(0) <= 122 ? shorthand.toLowerCase().charCodeAt(0) : 0
+    const indexLetter = shorthand.toLowerCase().charCodeAt(0)
+    const prefixCharacterIndex = indexLetter <= 122 ? indexLetter : 0
     const sidetext = document.createElement("header");
     const normalText = "<span style=\"font-family: Icon,serif\">&#60810;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
     const favoriteText = "<span style=\"font-family: Icon,serif\">&#60938;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
@@ -993,10 +1002,10 @@ async function addMod(name) {
 
     sidetext.classList.add("sidebutton");
     sidetext.id = elementId;
-    sidetext.style.order = char_code
+    sidetext.style.order = prefixCharacterIndex
 
     if (configData.favorite) {
-	sidetext.style.order = char_code - 122
+	sidetext.style.order = prefixCharacterIndex - 122
 	sidetext.classList.add("favorite")
     } else {
 	sidetext.classList.remove("favorite")
@@ -1004,7 +1013,7 @@ async function addMod(name) {
 
     if (configData.pinned) {
 	sidetext.classList.add("pinned")
-	sidetext.style.order = char_code - 244
+	sidetext.style.order = prefixCharacterIndex - 244
     } else {
 	sidetext.classList.remove("pinned")
     }
@@ -1025,9 +1034,9 @@ async function addMod(name) {
 	preload: {},
 	isFavorite: configData.favorite,
 	nameId: name.toLowerCase(),
-	getOrder: () => configData.pinned ? char_code - 244 : (configData.favorite ? char_code - 122 : char_code),
+	getOrder: () => configData.pinned ? prefixCharacterIndex - 244 : (configData.favorite ? prefixCharacterIndex - 122 : prefixCharacterIndex),
 	preloadImages: async () => {
-	    const list = getLauncher(name).getFunctions()
+	    const list = launcher.getFunctions()
 	    let images = 0;
 	    list.preload = {}
 
@@ -1057,7 +1066,7 @@ async function addMod(name) {
 	    return name
 	},
 	resetOrder: () => {
-	    sidetext.style.order = getLauncher(name).getFunctions().getOrder().toString()
+	    sidetext.style.order = launcher.getFunctions().getOrder().toString()
 	},
 	setPinned: async (pinnedState) => {
 	    if (pinnedState === undefined) {
@@ -1077,7 +1086,7 @@ async function addMod(name) {
 		sidetext.innerHTML = normalText
 	    }
 
-	    getLauncher(name).getFunctions().resetOrder()
+	    launcher.getFunctions().resetOrder()
 	    Hud.setPinned(configData.pinned)
 
 	    if (configData.pinned) {
@@ -1151,8 +1160,8 @@ async function addMod(name) {
 	    } else {
 		sidetext.innerHTML = normalText
 	    }
-	    getLauncher(name).getFunctions().isFavorite = configData.favorite;
-	    getLauncher(name).getFunctions().resetOrder()
+	    launcher.getFunctions().isFavorite = configData.favorite;
+	    launcher.getFunctions().resetOrder()
 	    await saveModData();
 	    Hud.ofId("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
 	},
@@ -1183,7 +1192,7 @@ async function addMod(name) {
 	    removeModLaunchedFlag();
 	    await saveModData();
 	    await saveConfig()
-	    await getLauncher(name).getFunctions().leftClick();
+	    await launcher.getFunctions().leftClick();
 	},
 	leftClick: async () => {
 	    let taskPromise;
@@ -1241,8 +1250,8 @@ async function addMod(name) {
 		    if (localEntry.name.startsWith("screenshot")) {
 			screenshots = true;
 
-			if (getLauncher(name).getFunctions().preload[localEntry.name] !== undefined) {
-			    frag.appendChild(getLauncher(name).getFunctions().preload[localEntry.name]);
+			if (launcher.getFunctions().preload[localEntry.name] !== undefined) {
+			    frag.appendChild(launcher.getFunctions().preload[localEntry.name]);
 			    continue;
 			}
 			images.push(
@@ -1358,17 +1367,16 @@ async function addMod(name) {
 
 async function getRenpy(dir) {
     let renpy = undefined;
-    const tld = (() => {
-	if (getOSType() === OS.TYPE.MAC) {
-	    return dir + terminatePath("/DDLC.app/Contents/Resources/autorun/renpy")
-	} else {
-	    return dir + fileTerminator + "renpy"
-	}
-    })()
+    const tld = dir +
+	(getOSType() === OS.TYPE.MAC ?
+	    terminatePath("/DDLC.app/Contents/Resources/autorun/renpy") :
+	    terminatePath("/renpy")
+	);
 
-    Logger.log("Fetching renpy for " + tld)
-    if (!await isDir(tld)) return undefined
-    const dirFiles = await readDir(tld);
+    Logger.log("Fetching Ren'Py for " + tld)
+    const optional = await Optional.readDir(tld);
+    if (optional.isNone()) return undefined
+    const dirFiles = await optional.getResult();
 
     for (const localEntry of dirFiles) {
 	switch (localEntry.name) {
@@ -2120,7 +2128,7 @@ async function launchDesktop() {
 	    holder.classList.add("console-warn")
 	}
 
-	text.innerHTML = htmlEscape(data.msg).replaceAll("\n", "<br>")
+	text.innerHTML = formattedHtmlEscape(data.msg)
 	timestamp.textContent = (difference < 1000 ? difference + "ms" : (difference > 60000 ? (difference / 60000).toFixed(2) + "m" : (difference / 1000).toFixed(2) + "s"));
 
 	holder.appendChild(text);

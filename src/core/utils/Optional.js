@@ -64,9 +64,8 @@ class ReadDirOption extends Option {
     }
 
     /**
-     * @return {DirEntry[]}
+     * @return Promise<DirEntry[]>
      */
-
     async getResult() {
 	if (super.isNone()) {
 	    throw new Error("Cannot get value of None");
