@@ -27,7 +27,7 @@ It incorporates UnRPYC to support these advanced features.
 # Getting Started
 ### Prerequisites
 - DDLC Zip File – [Download Here](https://teamsalvato.itch.io/ddlc)
-- Latest Release – [Download Here](https://github.com/BKunzite/Doki-Doki-Mod-Manager/releases)
+- Latest Release – [Latest Releases Here](https://github.com/BKunzite/DokiModManager/releases)
 - Modern-Ish Operating System 
   - Windows: 10/11
   - Linux: Most Common Distributions w/WebKit2GTK 4.1
@@ -43,14 +43,17 @@ It incorporates UnRPYC to support these advanced features.
 - You can load mods by clicking on "Set Install Location" on the home page and selecting your old mods folder
 
 ### How To Use
-- Run Installer (Kunzite Doki Doki Mod Manager_1.x.x_x64-setup.exe or Kunzite Doki Doki Mod Manager_1.x.x_x64_en-US.msi)
-  - For Linux Users, Use "Kunzite Doki Doki Mod Manager_1.x.x_amd64.deb", "Kunzite Doki Doki Mod Manager-1.x.x-1.x86_64.rpm", or "Kunzite Doki Doki Mod Manager_1.x.x_amd64.AppImage"
-- After that, run the resulting program
-- Select your language
-- If you are prompted to import a zip, click on it and select the DDLC Zip File downloaded from the [prerequisites](#prerequisites)
-- Click on "Install"
-- Continue with the built-in tutorial
-- After you complete the tutorial, you can then load your old mods using the [instructions above](#previous-mods)
+- Run The Installer (**_Kunzite Doki Doki Mod Manager_1.x.x_x64-setup.exe_** or _**Kunzite Doki Doki Mod Manager_1.x.x_x64_en-US.msi**_)
+  - For Linux Users, Use:<br>
+  _**Kunzite Doki Doki Mod Manager_1.x.x_amd64.deb**_ (for debian-based distros), <br>
+  _**Kunzite Doki Doki Mod Manager-1.x.x-1.x86_64.rpm**_ (for fedora-based distros), or <br>
+  _**Kunzite Doki Doki Mod Manager-x86_64.AppImage**_ (for arch/other distros)
+- After that, run the **program**
+- Select your **language**
+- If you are prompted to import a zip, **click on it and select the DDLC Zip File downloaded from the [prerequisites](#prerequisites)**
+- Click on **"Install"**
+- Continue with the **built-in tutorial**
+- After you complete the tutorial, you can then load your old mods using the **[instructions above](#previous-mods)**
 
 ### Custom Backgrounds & Themes
 
