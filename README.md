@@ -1,6 +1,6 @@
 ![Doki Doki Mod Manager 1.8.0 Artwork](Artwork/ddmm1_8_0.png)
 
-<div style="display: flex; align-items: center; gap: 1rem; justify-content: center">
+<div align="center">
 <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/bkunzite/dokimodmanager?style=for-the-badge">
 <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/bkunzite/dokimodmanager/total?style=for-the-badge">
 <a href="https://www.buymeacoffee.com/BKunzite" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style="height: 30px;width: 120px; transform: translateY(3px)" ></a>
