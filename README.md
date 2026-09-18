@@ -1,4 +1,4 @@
-prepa![Doki Doki Mod Manager 1.8.0 Artwork](Artwork/ddmm1_8_0.png)
+![Doki Doki Mod Manager 1.8.0 Artwork](Artwork/ddmm1_8_0.png)
 
 <div style="display: flex; align-items: center; gap: 1rem; justify-content: center">
 <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/bkunzite/dokimodmanager?style=for-the-badge">
