@@ -41,12 +41,12 @@ export function getOSType() {
 
 class DefaultClass {
     Init() {
-
         Logger.log("Running on OS.TYPE-" + getOSType().toUpperCase());
         if (getOSType() === OS.TYPE.LINUX || getOSType() === OS.TYPE.MAC) {
             /*
-                      Reloading the webpage is broken on webkit! We love webkit!
-                   */
+                Reloading the webpage is broken on webkit! We love webkit!
+            */
+
             window.addEventListener("keydown", (e) => {
                 if (e.key === "r" && e.ctrlKey) {
                     e.preventDefault();

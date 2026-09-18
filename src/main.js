@@ -288,9 +288,9 @@ function onWindowFocusChanged(focus) {
  */
 
 async function loadConfig(path) {
-    let configPath = path + fileTerminator + "client-config.json";
-    let hasConfig = await isExist(configPath)
-    let hostname = await invoke("get_host_name", {})
+    const configPath = path + fileTerminator + "client-config.json";
+    const hasConfig = await isExist(configPath)
+    const hostname = await invoke("get_host_name", {})
     let configData = await new ProgramData(hostname);
 
     Logger.log("Local Path: " + path)
@@ -314,7 +314,7 @@ async function loadConfig(path) {
 	    Hud.ofId("changelog-text").textContent = "File: " + configPath + "\n\n" + e + "\n\nData:\n" + (await readTextFile(configPath)).split("\n").map((line, index) => index + "|  " + line).join("\n")
 	    Hud.ofId("changelog-update").textContent = TranslationUtil.of("update")
 	    Hud.ofId("changelog-ignore").textContent = TranslationUtil.of("end")
-	    Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
+	    Hud.ofId("changelog-ignore").style.setProperty("right", "calc(2rem + " + Hud.getBoundingBoxOf("changelog-update").width + "px)")
 
 	    let response = await new Promise(resolve => {
 		Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -856,7 +856,7 @@ async function addMod(name) {
     // Create SideButton And Load Config
 
     let hasConfig = false;
-    let configPath = selectedPath + fileTerminator + name + fileTerminator + ".ddmm.config.json";
+    const configPath = selectedPath + fileTerminator + name + fileTerminator + ".ddmm.config.json";
     let configData = {
 	author: TranslationUtil.of("unknown"),
 	time: 0,
@@ -2281,32 +2281,36 @@ async function setupIPCListeners(onLoadStartTime) {
 
     await listen("pathRespond", async (event) => {
 	if (!loadingStage2) {
+	    const payloadPath = event.payload.path;
+	    const releaseNotes = await getLatest();
+	    const newestReleaseVersion = releaseNotes.split("\n")[0]
+	    let forcedEnglishTranslation = false;
+
+	    loadingStage2 = true;
 	    Hud.setLoadingSubtitle("Starting Second Stage")
 	    Logger.log("Start Loading Pt. 2 (" + (Date.now() - onLoadStartTime) + "ms).")
 
-	    let payloadPath = event.payload.path;
-	    let newestReleaseVersion = await getLatest();
-	    let forcedEnglishTranslation = false;
 	    await loadConfig(event.payload.local_path)
-	    loadingStage2 = true;
 
 	    Logger.log("Version Check (" + (Date.now() - onLoadStartTime) + "ms).")
 
-	    if (newestReleaseVersion.split("\n")[0] !== CLIENT_VERSION) {
+	    if (newestReleaseVersion !== CLIENT_VERSION) {
 		Logger.warn("NOT UP TO DATE: LATEST_ONLINE_VERSION=" + newestReleaseVersion + " > " + CLIENT_VERSION + "=CLIENT_VERSION")
 		Hud.ofId("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
 		if (navigator.onLine) {
 		    if (TranslationUtil.getLanguage() === STRINGS.EMPTY) {
 			forcedEnglishTranslation = true;
 		    }
+
 		    loadTranslation(TranslationUtil.getLanguage(), true)
 
 		    Hud.show("changelog")
-		    Hud.ofId("changelog-title").textContent = "New Update! | " + newestReleaseVersion.split("\n")[0]
-		    Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newestReleaseVersion.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
+		    Hud.ofId("changelog-title").textContent = "New Update! | " + newestReleaseVersion
+		    Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(releaseNotes.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
 		    Hud.ofId("changelog-update").textContent = TranslationUtil.of("update")
 		    Hud.ofId("changelog-ignore").textContent = TranslationUtil.of("ignore")
-		    Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
+		    Hud.ofId("changelog-ignore").style.setProperty("right", "calc(2rem + " + Hud.getBoundingBoxOf("changelog-update").width + "px)")
+		    Logger.info(Hud.ofId("changelog-ignore").style.getPropertyValue("right"))
 
 		    let response = await new Promise(resolve => {
 			Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -2337,11 +2341,11 @@ async function setupIPCListeners(onLoadStartTime) {
 		    await saveConfig()
 
 		    Hud.show("changelog")
-		    Hud.ofId("changelog-title").textContent = "Update Complete! | " + newestReleaseVersion.split("\n")[0]
-		    Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(newestReleaseVersion.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
 		    Hud.hide("changelog-ignore")
+		    Hud.ofId("changelog-title").textContent = "Update Complete! | " + newestReleaseVersion
+		    Hud.ofId("changelog-text").innerHTML = linkify(htmlEscape(releaseNotes.split("\n").slice(1).join("\n"))).replace(/\r?\n/g, "<br>")
 		    Hud.ofId("changelog-update").textContent = TranslationUtil.of("ignore")
-		    Hud.ofId("changelog-ignore").style.right = "calc(2rem + " + Hud.ofId("changelog-update").width + "px)"
+		    Hud.ofId("changelog-ignore").style.setProperty("right", "calc(2rem + " + Hud.getBoundingBoxOf("changelog-update").width + "px)")
 
 		    await new Promise(resolve => {
 			Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -2363,10 +2367,12 @@ async function setupIPCListeners(onLoadStartTime) {
 		Hud.ofId("language-list").classList.remove("language-list-hide")
 		Hud.ofId("language-list").classList.add("language-list-force")
 		Hud.ofId("loader").appendChild(Hud.ofId("language-list"))
+
 		let interval;
 		await new Promise(resolve => interval = setInterval(() => {
 		    if (TranslationUtil.getLanguage() !== STRINGS.EMPTY) {
 			clearInterval(interval)
+			interval = null;
 			resolve()
 		    }
 		}, 100))
@@ -2381,18 +2387,21 @@ async function setupIPCListeners(onLoadStartTime) {
 	    Logger.log("DDLC Check (" + (Date.now() - onLoadStartTime) + "ms).")
 
 	    if (!await isDir(localPath + fileTerminator + "store" + fileTerminator + "ddlc")) {
-		Hud.setLoadingSubtitle(TranslationUtil.of("select_zip"))
+		Hud.unsafe_setLoadingSubtitle(linkify(TranslationUtil.of("select_zip")))
 		Hud.show("select-zip")
-		let listener = async () => {
+
+		let listener = async (e) => {
+		    e.preventDefault();
 		    await openUrl("https://ddlc.moe")
 		};
-		Hud.ofId("loadingsub").addEventListener("mouseup", listener)
 
-		while (!await isDir(localPath + fileTerminator + "store" + fileTerminator + "ddlc")) {
+		Hud.ofId("loadingsub").addEventListener("click", listener)
+
+		while (!ddlcSelected) {
 		    await new Promise(resolve => setTimeout(resolve, 1000))
 		}
 
-		Hud.ofId("loadingsub").removeEventListener("mouseup", listener)
+		Hud.ofId("loadingsub").removeEventListener("click", listener)
 	    }
 
 	    Hud.ofId("select-zip").remove();
@@ -2832,8 +2841,6 @@ async function setupHTMListeners(onLoadStartTime) {
 	    await importMod(alertPath)
 	}
     })
-
-    await setupObserver(onLoadStartTime)
 
     Logger.log("Loading Loading Screen")
 
@@ -3538,15 +3545,18 @@ async function setupObserver(onLoadStartTime) {
 async function onLoad() {
     let onLoadStartTime = Date.now();
 
-    Logger.log("Loading Observers");
+    Logger.log("Initializing Launcher.");
 
     PreventDefaults.init()
     OSUtil.Init()
     await SeasonsManager.init(CURRENT.SEASON)
 
+    Logger.log("Initializing Listeners. (" + (Date.now() - onLoadStartTime) + "ms).");
+
     await setupIPCListeners(onLoadStartTime)
     await setupHTMListeners(onLoadStartTime)
-
+    await setupObserver(onLoadStartTime)
+    
     await getCurrentWindow().onFocusChanged(async (
 	{payload: isFocused}
     ) => {

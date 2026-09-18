@@ -67,9 +67,9 @@ function addConstant(msg, isWarn, timestamp) {
     });
 }
 
-export default Logger;
-
 console.log = (...args) => Logger.log("(Silent)", getTimeStamp(), ...args);
 console.warn = (...args) => Logger.warn("(SilentWarn)", getTimeStamp(), ...args);
 
 Logger.log("[Logger.js/MARKER] Debugger Attached.");
+
+export default Logger;

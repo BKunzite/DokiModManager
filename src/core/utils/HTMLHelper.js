@@ -188,6 +188,15 @@ class HTMLHelperObject {
     }
 
     /**
+     * Set Loading SubTitle
+     * @param {string} subtitle
+     */
+
+    unsafe_setLoadingSubtitle(subtitle) {
+        this.ofId("loadingsub").innerHTML = subtitle
+    }
+
+    /**
      * Gets The Bounding Box For An Element Id
      * @param {string} elementId
      * @return DOMRect

@@ -37,8 +37,7 @@ class Christmas {
             snowflake.style.width = size + "px";
             snowflake.style.height = size + "px";
             snowflake.classList.add("snowflake");
-            snowflake.style.transition = "top " + speed + "s linear, rotate " +
-                speed + "s ease";
+            snowflake.style.transition = "top " + speed + "s linear, rotate " + speed + "s ease";
             snowflake.style.rotate = Math.floor(Math.random() * 360) + "deg";
             snowflake.style.opacity = (Math.random() * 0.5 + 0.5).toString();
             document.body.appendChild(snowflake);
