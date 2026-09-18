@@ -13,7 +13,7 @@ pub fn is_archive_game_folder(
         let mut name = strip_slash_prefix(entry.name());
 
         if name.starts_with(tld) {
-            name = strip_slash_prefix(name.replace(tld, "").as_str());
+            name = strip_slash_prefix(name.replacen(tld, "", 1).as_str());
         }
 
         if is_game_folder(&name) && !name.contains(std::path::MAIN_SEPARATOR) {
@@ -125,7 +125,7 @@ pub fn extract_archive_without_tld(
         let mut name = strip_slash_prefix(entry.name());
 
         if name.starts_with(tld) {
-            name = strip_slash_prefix(name.replace(tld, "").as_str());
+            name = strip_slash_prefix(name.replacen(tld, "", 1).as_str());
         }
 
         let path = target_dir.join(name);

@@ -2109,6 +2109,7 @@ async function updateClient() {
 }
 
 async function launchDesktop() {
+    previous_app.unmount();
     previous_app = createApp(Desktop)
     previous_app.mount("#app");
     const logs = Logger.instant()
@@ -2310,7 +2311,6 @@ async function setupIPCListeners(onLoadStartTime) {
 		    Hud.ofId("changelog-update").textContent = TranslationUtil.of("update")
 		    Hud.ofId("changelog-ignore").textContent = TranslationUtil.of("ignore")
 		    Hud.ofId("changelog-ignore").style.setProperty("right", "calc(2rem + " + Hud.getBoundingBoxOf("changelog-update").width + "px)")
-		    Logger.info(Hud.ofId("changelog-ignore").style.getPropertyValue("right"))
 
 		    let response = await new Promise(resolve => {
 			Hud.ofId("changelog-update").addEventListener("mouseup", async () => {
@@ -3583,5 +3583,7 @@ async function onLoad() {
     }, 2000)
 }
 
-createApp(App).mount("#app");
+previous_app = createApp(App)
+previous_app.mount("#app");
+
 document.addEventListener('DOMContentLoaded', onLoad);
