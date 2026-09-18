@@ -1,10 +1,10 @@
-# Doki Doki Mod Manager
+prepa![Doki Doki Mod Manager 1.8.0 Artwork](Artwork/ddmm1_8_0.png)
 
-![Doki Doki Mod Manager 1.7.0 Artwork](Artwork/ddmm1.7.0.png)
-
-[![Written by Human, Not by AI](https://img.shields.io/badge/Written%20by%20Human-Not%20by%20AI-5B20B3?labelColor=FFF&style=for-the-badge)](https://notbyai.fyi)
-![GitHub last commit](https://img.shields.io/github/last-commit/bkunzite/DokiModManager?display_timestamp=committer&style=for-the-badge&label=Last%20Update%20&color=violet)
-<a href="https://www.buymeacoffee.com/bkunzite" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-yellow.png" alt="Buy Me A Coffee" height="28" width="119"></a>
+<div style="display: flex; align-items: center; gap: 1rem; justify-content: center">
+<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/bkunzite/dokimodmanager?style=for-the-badge">
+<img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/bkunzite/dokimodmanager/total?style=for-the-badge">
+<a href="https://www.buymeacoffee.com/BKunzite" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style="height: 30px;width: 120px; transform: translateY(3px)" ></a>
+</div>
 
 ## Summary
 Doki Doki Mod Manager is a mod manager for Doki Doki Literature Club that uses Rust + Tauri.
@@ -27,8 +27,17 @@ It incorporates UnRPYC to support these advanced features.
 ### Prerequisites
 - DDLC Zip File – [Download Here](https://teamsalvato.itch.io/ddlc)
 - Latest Release – [Download Here](https://github.com/BKunzite/Doki-Doki-Mod-Manager/releases)
-- Modern-Ish Operating System (Windows 10/11, Linux w/WebKit2GTK 4.1, (Later) macOS BigSur 11 (or newer, with an Mx chip (M1, M2, etc.)))
-
+- Modern-Ish Operating System 
+  - Windows: 10/11
+  - Linux: Most Common Distributions w/WebKit2GTK 4.1
+  - MacOS: BigSur 11 with a M1, M2, etc.
+    MacOS Support Goes Into Alpha (With a caveat)!
+    - The MacOS app will not be signed.
+      To be signed, I have to pay a $99/yr subscription.
+      So for now, the app will not be signed.
+      This means you have to allow the app through gatekeeper
+      Follow this guide to allow the app through gatekeeper:
+      https://tinyurl.com/4cjw2md7
 ### Previous Mods
 - You can load mods by clicking on "Set Install Location" on the home page and selecting your old mods folder
 

@@ -657,7 +657,9 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     chmod_x_directory(&PathBuf::from(&dir));
     let mut launch_result = if cfg!(target_os = "linux") {
         Command::new(path)
-            .env_clear()
+            .env_remove("DESKTOPINTEGRATION")
+            .env_remove("WEBKIT_DISABLE_DMABUF_RENDERER")
+            .env_remove("LD_PRELOAD")
             .current_dir(&dir)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -718,13 +720,14 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     #[cfg(target_os = "linux")]
     if try_admin && Instant::now().duration_since(launch_time).as_secs() < 60 {
         stamp("Failed to execute normally: trying it as bash");
-        app.emit("popup", StringData { text: "Running as script failed; trying to execute <file>.sh through bash. If it still doesnt run, this mod cannot be ran on linux." }).expect("Popup Error");
         tokio::time::sleep(Duration::from_millis(1000)).await;
         launch_time = Instant::now();
 
         launch_result = Command::new("bash")
+            .env_remove("DESKTOPINTEGRATION")
+            .env_remove("WEBKIT_DISABLE_DMABUF_RENDERER")
+            .env_remove("LD_PRELOAD")
             .arg(path)
-            .env_clear()
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn();

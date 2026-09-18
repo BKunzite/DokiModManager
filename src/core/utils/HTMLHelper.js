@@ -25,6 +25,15 @@ class HTMLHelperObject {
     }
 
     /**
+     * Returns Whether A Function Is Async or Not
+     * @param func
+     * @return {boolean}
+     */
+    isFunctionAsync(func) {
+        return func.constructor.name === "AsyncFunction"
+    }
+
+    /**
      * vals can include a modifier
      *
      * by default, it is ```HTMLHelper.conditionals.OR```

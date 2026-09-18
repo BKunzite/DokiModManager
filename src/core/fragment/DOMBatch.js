@@ -1,5 +1,6 @@
 import Hud from "../utils/HTMLHelper";
 import Logger from "../utils/Logger";
+import HTMLHelper from "../utils/HTMLHelper";
 
 class BatchObj {
     #frag = document.createDocumentFragment();
@@ -44,7 +45,7 @@ class DOMBatchObj {
             return;
         }
 
-        if (func.constructor.name === "AsyncFunction") {
+        if (HTMLHelper.isFunctionAsync(func)) {
             func(frag).then(() => elementObj.appendChild(frag));
         } else {
             func.call(this, frag);
