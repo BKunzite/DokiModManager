@@ -79,5 +79,6 @@ if [ -n "$new_appimage" ]; then
     echo "patched AppImage ready: $out_dir/$(basename "$new_appimage")"
 fi
 
+rm "../target/release/bundle/appimage/Kunzite Doki Doki Mod Manager.AppDir/usr/lib/libreadline.so.8"
 
 echo "done."
