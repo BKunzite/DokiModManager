@@ -9,10 +9,9 @@
 
 ## Summary
 Doki Doki Mod Manager is a mod manager for Doki Doki Literature Club that uses Rust + Tauri.
-The premise behind this mod manager is that it allows you to seamlessly install mods, with its unique ability to install mods directly from its interface, rather than having to download them from your browser and import them manually.
-It also comes with many languages, heavy customization options, Discord Rich Presence integration, and profiles. Profiles allow you to have backup save data and to be able to transfer them from PC to PC.
-It also allows you to make new save data slots.
-It incorporates UnRPYC to support these advanced features.
+The core concept behind this mod manager is that it allows you to seamlessly install mods with its unique ability to install mods directly from the internet, rather than having to download them from your browser and manually import.
+It also supports many different languages, heavy customization options, Discord Rich Presence integration, and profiles. Profiles allow you to back up and save data, create a new playthrough, or transfer them from PC to PC.
+Doki Doki Mod Manager incorporates UnRPYC to support these advanced features.
 
 # Features
 + Discord RPC
@@ -76,20 +75,39 @@ Doki Doki Mod Manager, whilst open, will constantly scan downloads for newly dow
 | Docker Integration                    | 2 - 3 Week(s) | &#9744;    |
 
 MacOS Support Will Be Included In 1.8.0
-<br> Rust Refactor Needs To Be Done Because Of Code Debt
-<br> TypeScript Migration Should Be Done To Improve Development Speeds
 <br> Resizing Might Be Done To Support More Systems
 <br> Docker Will Likely Not Be Added Unless Requested By A Majority
 
 # Support For Non-Windows-Based Operating Systems
 
 ### macOS (BigSur 11 and newer with an Mx chip (M1, M2, etc.))
-There are now plans for Mac support this summer/fall. MacOS Support should be available in the 1.8.0-release update.
-The linux build will go outside of beta once 2.1.0 (26.xx.xx/27.xx.xx) comes out.
+The macOS build is currently in alpha. Expect bugs to come from this version.
+The macOS build will go outside of beta once 2.1.0 (26.xx.xx/27.xx.xx) comes out.
+#### Known MacOS Issues:
+- WebGTK rendering artifacts
+- Downloads Randomly Not Starting (WebGTK Issue)
+  - You might have to just import the mod ZIP file
+    downloaded from your browser
+- There is no Update System for MacOS, Update Manually Via GitHub
+- Some Mods May Not Load (Not all mods support linux)
+- Non-Resizeable Window (A full UI update would have to be done)
+  - This may cause an issue for tiling managers
 
 ### Linux-Based Operating Systems
 The linux build is currently in beta. Expect bugs to come from this version.
 The linux build will go outside of beta once 2.0.0 (26.xx.xx/27.xx.xx) comes out.
+#### Known Linux Issues:
+- WebGTK rendering artifacts
+- Downloads Randomly Not Starting (WebGTK Issue)
+  - You might have to just import the mod ZIP file
+    downloaded from your browser
+- Current Update System May Be Broken, If So, Update Manually Via GitHub
+- Some Mods May Not Load (Not all mods support linux)
+- Non-Resizeable Window (A full UI update would have to be done)
+  - This may cause an issue for tiling managers
+- Slow Loading Times
+- No Window Blur Transparency Support
+- Non-Debian Users May Have Other Issues
 
 # Credits
 

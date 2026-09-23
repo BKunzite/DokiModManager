@@ -57,10 +57,12 @@ use crate::hash::get_file_hash;
 use constants::*;
 use simple_logger::*;
 
-static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
 static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
 static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
 static DOWNLOAD_STATE: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
+
+#[cfg(not(target_os = "windows"))]
+static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
 
 #[cfg(target_os = "linux")]
 static PENDING_FALLBACKS: OnceLock<Mutex<HashMap<String, oneshot::Sender<()>>>> = OnceLock::new();
@@ -829,8 +831,9 @@ fn version_f32(s: &str) -> Option<f32> {
 fn set_playing(name: &str) {
     discord_rpc::set_activity(&format!("Playing '{}\n' Mod", name));
 }
-#[tauri::command]
-async fn update(app: AppHandle, close: bool) {
+
+#[cfg(not(target_os = "windows"))]
+async fn no_auto_update(app: AppHandle, close: bool) {
     open::that(RELEASES_URL).expect("Open Release URL Failed");
     if close {
         app.exit(404);
@@ -1634,6 +1637,9 @@ async fn update_exe() {
 
     #[cfg(target_os = "linux")]
     update_linux_binary().await;
+
+    #[cfg(target_os = "macos")]
+    no_auto_update();
 }
 
 #[cfg(target_os = "linux")]
@@ -1704,37 +1710,38 @@ async fn update_linux_binary() {
 
     match install_info.kind {
         InstallType::Appimage => {
-            println!("Updating DokimodManager - AppImage");
-            let resp = reqwest::get(LATEST_ARTIFACT_LINUX_APP)
-                .await
-                .expect("Failed to download latest");
-            if exists(get_current_dir().join("dokimodmanager-new.AppImage")).unwrap() {
-                remove_file(get_current_dir().join("dokimodmanager-new.AppImage")).unwrap();
-            }
-            let mut out =
-                File::create("dokimodmanager-new.AppImage").expect("Failed to create file");
-            out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
-                .unwrap();
-
-            let script2 = RESOURCES
-                .get_file("update_app.sh")
-                .expect("Failed to get script path");
-
-            let update_script2 = script2.contents_utf8().unwrap();
-            if exists(get_current_dir().join("update_app.sh")).unwrap() {
-                remove_file(get_current_dir().join("update_app.sh")).unwrap();
-            }
-            let mut update_script_path2 =
-                File::create(get_current_dir().join("update_app.sh")).unwrap();
-            update_script_path2
-                .write_all(update_script2.as_bytes())
-                .unwrap();
-            run_solo_proc_linux(
-                get_current_dir()
-                    .join("update_app.sh")
-                    .display()
-                    .to_string(),
-            );
+            no_auto_update();
+            // println!("Updating DokimodManager - AppImage");
+            // let resp = reqwest::get(LATEST_ARTIFACT_LINUX_APP)
+            //     .await
+            //     .expect("Failed to download latest");
+            // if exists(get_current_dir().join("dokimodmanager-new.AppImage")).unwrap() {
+            //     remove_file(get_current_dir().join("dokimodmanager-new.AppImage")).unwrap();
+            // }
+            // let mut out =
+            //     File::create("dokimodmanager-new.AppImage").expect("Failed to create file");
+            // out.write_all(&resp.bytes().await.expect("Failed to write bytes"))
+            //     .unwrap();
+            //
+            // let script2 = RESOURCES
+            //     .get_file("update_app.sh")
+            //     .expect("Failed to get script path");
+            //
+            // let update_script2 = script2.contents_utf8().unwrap();
+            // if exists(get_current_dir().join("update_app.sh")).unwrap() {
+            //     remove_file(get_current_dir().join("update_app.sh")).unwrap();
+            // }
+            // let mut update_script_path2 =
+            //     File::create(get_current_dir().join("update_app.sh")).unwrap();
+            // update_script_path2
+            //     .write_all(update_script2.as_bytes())
+            //     .unwrap();
+            // run_solo_proc_linux(
+            //     get_current_dir()
+            //         .join("update_app.sh")
+            //         .display()
+            //         .to_string(),
+            // );
         }
         InstallType::Deb => {
             println!("Updating DokimodManager - Debian");
@@ -2110,7 +2117,6 @@ pub async fn run() {
             import_mod,
             delete_path,
             rename_dir,
-            update,
             set_ddlc_zip,
             update_exe,
             tracker,
