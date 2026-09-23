@@ -4,6 +4,8 @@ import {USE_CACHED_IMAGING} from "../Constants";
 
 let cache = {};
 let localPreloadCovers = {};
+let localPreloadCoverShorts = {}
+let localPreloadCoverShortsInverse = {}
 let localCovers = [];
 let cache_size = 0;
 let cache_events = {
@@ -56,8 +58,22 @@ class PreloadImageCover {
 	return this;
     }
 
-    set(id, val) {
+    set(id, val, short) {
 	localPreloadCovers[id] = val;
+	localPreloadCoverShorts[id] = short;
+	localPreloadCoverShortsInverse[short] = id;
+    }
+
+    convertToShort(id) {
+	return localPreloadCoverShorts[id];
+    }
+
+    convertFromShort(short) {
+	return localPreloadCoverShortsInverse[short];
+    }
+
+    getOfShort(short) {
+	return localPreloadCovers[this.convertFromShort(short)]
     }
 
     get(id) {
@@ -180,6 +196,8 @@ EXPORTED
 
 export const covers = new ImageCover();
 export const preloadCovers = new PreloadImageCover();
+export const coverIdToShortMap = new Map();
+export const shortToCoverIdMap = new Map();
 
 export function deref(url) {
     if (USE_CACHED_IMAGING && cache[url] !== undefined) return;

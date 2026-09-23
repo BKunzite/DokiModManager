@@ -28,9 +28,10 @@ import Desktop from "./Desktop.vue";
 //// Utils
 // ----- INTERNAL ------- //
 import {
+    coverIdToShortMap,
     covers,
     deref,
-    getImage,
+    getImage, shortToCoverIdMap,
     lazyDeref,
     preloadCovers,
     preloadImageObject,
@@ -219,10 +220,12 @@ async function syncCovers() {
 
     for (const cover of covers.asList()) {
 	imagePrepared++
+	coverIdToShortMap.set(covers.indexOf(cover), cover)
+	shortToCoverIdMap.set(cover, covers.indexOf(cover))
 	new Promise(async (resolve, reject) => {
 	    try {
 		const img = await preloadImageObject(cover)
-		preloadCovers.set(cover, img)
+		preloadCovers.set(cover, img, cover)
 		resolve()
 	    } catch (e) {
 		reject(e)
@@ -234,18 +237,21 @@ async function syncCovers() {
 	})
     }
 
-    const pathOptional = await Optional.readDir(localPath + imageLocation)
+    const pathPrefix = localPath + imageLocation;
+    const pathOptional = await Optional.readDir(pathPrefix)
 
     if (pathOptional.isSome()) {
 	for (const image of await pathOptional.getResult()) {
 	    if (regexImageName(image.name)) {
 		const path = localPath + imageLocation + fileTerminator + image.name;
 		covers.add(path)
+		coverIdToShortMap.set(covers.indexOf(path), image.name)
+		shortToCoverIdMap.set(image.name, covers.indexOf(path))
 		imagePrepared++
 		new Promise(async (resolve, reject) => {
 		    try {
 			const img = await preloadImageObject(path)
-			preloadCovers.set(path, img)
+			preloadCovers.set(path, img, image.name)
 			resolve()
 		    } catch (e) {
 			reject(e)
@@ -340,7 +346,7 @@ async function loadConfig(path) {
 
     configData
 	.default("theme", "NATSUKI")
-	.default("coverId", 0)
+	.default("coverId", "DefaultCovers/house.webp")
 	.default("totalTime", 0)
 	.default("tutorial", false)
 	.default("version", "0.0.0-release")
@@ -424,7 +430,7 @@ async function updateCoverImages(first_time = false) {
 		if (currentEntry !== STRINGS.EMPTY && e.button === 0) {
 		    await getLauncher(currentEntry).getFunctions().setCover(covers.indexOf(cover));
 		} else if (e.button === 0) {
-		    currentBackgroundCover = covers.indexOf(cover)
+		    currentBackgroundCover = preloadCovers.convertToShort(cover);
 		    await setCover(currentBackgroundCover)
 		}
 		AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)
@@ -458,7 +464,7 @@ async function updateCoverImages(first_time = false) {
 	    cover_text.innerHTML = "&#60450;"
 
 	    cover_img.addEventListener("mouseup", () => {
-		currentBackgroundCover = i;
+		currentBackgroundCover = coverIdToShortMap.get(i);
 		setCover(currentBackgroundCover)
 	    })
 
@@ -554,15 +560,20 @@ async function importMod(path) {
 
 /**
  * Sets The Current Cover/Background
- * @param {number} id Integer - Index of the cover
+ * @param {number | string} id Integer - Index of the cover
  * @returns {Promise<void>}
  */
 
 async function setCover(id) {
-    if (id > covers.length() - 1) {
-	id = 0;
+    if (!isNaN(id)) {
+	if (id > covers.length() - 1) {
+	    id = 0;
+	} else if (id < 0) {
+	    id = 0;
+	}
     }
-    let image = preloadCovers.ofCover(id).src;
+
+    let image = isNaN(id) ? preloadCovers.getOfShort(id).src : preloadCovers.ofCover(id).src
     if (image === undefined) {
 	image = await getImage(id)
     }
@@ -874,7 +885,13 @@ async function addMod(name) {
     let modCredits;
     let escapedModCredits;
     let saveModData = async () => {
-	const contents = JSON.stringify(configData, null, "\t");
+	const copyConfigData = structuredClone(configData);
+	if (coverIdToShortMap.has(configData.coverId)) {
+	    copyConfigData.coverId = coverIdToShortMap.get(configData.coverId);
+	}
+	Logger.info(coverIdToShortMap,coverIdToShortMap.has(configData.coverId) ? coverIdToShortMap.get(configData.coverId) : shortToCoverIdMap.get(configData.coverId) ?? "nul", copyConfigData)
+
+	const contents = JSON.stringify(copyConfigData, null, "\t");
 	await writeTextFile(configPath, contents);
     };
 
@@ -937,7 +954,7 @@ async function addMod(name) {
 		Logger.warn("No functional executable found in " + modDirectory)
 		throw new Error("No executable found!\nPath: " + modDirectory + "\nExecutable: " + gameExePath + "\nFiles: " + localFiles.map(v => v.name).join(", "))
 	    } else {
-		console.warn("Using DDLC Executable For Mod: " + name + " (" + gameExePath + ")")
+		Logger.warn("Using DDLC Executable For Mod: " + name + " (" + gameExePath + ")")
 	    }
 	}
 
@@ -959,10 +976,28 @@ async function addMod(name) {
 
     if (hasConfig) {
 	let contents = await readTextFile(configPath);
+	let migrateCover = false;
 	try {
 	    let c = JSON.parse(contents);
 	    for (const key in c) {
-		configData[key] = c[key];
+		const value = c[key];
+		if (key === "coverId") {
+		    if (!isNaN(parseInt(value))) {
+			migrateCover = true;
+			configData[key] = value;
+			continue;
+		    }
+
+		    configData[key] = shortToCoverIdMap.get(value) ?? 0;
+		} else {
+		    configData[key] = value;
+		}
+	    }
+
+	    if (migrateCover && coverIdToShortMap.has(configData.coverId)) {
+		Logger.info("Migrated Cover ID: " + configData.coverId + " -> " + coverIdToShortMap.get(configData.coverId))
+		configData.coverId = coverIdToShortMap.get(configData.coverId);
+		await saveModData();
 	    }
 	} catch (e) {
 	    Logger.warn("Failed To Parse Config File For Mod: " + configPath)
@@ -1113,11 +1148,13 @@ async function addMod(name) {
 	    Hud.show("pill")
 	    Hud.show("pill-files")
 	    Hud.show("pill-contains")
+
 	    if (!Hud.isVoid(covers.get(configData.coverId), preloadCovers.ofCover(configData.coverId))) {
 		Hud.ofId("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(configData.coverId).src + '")';
 	    } else {
 		Hud.ofId("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(0).src + '")';
 	    }
+
 	    setTimeout(async () => {
 		AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)
 		launch_time = Date.now();
@@ -2244,7 +2281,7 @@ async function setupIPCListeners(onLoadStartTime) {
 	download.setPercent(0)
 	download.setUpdateString("Importing")
 
-	console.log(url, path)
+	Logger.info(url, path)
 
 	DownloadsManager.swap(url, path)
 

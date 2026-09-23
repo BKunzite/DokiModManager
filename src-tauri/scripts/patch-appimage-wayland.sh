@@ -79,4 +79,5 @@ if [ -n "$new_appimage" ]; then
     echo "patched AppImage ready: $out_dir/$(basename "$new_appimage")"
 fi
 
+
 echo "done."

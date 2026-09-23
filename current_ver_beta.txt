@@ -8,6 +8,19 @@ Translations
  - Language Translations
  - Report Button Auto Resizes
 
+CoverID Migration
+    - CoverID will transition from saving as a
+        number to saving as an image name
+
+    - This will be done automatically, but it means
+        that the first time you launch the program
+        after updating, it will take a little longer to
+        launch.
+
+    - This should fix covers changing randomly
+    - This was an issue I knew could be possible but
+        did not hear any complaints about until recently
+
 Bug fixes
     - Like a lot of bugs, so much in fact
     that I could not list them all without missing some,
