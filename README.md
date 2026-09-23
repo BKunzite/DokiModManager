@@ -68,15 +68,12 @@ Doki Doki Mod Manager, whilst open, will constantly scan downloads for newly dow
 
 # Roadmap
 
+1.8.0 is feature complete. The expected release date is Wednesday (23) or Thursday (24) of September.
+
 | Tasks (Descending Importance For 2.0.0) | Time Required | Completed? |
-|-----------------------------------------|--------------|------------|
-| Multiple Downloads/Imports              | 1 Day        | ☑          |
-| Migration from ZIP/UNRAR to UNARC       | 1 Day        | ☑    |
-| MacOS Support                           | 1 - 2 Week(s) | ☑    |
-| Rust Refactor?                          | 1 - 2 Week(s) | &#9744;    |
-| TypeScript Migration?                   | 1 Week       | &#9744;    |
-| Resizing?                               | 1 - 2 Week(s) | &#9744;    |
-| Docker Integration?                     | 2 - 3 Week(s) | &#9744;    |
+|---------------------------------------|--------------|------------|
+| Resizing                              | 1 - 2 Week(s) | &#9744;    |
+| Docker Integration                    | 2 - 3 Week(s) | &#9744;    |
 
 MacOS Support Will Be Included In 1.8.0
 <br> Rust Refactor Needs To Be Done Because Of Code Debt
