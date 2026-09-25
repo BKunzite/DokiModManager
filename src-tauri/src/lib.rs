@@ -833,7 +833,7 @@ fn set_playing(name: &str) {
 }
 
 #[cfg(not(target_os = "windows"))]
-async fn no_auto_update(app: AppHandle, close: bool) {
+fn no_auto_update(app: &AppHandle, close: bool) {
     open::that(RELEASES_URL).expect("Open Release URL Failed");
     if close {
         app.exit(404);
@@ -1631,15 +1631,15 @@ fn get_host_name() -> String {
         .unwrap_or_else(|_| "Monika".to_string())
 }
 #[tauri::command]
-async fn update_exe() {
+async fn update_exe(app: AppHandle) {
     #[cfg(target_os = "windows")]
     update_windows_binary().await;
 
     #[cfg(target_os = "linux")]
-    update_linux_binary().await;
+    update_linux_binary(&app).await;
 
     #[cfg(target_os = "macos")]
-    no_auto_update();
+    no_auto_update(&app, true);
 }
 
 #[cfg(target_os = "linux")]
@@ -1684,7 +1684,7 @@ fn detect_install(exe: &Path) -> InstallData {
     }
 }
 #[cfg(target_os = "linux")]
-async fn update_linux_binary() {
+async fn update_linux_binary(app: &AppHandle) {
     let exe = std::env::current_exe().expect("Failed to get current exe");
     let install_info = detect_install(&exe);
     let script = RESOURCES
@@ -1710,7 +1710,7 @@ async fn update_linux_binary() {
 
     match install_info.kind {
         InstallType::Appimage => {
-            no_auto_update();
+            no_auto_update(&app, true);
             // println!("Updating DokimodManager - AppImage");
             // let resp = reqwest::get(LATEST_ARTIFACT_LINUX_APP)
             //     .await
