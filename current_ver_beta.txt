@@ -1,4 +1,4 @@
-2.8.0-final-rc
+1.8.0-release
 Recommended (Various Bug Fixes)
 
 Multiple Downloads/Imports At Once

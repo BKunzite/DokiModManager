@@ -65,19 +65,6 @@ You can set custom mod covers by clicking on the image icon in the cover image n
 You can drag and drop zipped mods and/or background images anywhere in the mod manager.
 Doki Doki Mod Manager, whilst open, will constantly scan downloads for newly downloaded zip files to import as mods.
 
-# Roadmap
-
-1.8.0 is feature complete. The expected release date is Wednesday (23) or Thursday (24) of September.
-
-| Tasks (Descending Importance For 2.0.0) | Time Required | Completed? |
-|---------------------------------------|--------------|------------|
-| Resizing                              | 1 - 2 Week(s) | &#9744;    |
-| Docker Integration                    | 2 - 3 Week(s) | &#9744;    |
-
-MacOS Support Will Be Included In 1.8.0
-<br> Resizing Might Be Done To Support More Systems
-<br> Docker Will Likely Not Be Added Unless Requested By A Majority
-
 # Support For Non-Windows-Based Operating Systems
 
 ### macOS (BigSur 11 and newer with an Mx chip (M1, M2, etc.))
@@ -108,6 +95,23 @@ The linux build will go outside of beta once 2.0.0 (26.xx.xx/27.xx.xx) comes out
 - Slow Loading Times
 - No Window Blur Transparency Support
 - Non-Debian Users May Have Other Issues
+
+# Roadmap
+
+1.8.0 is feature complete. The expected release date is Wednesday (23) or Thursday (24) of September.
+
+1.8.0 Alpha <br>
+1.8.0 Beta <br>
+1.8.0 Release Candidate <br>
+**1.8.0 Release - Current** <br>
+
+| Tasks (Descending Importance For 1.9.0 / 27.1.0) | Time Required | Completed? |
+|--------------------------------------------------|--------------|------------|
+| Resizing                                         | 1 - 2 Week(s) | &#9744;    |
+| Docker Integration                               | 2 - 3 Week(s) | &#9744;    |
+
+Resizing To Be Done To Support More Systems
+<br> Docker Will Likely Be Added
 
 # Credits
 
