@@ -1298,7 +1298,23 @@ async function addMod(name) {
 		}
 	    })
 
-	    renpy = name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && !STRINGS.isEmpty(gameExePath) && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS) && !gameExePath.toString().endsWith("DDLC") && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX) && !gameExePath.toString().endsWith(OS.EXECUTABLE.LINUX_OTHER)) ? "Yes | " + gameExePath : (getOSType() === OS.TYPE.MAC ? "No - Mod likely wont execute properly" : "No")) + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!");
+	    const noExecutable = gameExePath === undefined || STRINGS.isEmpty(gameExePath);
+	    const isWindowsExecutable = gameExePath.toString() === OS.EXECUTABLE.WINDOWS;
+	    const isRawExecutable = gameExePath.toString().endsWith("DDLC");
+	    const isLinuxExecutable = gameExePath.toString() === OS.EXECUTABLE.LINUX || gameExePath.toString() === OS.EXECUTABLE.LINUX_OTHER;
+
+	    const hasCustomExecutable = !(noExecutable || isRawExecutable || isWindowsExecutable || isLinuxExecutable);
+
+	    renpy = name +
+		"<br>Renpy: "
+		+ escaped_renpy
+		+ "<br>Custom Exe: " +
+		(hasCustomExecutable ?
+		    TranslationUtil.of("yes") + " | " + gameExePath:
+		    TranslationUtil.of("no") + (getOSType() === OS.TYPE.MAC ? " - Mod likely wont execute properly" : ""))
+		+ "<br><br>Credits: <br>"
+		+ (escapedModCredits !== undefined ? escapedModCredits : "No Credits Found!");
+
 	    Hud.ofId("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
 
 	    new Promise(() => {
