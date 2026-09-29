@@ -22,6 +22,8 @@ fi
 
 echo "found AppDir: $appdir"
 
+rm -f "$appdir/usr/lib/libreadline.so.8"
+
 hooks_dir="$appdir/apprun-hooks"
 mkdir -p "$hooks_dir"
 cp "$hook_src" "$hooks_dir/wayland-compat.sh"
@@ -78,7 +80,5 @@ if [ -n "$new_appimage" ]; then
     mv "$new_appimage" "$out_dir/"
     echo "patched AppImage ready: $out_dir/$(basename "$new_appimage")"
 fi
-
-rm "../target/release/bundle/appimage/Kunzite Doki Doki Mod Manager.AppDir/usr/lib/libreadline.so.8"
 
 echo "done."
