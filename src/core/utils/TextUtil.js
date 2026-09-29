@@ -59,7 +59,7 @@ export function htmlEscape(text) {
     }
 
     if (lastIndex !== length - 1) {
-        string += text.slice(lastIndex, length - 1);
+        string += text.slice(lastIndex, length);
     }
 
     return string;
@@ -114,7 +114,7 @@ export function formattedHtmlEscape(text) {
     }
 
     if (lastIndex !== length - 1) {
-        string += text.slice(lastIndex, length - 1);
+        string += text.slice(lastIndex, length);
     }
 
     return string;

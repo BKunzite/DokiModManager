@@ -1017,7 +1017,7 @@ async function addMod(name) {
 	await searchGame();
     } else {
 	gameExePath = configData.executable;
-	escapedModCredits = configData.credits !== undefined ? formattedHtmlEscape(configData.credits) : undefined;
+	escapedModCredits = configData.credits !== undefined ? htmlEscape(configData.credits) : undefined;
     }
 
     if (Hud.isVoid(configData.coverId)) {
@@ -1353,7 +1353,6 @@ async function addMod(name) {
 	    if (!screenshots) {
 		Hud.hide("screenshots-header")
 		Hud.hide("screenshots-parent")
-		Hud.ofId("info").classList.remove("info")
 		Hud.ofId("info").classList.add("expanded")
 		Hud.ofId("setinfo-header").style.left = "16rem";
 	    } else {
@@ -1382,7 +1381,6 @@ async function addMod(name) {
 		Hud.show("screenshots-header")
 		Hud.show("screenshots-parent")
 		Hud.ofId("info").classList.remove("expanded")
-		Hud.ofId("info").classList.add("info")
 		Hud.ofId("setinfo-header").style.left = "30rem";
 	    }
 
