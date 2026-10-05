@@ -45,6 +45,9 @@ class HTMLHelperObject {
      * @returns {boolean}
      */
     isVoid(...vals) {
+        if (vals.length === 0) return false;
+        if (vals.length === 1) return vals[0] === null || vals[0] === undefined || vals[0] === STRINGS.EMPTY;
+
         let modifier = this.CONDITIONALS.OR;
         const flags = []
         for (const val of vals) {

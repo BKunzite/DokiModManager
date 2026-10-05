@@ -3,6 +3,6 @@ export default {
 	"RELEASE": "current_ver.txt",
     },
     "DEV": {
-	"BETA": "current_ver_beta.txt"
+	"PUBLIC": "current_ver_beta.txt"
     }
 }

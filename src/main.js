@@ -89,6 +89,7 @@ import {Fzf} from 'fzf';
 import DOMBatch from "./core/fragment/DOMBatch";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import Optional from "./core/utils/Optional";
+import WaitInterval from "./core/utils/WaitInterval";
 
 //// Profile Data
 
@@ -266,9 +267,9 @@ async function syncCovers() {
     }
 
     await new Promise(resolve => {
-	let interval = setInterval(() => {
+	WaitInterval.waitFor((resolve2) => {
 	    if (imageLoaded === imagePrepared) {
-		clearInterval(interval);
+		resolve2()
 		resolve()
 	    }
 	}, 50)
@@ -789,9 +790,9 @@ async function requestDirectory(directoryPath = undefined) {
 	}
 
 	return new Promise(async (resolve) => {
-	    let interval = setInterval(async () => {
+	    WaitInterval.waitFor(async (resolve2) => {
 		if (finished_mods === mods_to_complete) {
-		    clearInterval(interval)
+		    resolve2()
 		    docFrag.finalize()
 
 		    Hud.setLoadingBar(100)
@@ -1242,7 +1243,7 @@ async function addMod(name) {
 	    })
 
 	    currentEntry = name;
-	    await setCover(configData.coverId);
+	    setCover(configData.coverId).then(() => {});
 	    Hud.setPinned(configData.pinned);
 
 	    if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.MAC && !gameExePath.endsWith(".app")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
@@ -3594,12 +3595,12 @@ async function setupObserver(onLoadStartTime) {
  */
 
 async function onLoad() {
-    let onLoadStartTime = Date.now();
+    const onLoadStartTime = Date.now();
 
     Logger.log("Initializing Launcher.");
 
     PreventDefaults.init()
-    OSUtil.Init()
+    OSUtil.init()
     await SeasonsManager.init(CURRENT.SEASON)
 
     Logger.log("Initializing Listeners. (" + (Date.now() - onLoadStartTime) + "ms).");
@@ -3624,14 +3625,15 @@ async function onLoad() {
     Hud.setLoadingSubtitle("Waiting For Backend Response")
     await invoke("request_path")
 
-    let loop = setInterval(async () => {
+    WaitInterval.waitFor(async (resolve) => {
 	if (!loadingStage2) {
 	    await invoke("request_path")
 	} else {
 	    Logger.log("Loading Part 2 Started.")
-	    clearInterval(loop)
+	    resolve()
 	}
     }, 2000)
+
 }
 
 previous_app = createApp(App)

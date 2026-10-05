@@ -1,61 +1,10 @@
-1.8.0-release
-Recommended (Various Bug Fixes)
+1.8.1-beta
+Recommended (Bug fixes)
 
-Multiple Downloads/Imports At Once
-Translations
- - Added Italian
- - Added Polish
- - Language Translations
- - Report Button Auto Resizes
+Visual Bugs
+- Mods with a custom executable ending in 'DDLC.exe' i.e. 'TheOutside_DDLC.exe' would
+not be shown as containing a custom executable.
+- Padding for screenshots under mods has been fixed.
 
-CoverID Migration
-    - CoverID will transition from saving as a
-        number to saving as an image name
-
-    - This will be done automatically, but it means
-        that the first time you launch the program
-        after updating, it will take a little longer to
-        launch.
-
-    - This should fix covers changing randomly
-    - This was an issue I knew could be possible but
-        did not hear any complaints about until recently
-
-Bug fixes
-    - Like a lot of bugs, so much in fact
-    that I could not list them all without missing some,
-    so if you want to find all bugs that were fixed,
-    check the commit history
-
-Linux Beta Fixes
- - Better Mod Support
- - If the error contained:
-    py3-linux-x86_64
-    py2-linux-x86_64
-  then it should now be fixed
- - Linux beta will now go from beta -> RC (Release Candidate)
- - Arch should now be properly supported
-
-App Logs
-    - If you want to report a bug on the discord,
-    Make a ticket, then please press [Shift + Control + L] in the program and:
-        - Open the selected file and copy its contents
-          into the ticket or
-        - Copy the entire file into the ticket
-
-Performance Improvements
-    - Technical -
-        - Batch DOM Updates Via Document Fragments
-        - Decrease CPU/GPU Usage Upon Window Unfocus
-        - Launch Time Should Be Decreased (Slightly)
-
-Migration from unrar/zip to unarc-rs
- - Better RAR Archive Support
-
-MacOS Support Goes Into Alpha (With a caveat)!
- - The MacOS app will not be signed
-    To be signed, I have to pay a 99$/year subscription
-    So for now, the app will not be signed
-    This means you have to allow the app through gatekeeper
- - Follow this guide to allow the app through gatekeeper:
-    https://tinyurl.com/4cjw2md7
+ToDo:
+- MacOS Mod Install Fixes

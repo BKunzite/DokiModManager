@@ -40,7 +40,7 @@ export function getOSType() {
 }
 
 class DefaultClass {
-    Init() {
+    init() {
         Logger.log("Running on OS.TYPE-" + getOSType().toUpperCase());
         if (getOSType() === OS.TYPE.LINUX || getOSType() === OS.TYPE.MAC) {
             /*

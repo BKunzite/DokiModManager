@@ -1,8 +1,8 @@
 import Logger from "./utils/Logger";
 import BRANCHES from "./enum/BRANCHES";
 
-export const CLIENT_VERSION = "1.8.0-release"
-const CURRENT_BRANCH = BRANCHES.STABLE.RELEASE
+export const CLIENT_VERSION = "1.8.1-beta"
+const CURRENT_BRANCH = BRANCHES.DEV.PUBLIC
 const VERSION_URL = `https://raw.githubusercontent.com/BKunzite/DokiModManager/refs/heads/main/${CURRENT_BRANCH}`
 
 /**
