@@ -98,12 +98,10 @@ The linux build will go outside of beta once 2.0.0 (26.xx.xx/27.xx.xx) comes out
 
 # Roadmap
 
-1.8.0 is feature complete. The expected release date is Wednesday (23) or Thursday (24) of September.
-
-1.8.0 Alpha <br>
-1.8.0 Beta <br>
-1.8.0 Release Candidate <br>
-**1.8.0 Release - Current** <br>
+1.8.1 Alpha <br>
+**_1.8.1 Beta ⇒ Current Development Cycle_** <br>
+1.8.1 Release Candidate <br>
+1.8.1 Release <br>
 
 | Tasks (Descending Importance For 1.9.0 / 27.1.0) | Time Required | Completed? |
 |--------------------------------------------------|--------------|------------|
