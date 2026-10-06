@@ -13,7 +13,7 @@ export class LauncherAbstract {
     /**
      * Launcher Abstract Class
      * @returns {{item: HTMLElement, location: String, absolute_location: String, preload: {String: HTMLElement}, isFavorite: Boolean, nameId: String, getOrder: () => Number, preloadImages: () => Promise<void>, getData: () => {}, setAuthor: (author: String) => Promise<void>, getPath: () => Promise<String>,
-     *     getName: () => Promise<String>, resetOrder: () => void, setPinned: (pinned: boolean=any) => Promise<void>, open: () => Promise<void>,
+     *     getName: () => string, resetOrder: () => void, setPinned: (pinned: boolean=any) => Promise<void>, open: () => Promise<void>,
      *     get_time: () => Promise<Number>, path: () => Promise<void>, setCover: (coverId: number) => Promise<void>, onFavorite: () => Promise<void>, close: () => Promise<void>, leftClick: () => Promise<void>}}
      */
     getFunctions() {

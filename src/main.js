@@ -31,11 +31,12 @@ import {
     coverIdToShortMap,
     covers,
     deref,
-    getImage, shortToCoverIdMap,
+    getImage,
     lazyDeref,
     preloadCovers,
     preloadImageObject,
-    regexImageName
+    regexImageName,
+    shortToCoverIdMap
 } from "./core/utils/ImageUtils";
 import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
 import {TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE, TranslationUtil} from "./core/utils/TranslationUtil"
@@ -67,13 +68,17 @@ import {
     CLIENT_THEMES,
     CURRENT,
     DDLC_FOLDER_NAME,
-    HEART_EMPTY,
-    HEART_FULL,
     PROGRAM_NAME,
     WARN_GENERIC_DATA_PATHS
 } from "./core/Constants";
 import OSUtil, {DDLC_FOLDER_REGEX, getOSType, INVALID_MAC_BINARIES, OS} from "./core/utils/OSUtil";
-import {fileTerminator, supportedModPackage, terminatePath} from "./core/utils/FileSystem";
+import {
+    fileTerminator,
+    INVALID_FOLDER_CHARACTERS,
+    INVALID_FOLDER_NAMES,
+    supportedModPackage,
+    terminatePath
+} from "./core/utils/FileSystem";
 import Logger from "./core/utils/Logger";
 import DownloadsManager from "./core/download/DownloadsManager"
 import PreventDefaults from "./core/utils/PreventDefaults";
@@ -188,7 +193,7 @@ function loadTranslation(lang, first) {
     });
     Hud.ofId("language-text").textContent = TranslationUtil.sub("metadata").of("name");
 
-    if (currentEntry === STRINGS.EMPTY) {
+    if (STRINGS.isEmpty(currentEntry)) {
 	if (!first) {
 	    gotoHomePage()
 	}
@@ -581,7 +586,7 @@ async function setCover(id) {
 
     Hud.ofId("cove").style.backgroundImage = 'url("' + image + '")';
 
-    if (currentEntry === STRINGS.EMPTY) {
+    if (STRINGS.isEmpty(currentEntry)) {
 	Hud.ofId("bg").style.backgroundImage = 'url("' + image + '")';
 	const img = new Image();
 	img.src = image;
@@ -890,7 +895,7 @@ async function addMod(name) {
 	if (coverIdToShortMap.has(configData.coverId)) {
 	    copyConfigData.coverId = coverIdToShortMap.get(configData.coverId);
 	}
-	Logger.info(coverIdToShortMap,coverIdToShortMap.has(configData.coverId) ? coverIdToShortMap.get(configData.coverId) : shortToCoverIdMap.get(configData.coverId) ?? "nul", copyConfigData)
+	Logger.info(coverIdToShortMap, coverIdToShortMap.has(configData.coverId) ? coverIdToShortMap.get(configData.coverId) : shortToCoverIdMap.get(configData.coverId) ?? "nul", copyConfigData)
 
 	const contents = JSON.stringify(copyConfigData, null, "\t");
 	await writeTextFile(configPath, contents);
@@ -1098,9 +1103,7 @@ async function addMod(name) {
 	getPath: async () => {
 	    return selectedPath
 	},
-	getName: async () => {
-	    return name
-	},
+	getName: () => name,
 	resetOrder: () => {
 	    sidetext.style.order = launcher.getFunctions().getOrder().toString()
 	},
@@ -1201,7 +1204,7 @@ async function addMod(name) {
 	    launcher.getFunctions().isFavorite = configData.favorite;
 	    launcher.getFunctions().resetOrder()
 	    await saveModData();
-	    Hud.ofId("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
+	    Hud.setHeart(configData.favorite)
 	},
 	close: async () => {
 	    const playTime = Date.now() - launch_time;
@@ -1243,7 +1246,8 @@ async function addMod(name) {
 	    })
 
 	    currentEntry = name;
-	    setCover(configData.coverId).then(() => {});
+	    setCover(configData.coverId).then(() => {
+	    });
 	    Hud.setPinned(configData.pinned);
 
 	    if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.MAC && !gameExePath.endsWith(".app")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
@@ -1255,23 +1259,23 @@ async function addMod(name) {
 		await saveModData();
 	    }
 
-	    let renpy = configData.renpy || (TranslationUtil.of("unknown") + " (Try Reinstalling; If its still broken, please create a git issue on this)");
-	    let screenshots = false;
+	    let modDescription = configData.renpy || (TranslationUtil.of("unknown") + " (Try Reinstalling; If its still broken, please create a git issue on this)");
+	    let containsScreenshots = false;
 	    let images = []
 	    let lastPlayed = TranslationUtil.of("never");
 
-	    const children = Array.from(Hud.ofId("screenshots").children);
-	    const escaped_renpy = htmlEscape(renpy);
-	    const min = Math.floor(configData.time / 60000);
+	    const screenshotsChildren = Array.from(Hud.ofId("screenshots").children);
+	    const escapedDescription = htmlEscape(modDescription);
+	    const playTimeMinutes = Math.floor(configData.time / Units.MillisMap.MINUTE);
 	    const msSinceLastPlayed = Date.now() - configData.last_played;
-	    const pin_holder = Hud.ofId("pin-holder");
+	    const pinHolder = Hud.ofId("pin-holder");
 
-	    if (!STRINGS.isEmpty(pin_holder.style.top)) {
-		pin_holder.style.removeProperty("left")
-		pin_holder.style.removeProperty("top")
+	    if (!STRINGS.isEmpty(pinHolder.style.top)) {
+		pinHolder.style.removeProperty("left")
+		pinHolder.style.removeProperty("top")
 	    }
 
-	    for (const child of children) {
+	    for (const child of screenshotsChildren) {
 		if (!child.classList.contains("preload-image")) {
 		    lazyDeref(child.getElementsByClassName("screenshots-image")[0].src);
 		    child.getElementsByClassName("screenshots-image")[0].src = STRINGS.EMPTY
@@ -1279,14 +1283,12 @@ async function addMod(name) {
 		child.remove()
 	    }
 
-	    if (taskPromise !== null) {
-		await taskPromise;
-	    }
+	    if (taskPromise !== null) await taskPromise;
 
 	    DOMBatch.batchRender("screenshots", (frag) => {
 		for (const localEntry of taskFiles) {
 		    if (localEntry.name.startsWith("screenshot")) {
-			screenshots = true;
+			containsScreenshots = true;
 
 			if (launcher.getFunctions().preload[localEntry.name] !== undefined) {
 			    frag.appendChild(launcher.getFunctions().preload[localEntry.name]);
@@ -1306,22 +1308,18 @@ async function addMod(name) {
 
 	    const hasCustomExecutable = !(noExecutable || isRawExecutable || isWindowsExecutable || isLinuxExecutable);
 
-	    renpy = name +
+	    modDescription = name +
 		"<br>Renpy: "
-		+ escaped_renpy
+		+ escapedDescription
 		+ "<br>Custom Exe: " +
 		(hasCustomExecutable ?
-		    TranslationUtil.of("yes") + " | " + gameExePath:
+		    TranslationUtil.of("yes") + " | " + gameExePath :
 		    TranslationUtil.of("no") + (getOSType() === OS.TYPE.MAC ? " - Mod likely wont execute properly" : ""))
 		+ "<br><br>Credits: <br>"
 		+ (escapedModCredits !== undefined ? escapedModCredits : "No Credits Found!");
 
-	    Hud.ofId("covertext").innerHTML = configData.favorite ? HEART_FULL : HEART_EMPTY;
-
-	    new Promise(() => {
-		AssetsManager.Sound.play(AssetsManager.Sound.BOOP_SOUND)
-	    }).then(() => {
-	    })
+	    Hud.setHeart(configData.favorite)
+	    AssetsManager.Sound.play(AssetsManager.Sound.BOOP_SOUND)
 
 	    if (configData.last_played !== -1) {
 		let date = new Date(configData.last_played).toLocaleString();
@@ -1338,20 +1336,20 @@ async function addMod(name) {
 	    }
 
 	    if (configData.size === 0) {
-		updateDisplayInfo(name, configData.author, "Reading...", Math.floor(min / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(min % 60) + TranslationUtil.sub("timeUnits").of("m"), renpy, "Never")
+		updateDisplayInfo(name, configData.author, "Reading...", Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, "Never")
 		setTimeout(async () => {
 		    let data = await metadata(selectedPath + fileTerminator + name);
 		    configData.size = data.size;
 		    if (currentEntry === name) {
-			updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(min / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(min % 60) + TranslationUtil.sub("timeUnits").of("m"), name + "<br>Renpy: " + escaped_renpy + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== STRINGS.EMPTY && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed)
+			updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), name + "<br>Renpy: " + escapedDescription + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== STRINGS.EMPTY && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed)
 		    }
 		    data = null
 		}, 0)
 	    } else {
-		updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.round(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(min / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(min % 60) + TranslationUtil.sub("timeUnits").of("m"), renpy, lastPlayed)
+		updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.round(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, lastPlayed)
 	    }
 
-	    if (!screenshots) {
+	    if (!containsScreenshots) {
 		Hud.hide("screenshots-header")
 		Hud.hide("screenshots-parent")
 		Hud.ofId("info").classList.add("expanded")
@@ -1385,7 +1383,7 @@ async function addMod(name) {
 		Hud.ofId("setinfo-header").style.left = "30rem";
 	    }
 
-	    renpy = null
+	    modDescription = null
 	}
     })
 
@@ -1421,8 +1419,8 @@ async function getRenpy(dir) {
     let renpy = undefined;
     const tld = dir +
 	(getOSType() === OS.TYPE.MAC ?
-	    terminatePath("/DDLC.app/Contents/Resources/autorun/renpy") :
-	    terminatePath("/renpy")
+		terminatePath("/DDLC.app/Contents/Resources/autorun/renpy") :
+		terminatePath("/renpy")
 	);
 
     Logger.log("Fetching Ren'Py for " + tld)
@@ -1606,11 +1604,11 @@ function gotoHomePage() {
  */
 
 async function setAuthor() {
-    if (currentEntry === STRINGS.EMPTY) return;
+    if (STRINGS.isBlank(currentEntry)) return;
     let value = Hud.ofId("authinput").value.trimEnd();
     Hud.ofId("authinput").blur()
 
-    if (value === STRINGS.EMPTY) {
+    if (STRINGS.isBlank(STRINGS.EMPTY)) {
 	const author = (await getLauncher(currentEntry).getFunctions().getData()).author;
 	Hud.ofId("authinput").value = author;
 	Hud.ofId("authinput").placeholder = author;
@@ -1663,7 +1661,7 @@ async function updateConcurrentGameInfo() {
     const playTime = await getLauncher(currentEntry).getFunctions().get_time();
     const second = Math.floor(playTime / 1000) % 60;
     const min = Math.floor(playTime / 60000);
-    const name = await getLauncher(currentEntry).getFunctions().getName() + STRINGS.SPACE;
+    const name = getLauncher(currentEntry).getFunctions().getName() + STRINGS.SPACE;
     const author = (await getLauncher(currentEntry).getFunctions().getData()).author;
     const time = Math.floor(min / 60) + TranslationUtil.sub("timeUnits").of("h") + " " + (min % 60) + TranslationUtil.sub("timeUnits").of("m") + " " + second + TranslationUtil.sub("timeUnits").of("s");
 
@@ -1678,46 +1676,43 @@ async function updateConcurrentGameInfo() {
  */
 
 async function renameMod() {
-    if (currentEntry === STRINGS.EMPTY) return;
-    let value = Hud.ofId("modtitle").value.trimStart().trimEnd();
-    let name = await getLauncher(currentEntry).getFunctions().getName();
-    if (value === name) {
+    if (STRINGS.isEmpty(currentEntry)) return;
+    const value = Hud.ofId("modtitle").value.trim();
+    const name = getLauncher(currentEntry).getFunctions().getName();
+
+    if (value === name || value.length === 0) {
 	Hud.ofId("modtitle").value = formatModName(currentEntry);
 	return;
     }
-    if (value !== name && value.length !== 0) {
-	let oldName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + name;
-	let newName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + value;
 
-	if (value.match(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/g) || value.match(/^(con|prn|aux|nul|com\d|lpt\d)$/i) || value.length > 100) {
-	    await confirm("The Name '" + value + "' is invalid!")
-	    Hud.ofId("modtitle").value = formatModName(currentEntry);
-	    return;
-	}
+    const oldName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + name;
+    const newName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + value;
 
-	if (await isExist(await getLauncher(currentEntry).getFunctions().getPath() + fileTerminator + newName)) {
-	    await confirm("The Name '" + value + "' already exists!")
-	    Hud.ofId("modtitle").value = formatModName(currentEntry);
-	    return;
-	}
+    if (value.length > 100 || INVALID_FOLDER_CHARACTERS.test(value) !== null || INVALID_FOLDER_NAMES.test(value) != null) {
+	await confirm("The name '" + value + "' is invalid!")
+	Hud.ofId("modtitle").value = formatModName(currentEntry);
+	return;
+    }
 
-	try {
-	    Hud.show("loader")
-	    Hud.hide("main")
-	    Hud.setLoadingSubtitle("Renaming Mod")
-	    Hud.setLoadingBar(0, false)
-	    Hud.setLoadingBar(100, true)
-	    await invoke("rename_dir", {
-		path: oldName,
-		newName: newName,
-		id: value
-	    })
-	} catch (e) {
-	    await confirm("Cannot Rename The File Due To:\n\n" + e)
-	}
+    if (await isExist(await getLauncher(currentEntry).getFunctions().getPath() + fileTerminator + newName)) {
+	await confirm("Another mod with the name '" + value + "' already exists!")
+	Hud.ofId("modtitle").value = formatModName(currentEntry);
+	return;
+    }
 
-    } else {
-	Hud.ofId("modtitle").value = currentEntry;
+    try {
+	Hud.show("loader")
+	Hud.hide("main")
+	Hud.setLoadingSubtitle("Renaming Mod")
+	Hud.setLoadingBar(0, false)
+	Hud.setLoadingBar(100, true)
+	await invoke("rename_dir", {
+	    path: oldName,
+	    newName: newName,
+	    id: value
+	})
+    } catch (e) {
+	await confirm("Cannot Rename The File Due To Error:\n\n" + e)
     }
 }
 
@@ -1812,7 +1807,7 @@ async function saveProfileData() {
 	"profiles": sorted
     }
 
-    Logger.log("profile data | sorted",profiles_data, sorted)
+    Logger.log("profile data | sorted", profiles_data, sorted)
 
     writeTextFile(profilePath + fileTerminator + ".info.json", JSON.stringify(profiles_data, null, "\t")).then(_ => {
     });
@@ -2351,7 +2346,7 @@ async function setupIPCListeners(onLoadStartTime) {
 		Logger.warn("NOT UP TO DATE: LATEST_ONLINE_VERSION=" + newestReleaseVersion + " > " + CLIENT_VERSION + "=CLIENT_VERSION")
 		Hud.ofId("version").innerHTML = `(${CLIENT_VERSION}) <u>Update!</u>`
 		if (navigator.onLine) {
-		    if (TranslationUtil.getLanguage() === STRINGS.EMPTY) {
+		    if (STRINGS.isBlank(TranslationUtil.getLanguage())) {
 			forcedEnglishTranslation = true;
 		    }
 
@@ -2386,7 +2381,7 @@ async function setupIPCListeners(onLoadStartTime) {
 		Logger.log("Installed Version?: " + CLIENT_VERSION, "Latest Online Version?: " + localConfig.config.get("version"))
 		Hud.ofId("version").textContent = `(${CLIENT_VERSION})`
 		if (localConfig.config.get("version") !== CLIENT_VERSION) {
-		    if (TranslationUtil.getLanguage() === STRINGS.EMPTY) {
+		    if (STRINGS.isBlank(TranslationUtil.getLanguage())) {
 			forcedEnglishTranslation = true;
 		    }
 		    loadTranslation(TranslationUtil.getLanguage(), true)
@@ -2414,7 +2409,7 @@ async function setupIPCListeners(onLoadStartTime) {
 
 	    Logger.log("Language (" + (Date.now() - onLoadStartTime) + "ms). Current=" + TranslationUtil.getLanguage() + " | Escaped=" + forcedEnglishTranslation)
 
-	    if (TranslationUtil.getLanguage() === STRINGS.EMPTY || forcedEnglishTranslation) {
+	    if (STRINGS.isEmpty(TranslationUtil.getLanguage()) || forcedEnglishTranslation) {
 		TranslationUtil.setLanguage(STRINGS.EMPTY)
 		Hud.ofId("language-list").classList.remove("language-list-hide")
 		Hud.ofId("language-list").classList.add("language-list-force")
@@ -3032,12 +3027,12 @@ async function setupHTMListeners(onLoadStartTime) {
 
 	    const localDataLocation = absoluteLocation + fileTerminator + "game" + fileTerminator + "saves"
 	    const backupDataLocation = localPath + fileTerminator + terminatePath("store\\save_data_secondary")
-	    let backupDataName = modName === STRINGS.EMPTY ? backupDataLocation + fileTerminator + currentEntry : modName + "_DDMM_data"
+	    let backupDataName = STRINGS.isBlank(modName) ? backupDataLocation + fileTerminator + currentEntry : modName + "_DDMM_data"
 	    let canUseBackupLocation = false
 
 	    Logger.log(localDataLocation, backupDataLocation, renpySaveDataLocation, modName)
 
-	    if (renpySaveDataLocation === STRINGS.EMPTY) {
+	    if (STRINGS.isBlank(renpySaveDataLocation)) {
 		let secondary_name = backupDataName.split(fileTerminator).pop()
 		if (secondary_name.match(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/g) || secondary_name.match(/^(con|prn|aux|nul|com\d|lpt\d)$/i)) {
 		    secondary_name = secondary_name.replace(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/gi, STRINGS.EMPTY)
@@ -3067,8 +3062,8 @@ async function setupHTMListeners(onLoadStartTime) {
 
 	    Logger.log(renpySaveDataLocation, canUseBackupLocation)
 
-	    if (renpySaveDataLocation !== STRINGS.EMPTY || canUseBackupLocation) {
-		const finalSaveDataLocation = renpySaveDataLocation === STRINGS.EMPTY ? backupDataName : renpySaveDataLocation
+	    if (!STRINGS.isBlank(renpySaveDataLocation) || canUseBackupLocation) {
+		const finalSaveDataLocation = STRINGS.isBlank(renpySaveDataLocation) ? backupDataName : renpySaveDataLocation
 
 		if (!await isExist(finalSaveDataLocation)) {
 		    await mkdir(finalSaveDataLocation)
@@ -3134,9 +3129,9 @@ async function setupHTMListeners(onLoadStartTime) {
 
     Hud.ofId("delete-yes").addEventListener("mouseup", async () => {
 	Hud.hide("delete-prompt")
-	if (currentSavePath === STRINGS.EMPTY) return;
+	if (STRINGS.isBlank(currentSavePath)) return;
 	for (const p of currentSavePath.split("|")) {
-	    if (p === STRINGS.EMPTY) continue
+	    if (STRINGS.isEmpty(p)) continue
 	    await invoke("delete_path", {
 		path: p
 	    });
@@ -3149,10 +3144,10 @@ async function setupHTMListeners(onLoadStartTime) {
     })
 
     Hud.ofId("modtitle").addEventListener("focusin", async () => {
-	if (currentEntry === STRINGS.EMPTY) {
+	if (STRINGS.isBlank(currentEntry)) {
 	    Hud.ofId("modtitle").value = currentUserName
 	} else {
-	    Hud.ofId("modtitle").value = await getLauncher(currentEntry).getFunctions().getName();
+	    Hud.ofId("modtitle").value = getLauncher(currentEntry).getFunctions().getName();
 	}
     })
 
@@ -3174,7 +3169,7 @@ async function setupHTMListeners(onLoadStartTime) {
 	    await renameMod()
 	} else {
 	    const name = Hud.ofId("modtitle").value;
-	    if (name.includes(TranslationUtil.of("greet")) || name === STRINGS.EMPTY) {
+	    if (name.includes(TranslationUtil.of("greet")) || STRINGS.isBlank(name)) {
 		gotoHomePage()
 		return;
 	    }
@@ -3247,7 +3242,7 @@ async function setupHTMListeners(onLoadStartTime) {
     })
 
     Hud.ofId("search").addEventListener("input", async (event) => {
-	if (event.target.value === STRINGS.EMPTY && lastInputLength > 0) {
+	if (STRINGS.isBlank(event.target.value) && lastInputLength > 0) {
 	    for (const index in getLaunchers()) {
 		const element = getLauncher(index).getFunctions();
 		element.item.classList.remove("hide2");
@@ -3255,7 +3250,7 @@ async function setupHTMListeners(onLoadStartTime) {
 	    }
 	    lastInputLength = 0;
 	    return;
-	} else if (event.target.value === STRINGS.EMPTY) {
+	} else if (STRINGS.isEmpty(event.target.value)) {
 	    return
 	}
 
@@ -3303,8 +3298,8 @@ async function setupHTMListeners(onLoadStartTime) {
 
 	button.addEventListener("mouseup", async () => {
 	    let old = TranslationUtil.getLanguage();
-	    loadTranslation(language, (old === STRINGS.EMPTY))
-	    if (old !== STRINGS.EMPTY) {
+	    loadTranslation(language, STRINGS.isEmpty(old))
+	    if (!STRINGS.isEmpty(old)) {
 		saveConfig().then(_ => {
 		})
 	    }
@@ -3332,7 +3327,7 @@ async function setupHTMListeners(onLoadStartTime) {
 	Hud.ofId("warn").classList.add("tutorial-active")
 	Hud.ofId("tutorial").textContent = TranslationUtil.of("next")
 	Hud.ofId("tutorial-no").textContent = TranslationUtil.of("cancel")
-	if (tutorialStep >= 4 && currentEntry === STRINGS.EMPTY) {
+	if (tutorialStep >= 4 && STRINGS.isEmpty(currentEntry)) {
 	    if (tutorialPointer == null) {
 		tutorialPointer = document.createElement("div")
 		tutorialPointer.classList.add("tutorial-pointer")
@@ -3608,7 +3603,7 @@ async function onLoad() {
     await setupIPCListeners(onLoadStartTime)
     await setupHTMListeners(onLoadStartTime)
     await setupObserver(onLoadStartTime)
-    
+
     await getCurrentWindow().onFocusChanged(async (
 	{payload: isFocused}
     ) => {

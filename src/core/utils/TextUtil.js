@@ -11,6 +11,7 @@ export const STRINGS = {
     SPACE: " ",
     EMPTY: "",
     isEmpty: (str) => str === STRINGS.EMPTY,
+    isBlank: (str) => str.trim() === STRINGS.EMPTY
 };
 
 /**

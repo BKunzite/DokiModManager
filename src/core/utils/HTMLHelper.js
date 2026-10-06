@@ -1,4 +1,5 @@
 import {STRINGS} from "./TextUtil";
+import {HEART_EMPTY, HEART_FULL} from "../Constants";
 
 class HTMLHelperObject {
     #goal_slow_bar = -1
@@ -45,7 +46,6 @@ class HTMLHelperObject {
      * @returns {boolean}
      */
     isVoid(...vals) {
-        if (vals.length === 0) return false;
         if (vals.length === 1) return vals[0] === null || vals[0] === undefined || vals[0] === STRINGS.EMPTY;
 
         let modifier = this.CONDITIONALS.OR;
@@ -206,6 +206,14 @@ class HTMLHelperObject {
      */
     getBoundingBoxOf(elementId) {
         return this.ofId(elementId).getBoundingClientRect()
+    }
+
+    /**
+     * Sets The Cover Icon To Full (Favorite) Or Empty (Not Favorite) Heart
+     * @param favorite
+     */
+    setHeart(favorite = false) {
+        this.ofId("covertext").innerHTML = favorite ? HEART_FULL : HEART_EMPTY;
     }
 }
 export default new HTMLHelperObject()
