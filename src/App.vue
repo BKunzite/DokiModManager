@@ -3,7 +3,7 @@
 
 <template>
 
-  <div id="loader" class="smooth-hide">
+  <div id="loader" class="smooth-hide background-clip">
 
     <div class="background"></div>
     <button class="import-zip hide" id="select-zip">Import Zip</button>
@@ -21,7 +21,9 @@
 
   </div>
   <div id="main" class="hide smooth-hide">
-    <div data-tauri-drag-region class="bg" id="bg"></div>
+    <div class="background-clip">
+      <div data-tauri-drag-region class="bg" id="bg"></div>
+    </div>
     <header class="title"><span class="title-colored">Doki Doki</span> Mod Manager</header>
     <div class="container-a smooth-hide" id="modlist">
       <header class="sidetext sticky"><span id="main-text">Main</span> <span

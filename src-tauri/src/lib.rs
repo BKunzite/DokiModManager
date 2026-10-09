@@ -39,6 +39,7 @@ use tokio::sync::oneshot;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+use std::thread::sleep;
 #[cfg(target_os = "windows")]
 use window_vibrancy::apply_acrylic;
 
@@ -60,7 +61,7 @@ use simple_logger::*;
 static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
 static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
 static DOWNLOAD_STATE: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
-
+static CURRENT_DIR: OnceLock<PathBuf> = OnceLock::new();
 #[cfg(not(target_os = "windows"))]
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
 
@@ -394,6 +395,7 @@ fn rpa_data(app: AppHandle, path: &str, out: &str, option: &str) -> String {
             }
         }
     }
+
     println!("Done!");
     String::new()
 }
@@ -954,7 +956,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
     if cfg!(target_os = "macos") {
         let app_contents = target_dir.join("DDLC.app/Contents");
-        let regular_contents = app_contents.join("Resources/autorun");
+        let mut regular_contents = app_contents.join("Resources/autorun");
         let macos_contents = app_contents.join("MacOS");
         create_dir_all(&macos_contents).expect("Failed to create temp extract");
         create_dir_all(&regular_contents).expect("Failed to create temp extract");
@@ -968,7 +970,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
             is_archive = true;
 
             if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder") {
-                target_dir = target_dir.join("game");
+                regular_contents = regular_contents.join("game");
                 is_game = true;
             }
 
@@ -976,7 +978,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
                 if is_archive_game_folder(&source_file, &nest_check.clone().unwrap())
                     .expect("Failed to get archive game folder")
                 {
-                    target_dir = target_dir.join("game");
+                    regular_contents = regular_contents.join("game");
                 }
                 stamp("Importing Archive Without Toplevel");
                 extract_archive_without_tld(&source_file, &regular_contents, &nest_check.unwrap())
@@ -1116,7 +1118,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     app.emit(
         "import_done",
         DoubleStringData {
-            text: PathBuf::from(&initial_target_dir)
+            text: initial_target_dir.to_path_buf()
                 .file_name()
                 .expect("Could not get file name")
                 .to_str()
@@ -1873,7 +1875,7 @@ fn track(app: &AppHandle, event: String, props: Option<serde_json::Value>) {
         .expect("Failed to track event");
 }
 
-async fn make_config() {
+fn make_config() {
     let default_config_data: ConfigData = ConfigData {
         directory: get_current_dir().display().to_string()
             + std::path::MAIN_SEPARATOR_STR
@@ -1891,8 +1893,7 @@ async fn make_config() {
 
 async fn update_unrpyc() {
     push_stamp("UnRPYC Update");
-    let rpyc = UN_RPYC;
-    let resp = reqwest::get(rpyc).await.expect("Failed to download latest");
+    let resp = reqwest::get(UN_RPYC).await.expect("Failed to download latest");
     let path = if cfg!(target_os = "windows") {
         get_current_dir().join("unrpyc.exe")
     } else {
@@ -1920,11 +1921,12 @@ async fn update_unrpyc() {
 
 pub fn get_current_dir() -> PathBuf {
     if cfg!(target_os = "windows") {
-        env::current_dir().expect("Could Not Get Current Directory")
+        CURRENT_DIR.get().expect("Could Not Get Current Directory").to_path_buf()
     } else {
-        env::current_dir()
+        CURRENT_DIR.get()
             .expect("Could Not Get Current Directory")
             .join(".dokimodmanager")
+            .to_path_buf()
     }
 }
 
@@ -1936,14 +1938,14 @@ pub fn get_unrpyc_filename() -> String {
     }
 }
 
-async fn stamp_system_info() {
+fn stamp_system_info() {
     stamp("====================== HARDWARE SPECS ======================");
 
     stamp("- OS Info -");
     stamp(format!("{}", os_info::get()).as_str());
 
     let mut system = System::new();
-    tokio::time::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL).await;
+    sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
 
     system.refresh_memory_specifics(MemoryRefreshKind::everything());
     system.refresh_cpu_specifics(CpuRefreshKind::everything());
@@ -1969,144 +1971,160 @@ async fn stamp_system_info() {
     stamp(format!("    Used Swap Ram Size - {:.2} GB", system.used_swap() as f32 * bytes_to_gb).as_str());
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub async fn run() {
+fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    CURRENT_DIR.set(if cfg!(target_os = "macos") && !cfg!(debug_assertions) {
+        app.path().data_dir().expect("Could Not Get Data Directory")
+    } else {
+        env::current_dir().expect("Could Not Get Current Directory")
+    }).expect("failed to set current directory");
+
     setup_logs();
     push_stamp("<INIT>");
+    stamp(format!("Running at {:?}", CURRENT_DIR.get().expect("Failed to get current dir")).as_str());
 
-    stamp("Starting Doki Doki Mod Manager");
-    stamp_system_info().await;
+    let handle = app.handle();
+    let window = app.get_webview_window("main").unwrap();
+    let app_handle = handle.clone();
+    let clone_handle = handle.clone();
+    let clone_handle2 = handle.clone();
+    let downloads_dir = get_current_dir().join("store").join("downloads");
 
-    push_stamp("CREATE_STORE");
-    create_dir_all(get_current_dir().join("store/mods").display().to_string())
-        .expect("FS Error: Failed To Create Store/Mods");
-    create_dir_all(get_current_dir().join("store/images").display().to_string())
-        .expect("FS Error: Failed To Create Store/Mods");
-    pop_stamp();
+    tauri::async_runtime::spawn(async move {
+        stamp("Starting Doki Doki Mod Manager");
+        stamp_system_info();
 
-    let exec_name = get_unrpyc_filename();
+        push_stamp("CREATE_STORE");
+        create_dir_all(get_current_dir().join("store/mods").display().to_string())
+            .expect("FS Error: Failed To Create Store/Mods");
+        create_dir_all(get_current_dir().join("store/images").display().to_string())
+            .expect("FS Error: Failed To Create Store/Mods");
+        pop_stamp();
 
-    push_stamp("UnRPYC Hash");
-    if !exists(get_current_dir().join(&exec_name)).unwrap()
-        || get_file_hash(&get_current_dir().join(&exec_name).display().to_string())
+        let exec_name = get_unrpyc_filename();
+
+        push_stamp("UnRPYC Hash");
+        if !exists(get_current_dir().join(&exec_name)).unwrap()
+            || get_file_hash(&get_current_dir().join(&exec_name).display().to_string())
             .expect("Unable to get hash on UNRPYC")
             != UN_RPYC_HASH
-    {
-        stamp("UnRPYC Update Required");
-        update_unrpyc().await;
-    } else {
-        stamp("UnRPYC - UnRPYC Up To Date!");
-    }
-    pop_stamp();
+        {
+            stamp("UnRPYC Update Required");
+            update_unrpyc().await;
+        } else {
+            stamp("UnRPYC - UnRPYC Up To Date!");
+        }
+        pop_stamp();
 
-    std::thread::spawn(move || {
-        discord_rpc::start();
+        std::thread::spawn(move || {
+            discord_rpc::start();
+        });
+
+        discord_rpc::set_activity("In Main Menu");
+
+        make_config();
+        pop_stamp();
     });
 
-    discord_rpc::set_activity("In Main Menu");
 
-    make_config().await;
-    pop_stamp();
+    app.track_event("app_started", None).unwrap();
+    #[cfg(target_os = "linux")]
+    {
+        let _ = window.set_size(Size::Physical(PhysicalSize::new(1200, 600)));
+        window
+            .set_size_constraints(WindowSizeConstraints {
+                min_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
+                max_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
+                min_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
+                max_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
+            })
+            .ok();
+    }
 
+    #[cfg(target_os = "windows")]
+    apply_acrylic(&window, Some((0, 0, 0, 10)))
+        .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
+
+    #[cfg(target_os = "macos")]
+    apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
+        .expect("Unsupported platform! 'apply_blur' is only supported on MacOs");
+
+    #[cfg(target_os = "linux")]
+    {
+        let _ = window.set_background_color(Some(Color(50, 50, 50, 255)));
+    }
+
+    // Track App Closed
+    app.get_webview_window("main")
+        .unwrap()
+        .on_window_event(move |event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                app_handle
+                    .track_event("app_closed", None)
+                    .expect("TODO: panic message");
+                std::thread::sleep(Duration::from_millis(100));
+            }
+        });
+
+    app.listen("request_download", move |event| {
+        let payload = event.payload().to_string();
+        let value = clone_handle2.clone();
+
+        task::spawn(async move {
+            let data: DownloadRequest =
+                serde_json::from_str(&payload).expect("Failed to read download request");
+            let downloads_dir = get_current_dir().join("store").join("downloads");
+            let confirmed = value
+                .dialog()
+                .message(format!("Do you want to download \"{}\"?", data.file_name))
+                .title("Download Request")
+                .buttons(MessageDialogButtons::YesNo)
+                .blocking_show();
+            if confirmed {
+                let _ = download_file(
+                    &value,
+                    data.url.to_string(),
+                    downloads_dir.join(data.file_name).display().to_string(),
+                )
+                    .await;
+            }
+        });
+    });
+
+    // Track Webview Open
+    app.listen("open_webview", move |event| {
+        let payload = event.payload().to_string();
+        let value = clone_handle.clone();
+
+        tauri::async_runtime::spawn(async move {
+            let command: WebviewOpen = serde_json::from_str(&payload).expect("Failed");
+            stamp(format!("received event to open webview: {}", command.url).as_str());
+
+            let _ = open_webview(
+                value,
+                command.url,
+                &command.name.replace(" ", "_").to_lowercase(),
+            )
+                .await.expect("Failed to open webview");
+        });
+    });
+
+    if downloads_dir.exists() {
+        stamp("Clearing Downloads Folder");
+        let _ = remove_dir_all(downloads_dir);
+    }
+
+    Ok(())
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub async fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_fs_pro::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_aptabase::Builder::new("A-US-9509641067").build())
-        .setup(|app| {
-            let window = app.get_webview_window("main").unwrap();
-            let app_handle = app.handle().clone();
-            let clone_handle = app.handle().clone();
-            let clone_handle2 = app.handle().clone();
-            let downloads_dir = get_current_dir().join("store").join("downloads");
-            app.track_event("app_started", None).unwrap();
-            #[cfg(target_os = "linux")]
-            {
-                let _ = window.set_size(Size::Physical(PhysicalSize::new(1200, 600)));
-                window
-                    .set_size_constraints(WindowSizeConstraints {
-                        min_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
-                        max_width: Some(PixelUnit::Physical(tauri::PhysicalUnit(1200))),
-                        min_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
-                        max_height: Some(PixelUnit::Physical(tauri::PhysicalUnit(600))),
-                    })
-                    .ok();
-            }
-
-            #[cfg(target_os = "windows")]
-            apply_acrylic(&window, Some((0, 0, 0, 10)))
-                .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
-
-            #[cfg(target_os = "macos")]
-            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
-                .expect("Unsupported platform! 'apply_blur' is only supported on MacOs");
-
-            #[cfg(target_os = "linux")]
-            {
-                let _ = window.set_background_color(Some(Color(50, 50, 50, 255)));
-            }
-
-            // Track App Closed
-            app.get_webview_window("main")
-                .unwrap()
-                .on_window_event(move |event| {
-                    if let tauri::WindowEvent::CloseRequested { .. } = event {
-                        app_handle
-                            .track_event("app_closed", None)
-                            .expect("TODO: panic message");
-                        std::thread::sleep(Duration::from_millis(100));
-                    }
-                });
-
-            app.listen("request_download", move |event2| {
-                let payload = event2.payload().to_string();
-                let value = clone_handle2.clone();
-
-                task::spawn(async move {
-                    let data: DownloadRequest =
-                        serde_json::from_str(&payload).expect("Failed to read download request");
-                    let downloads_dir = get_current_dir().join("store").join("downloads");
-                    let confirmed = value
-                        .dialog()
-                        .message(format!("Do you want to download \"{}\"?", data.file_name))
-                        .title("Download Request")
-                        .buttons(MessageDialogButtons::YesNo)
-                        .blocking_show();
-                    if confirmed {
-                        let _ = download_file(
-                            &value,
-                            data.url.to_string(),
-                            downloads_dir.join(data.file_name).display().to_string(),
-                        )
-                        .await;
-                    }
-                });
-            });
-
-            // Track Webview Open
-            app.listen("open_webview", move |event| {
-                let payload = event.payload().to_string();
-                let value = clone_handle.clone();
-
-                task::spawn(async move {
-                    let command: WebviewOpen = serde_json::from_str(&payload).expect("Failed");
-
-                    let _ = open_webview(
-                        value,
-                        command.url,
-                        &command.name.replace(" ", "_").to_lowercase(),
-                    )
-                    .await;
-                });
-            });
-
-            if downloads_dir.exists() {
-                stamp("Clearing Downloads Folder");
-                let _ = remove_dir_all(downloads_dir);
-            }
-            Ok(())
-        })
+        .setup(setup)
         .invoke_handler(tauri::generate_handler![
             close,
             minimize,

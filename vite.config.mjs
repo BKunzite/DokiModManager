@@ -1,6 +1,5 @@
-import { defineConfig } from "npm:vite";
-import vue from "npm:@vitejs/plugin-vue";
-import "npm:vue/compiler-sfc";
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
 
 const host = process.env.TAURI_DEV_HOST;
 

@@ -1,7 +1,8 @@
 {
   "nodeModulesDir": "auto",
+  "minimumDependencyAge": "0",
   "tasks": {
     "build:linux": "deno run tauri build && bash src-tauri/scripts/patch-appimage-wayland.sh",
-    "build:mac": "deno run tauri build && codesign --force --deep --sign - \"./src-tauri/target/release/bundle/macos/Kunzite Doki Doki Mod Manager.app\" && rm -rf \"./src-tauri/target/release/bundle/macos/Kunzite Doki Doki Mod Manager.dmg\" && appdmg ./src-tauri/target/release/bundle/macos/dmg-data.json \"./src-tauri/target/release/bundle/macos/Kunzite Doki Doki Mod Manager.dmg\""
+    "build:mac": "deno run tauri build && codesign --force --deep --sign - \"./src-tauri/target/release/bundle/macos/Kunzite Doki Doki Mod Manager.app\" && rm -rf \"./src-tauri/target/release/bundle/macos/Kunzite Doki Doki Mod Manager.dmg\" && npm remove appdmg && npm install appdmg && appdmg ./src-tauri/target/release/bundle/macos/dmg-data.json \"./src-tauri/target/release/bundle/macos/Kunzite Doki Doki Mod Manager.dmg\""
   }
 }

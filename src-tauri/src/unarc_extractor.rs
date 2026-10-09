@@ -59,7 +59,7 @@ pub fn detect_nest(archive_file: &PathBuf) -> Result<Option<String>, Box<dyn std
                 newest_found = None;
                 break;
             }
-        } else if !name.to_lowercase().contains("credit") && !name.to_lowercase().contains("read") {
+        } else if !name.to_lowercase().contains("credit") && !name.to_lowercase().contains("read") && !name.to_lowercase().ends_with(".pdf") && !name.to_lowercase().ends_with(".html") && !name.to_lowercase().ends_with(".txt") {
             println!("NonDir Found: {}", name);
             newest_found = None;
             break;

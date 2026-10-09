@@ -10,14 +10,14 @@ window.__TAURI__ = null;
 
 (() => {
     console.log("LINK REDIRECT - DOKI DOKI MOD MANAGER - INJECTED")
-    const isLinux = navigator.userAgent.toLowerCase().includes("linux");
+    const isUnix = navigator.userAgent.toLowerCase().includes("linux") || navigator.userAgent.toLowerCase().includes("mac");
 
-    const AD_DOMAINS = []
-        let r = [
+    const AD_DOMAINS = [
         "doubleclick.net",
         "googlesyndication.com",
         "adservice.google.com",
         "googleadservices.com",
+        "google.com/g/collect",
         "google-analytics.com",
         "googletagmanager.com",
         "adnxs.com",
@@ -40,11 +40,29 @@ window.__TAURI__ = null;
     ];
 
     function isUrlBlocked(value) {
-        console.log(value)
         if (value == null) return false;
 
         const url = typeof value === "string" ? value : String(value);
-        return AD_DOMAINS.some((domain) => url.includes(domain));
+        console.log("New URL: " + url)
+        if (url.startsWith("ipc://") || url.startsWith("ipc:") ||
+            url.startsWith("tauri://") || url.startsWith("asset://")) {
+            return false;
+        }
+        if (url.trim().startsWith("https://drive.usercontent.google.com/") && !url.includes("confirm")) {
+            console.log("GOOGLE ALT DOWNLOAD PATH REQUIRED! " + url)
+            // https://drive.usercontent.google.com/uc?id=1p47OBzNvJzpTeq5NflQAG-k9jxoYJXyA&authuser=0&export=download
+            __TAURI__APP.event.emit("open_webview", {
+                url: url,
+                name: "download_drive"
+            })
+            return true;
+        }
+        if (AD_DOMAINS.some((domain) => url.includes(domain))) {
+            console.warn("BLOCKED: " + url)
+            return true
+        } else {
+            return false
+        }
     }
 
     const originalFetch = window.fetch;
@@ -83,7 +101,7 @@ window.__TAURI__ = null;
         return originalSend.apply(this, args);
     };
 
-    if (!isLinux) return;
+    if (!isUnix) return;
 
     function getFilenameFromUrl(url) {
         try {
@@ -149,6 +167,7 @@ window.__TAURI__ = null;
 
         void triggerDownload(url, filename);
     };
+
     navigator.msSaveBlob = async function (blob, filename) {
         await saveBlob(blob, filename || getFilenameFromBlob(blob));
         return true;

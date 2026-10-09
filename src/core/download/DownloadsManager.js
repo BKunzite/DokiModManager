@@ -55,9 +55,9 @@ class DownloadingObject {
       this.#progressBar,
       this.#cancel,
     );
-    document.getElementById("downloads-list-inner").append(this.#div);
+    HTMLHelper.ofId("downloads-list-inner").append(this.#div);
 
-    const noneOf = document.getElementById("downloads-none");
+    const noneOf = HTMLHelper.ofId("downloads-none");
     if (noneOf !== null) noneOf.remove();
   }
 
@@ -118,13 +118,13 @@ class DownloadingObject {
     this.#progressBar = null;
     this.#progressBarFill = null;
 
-    const noneOf = document.getElementById("downloads-none");
-    if (noneOf === null) {
+    const noneOfPast = HTMLHelper.ofId("downloads-none");
+    if (noneOfPast === null && HTMLHelper.isVoid(document.querySelector(".downloads-element"))) {
       const noneOf = document.createElement("header");
       noneOf.id = "downloads-none";
       noneOf.classList.add("downloads-none");
       noneOf.textContent = TranslationUtil.of("no-downloads");
-      document.getElementById("downloads-list-inner").append(noneOf);
+      HTMLHelper.ofId("downloads-list-inner").append(noneOf);
     }
   }
 }
@@ -146,9 +146,9 @@ class DownloadsManager {
   }
 
   complete(url) {
-    const download = this.#ongoingDownloads[url];
+    const download = this.#ongoingDownloads[url]
     download.complete();
-    this.#ongoingDownloads[url] = undefined;
+    delete this.#ongoingDownloads[url]
     return download;
   }
 
@@ -168,4 +168,5 @@ class DownloadsManager {
   }
 }
 
-export default new DownloadsManager();
+const selfManager = new DownloadsManager();
+export default selfManager;

@@ -63,13 +63,14 @@ import {
     STRINGS
 } from "./core/utils/TextUtil";
 import {
-    CLIENT_START,
-    CLIENT_THEME_ENUM,
-    CLIENT_THEMES,
-    CURRENT,
-    DDLC_FOLDER_NAME,
-    PROGRAM_NAME,
-    WARN_GENERIC_DATA_PATHS
+	AUTHOR_INPUT_SIZE,
+	CLIENT_START,
+	CLIENT_THEME_ENUM,
+	CLIENT_THEMES,
+	CURRENT,
+	DDLC_FOLDER_NAME,
+	PROGRAM_NAME,
+	WARN_GENERIC_DATA_PATHS
 } from "./core/Constants";
 import OSUtil, {DDLC_FOLDER_REGEX, getOSType, INVALID_MAC_BINARIES, OS} from "./core/utils/OSUtil";
 import {
@@ -228,6 +229,7 @@ async function syncCovers() {
 	imagePrepared++
 	coverIdToShortMap.set(covers.indexOf(cover), cover)
 	shortToCoverIdMap.set(cover, covers.indexOf(cover))
+
 	new Promise(async (resolve, reject) => {
 	    try {
 		const img = await preloadImageObject(cover)
@@ -895,7 +897,6 @@ async function addMod(name) {
 	if (coverIdToShortMap.has(configData.coverId)) {
 	    copyConfigData.coverId = coverIdToShortMap.get(configData.coverId);
 	}
-	Logger.info(coverIdToShortMap, coverIdToShortMap.has(configData.coverId) ? coverIdToShortMap.get(configData.coverId) : shortToCoverIdMap.get(configData.coverId) ?? "nul", copyConfigData)
 
 	const contents = JSON.stringify(copyConfigData, null, "\t");
 	await writeTextFile(configPath, contents);
@@ -1246,11 +1247,10 @@ async function addMod(name) {
 	    })
 
 	    currentEntry = name;
-	    setCover(configData.coverId).then(() => {
-	    });
+	    await setCover(configData.coverId)
 	    Hud.setPinned(configData.pinned);
 
-	    if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.MAC && !gameExePath.endsWith(".app")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
+	    if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
 		await searchGame()
 	    }
 
@@ -1307,14 +1307,18 @@ async function addMod(name) {
 	    const isLinuxExecutable = gameExePath.toString() === OS.EXECUTABLE.LINUX || gameExePath.toString() === OS.EXECUTABLE.LINUX_OTHER;
 
 	    const hasCustomExecutable = !(noExecutable || isRawExecutable || isWindowsExecutable || isLinuxExecutable);
+		const getLastPath = () => {
+			let x = gameExePath.split('/');
+			return x[x.length - 1]
+		}
 
 	    modDescription = name +
 		"<br>Renpy: "
 		+ escapedDescription
 		+ "<br>Custom Exe: " +
 		(hasCustomExecutable ?
-		    TranslationUtil.of("yes") + " | " + gameExePath :
-		    TranslationUtil.of("no") + (getOSType() === OS.TYPE.MAC ? " - Mod likely wont execute properly" : ""))
+		    TranslationUtil.of("yes") + " | " + (getOSType() === OS.TYPE.MAC && gameExePath.includes('/') ? getLastPath() : gameExePath) :
+		    TranslationUtil.of("no"))
 		+ "<br><br>Credits: <br>"
 		+ (escapedModCredits !== undefined ? escapedModCredits : "No Credits Found!");
 
@@ -1547,10 +1551,10 @@ function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
 	Hud.hide("cover-up");
 	Hud.hide("cover-down");
 	Hud.ofId("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60755;</span> " + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61966;</span> " + time + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61974;</span> " + lastTime;
-	Hud.ofId("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 150) + "px"
+	Hud.ofId("authinput").style.width = Math.min(getTextWidth(author, "normal " + AUTHOR_INPUT_SIZE + "rem Aller"), 150) + "px"
 	if (space !== "Reading...") {
 	    Hud.ofId("authinput").addEventListener("input", async (e) => {
-		Hud.ofId("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal 1rem Aller"), 150) + "px"
+		Hud.ofId("authinput").style.width = Math.min(getTextWidth(e.target.value, "normal " + AUTHOR_INPUT_SIZE + "rem Aller"), 150) + "px"
 	    })
 	    Hud.ofId("authinput").addEventListener("focusout", async () => {
 		await setAuthor();
@@ -1608,11 +1612,11 @@ async function setAuthor() {
     let value = Hud.ofId("authinput").value.trimEnd();
     Hud.ofId("authinput").blur()
 
-    if (STRINGS.isBlank(STRINGS.EMPTY)) {
+    if (STRINGS.isBlank(value)) {
 	const author = (await getLauncher(currentEntry).getFunctions().getData()).author;
 	Hud.ofId("authinput").value = author;
 	Hud.ofId("authinput").placeholder = author;
-	Hud.ofId("authinput").style.width = Math.min(getTextWidth(author, "normal 1rem Aller"), 225) + "px"
+	Hud.ofId("authinput").style.width = Math.min(getTextWidth(author, "normal " + AUTHOR_INPUT_SIZE + "rem Aller"), 225) + "px"
     } else {
 	await getLauncher(currentEntry).getFunctions().setAuthor(value);
 	await getLauncher(currentEntry).getFunctions().leftClick();
@@ -2439,6 +2443,9 @@ async function setupIPCListeners(onLoadStartTime) {
 
 		let listener = async (e) => {
 		    e.preventDefault();
+			if (getOSType() === OS.TYPE.MAC) {
+				await confirm("Make sure you have 'Open safe files after downloading' off if you are using Safari!")
+			} 
 		    await openUrl("https://ddlc.moe")
 		};
 

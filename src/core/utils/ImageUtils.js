@@ -1,6 +1,7 @@
 import {readFile} from "@tauri-apps/plugin-fs";
 
 import {USE_CACHED_IMAGING} from "../Constants";
+import {getOSType, OS} from "./OSUtil";
 
 let cache = {};
 let localPreloadCovers = {};
@@ -110,7 +111,7 @@ function _internal_deref(url) {
 }
 
 function isAbsolute(cover) {
-    if (navigator.userAgent.toLowerCase().includes("linux")) {
+    if (getOSType() === OS.TYPE.LINUX || getOSType() === OS.TYPE.MAC) {
 	return cover.startsWith("/");
     } else {
 	return cover.includes(":");

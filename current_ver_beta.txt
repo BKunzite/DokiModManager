@@ -6,5 +6,13 @@ Visual Bugs
 not be shown as containing a custom executable.
 - Padding for screenshots under mods has been fixed.
 
-ToDo:
-- MacOS Mod Install Fixes
+- MacOS Fixes
+    Fallen Angle - Game Folder Mods Would Just Dump
+    Their Contents Into Autorun Instead Of Game
+
+    Exit Music Redux - Auto Nested Folder Detection Failed
+    Causing none of the mod files to be properly added
+
+    Fixed custom images not displaying
+
+    Google Drive Downloads On MacOS Fixed

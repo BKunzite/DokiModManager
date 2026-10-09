@@ -54,6 +54,9 @@ class DefaultClass {
                 }
             });
             document.documentElement.setAttribute("os-type", "linux");
+            if (getOSType() === OS.TYPE.MAC) {
+                document.documentElement.setAttribute("mac-type", "mac");
+            }
         }
     }
 }
