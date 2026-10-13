@@ -551,9 +551,14 @@ async function importMod(path) {
     }
     if (selectedPath != null) {
 	if (supportedModPackage(selectedPath)) {
-	    await invoke("import_mod", {
-		path: selectedPath
-	    })
+	    try {
+			await invoke("import_mod", {
+				path: selectedPath
+			})
+		} catch (e) {
+			await confirm("Failed to import mod!\nDeleting Temp Data\n\nReason:\n" + e)
+			DownloadsManager.complete(selectedPath)
+		}
 	} else {
 	    Hud.hide("loader")
 	    Hud.show("main")
@@ -2445,7 +2450,7 @@ async function setupIPCListeners(onLoadStartTime) {
 		    e.preventDefault();
 			if (getOSType() === OS.TYPE.MAC) {
 				await confirm("Make sure you have 'Open safe files after downloading' off if you are using Safari!")
-			} 
+			}
 		    await openUrl("https://ddlc.moe")
 		};
 

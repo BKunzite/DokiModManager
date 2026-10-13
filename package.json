@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@aptabase/tauri": "^0.4.1",
-    "@tauri-apps/api": "^2.12.2",
+    "@tauri-apps/api": "^2.12.3",
     "@tauri-apps/plugin-dialog": "2.8.1",
-    "@tauri-apps/plugin-fs": "^2.6.0",
-    "@tauri-apps/plugin-opener": "^2.7.0",
+    "@tauri-apps/plugin-fs": "^2.7.0",
+    "@tauri-apps/plugin-opener": "^2.7.1",
     "@tauri-apps/plugin-os": "^2.4.0",
     "@vueuse/core": "^15.0.0",
     "appdmg": "^0.6.6",
@@ -22,7 +22,7 @@
     "fdir": "^6.5.0",
     "fzf": "^0.5.2",
     "js-base64": "^3.9.4",
-    "npm-check-updates": "^23.1.0",
+    "npm-check-updates": "^23.1.1",
     "picomatch": "^4.0.7",
     "rolldown": "^1.2.13",
     "tauri-plugin-fs-pro-api": "^2.4.0",
@@ -31,9 +31,9 @@
     "vue": "^3.5.43"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.12.1",
-    "@vitejs/plugin-vue": "^6.0.9",
+    "@tauri-apps/cli": "^2.12.2",
+    "@vitejs/plugin-vue": "^6.0.10",
     "eslint-plugin-vue": "^10.11.1",
-    "prettier": "^3.9.9"
+    "prettier": "^3.9.10"
   }
 }

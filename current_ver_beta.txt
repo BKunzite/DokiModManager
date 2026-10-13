@@ -16,3 +16,9 @@ not be shown as containing a custom executable.
     Fixed custom images not displaying
 
     Google Drive Downloads On MacOS Fixed
+
+- Note For Developers
+Uh? Remember me switching to Deno because of bun's
+controversy? Well now Deno is being shut down in a year.
+I will likely switch to Node just for its stability,
+but for now, i'll stick with Deno until the end.
