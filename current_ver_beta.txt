@@ -13,9 +13,19 @@ not be shown as containing a custom executable.
     Exit Music Redux - Auto Nested Folder Detection Failed
     Causing none of the mod files to be properly added
 
-    Fixed custom images not displaying
+    Doki Doki Downpour - Size of the zip was too big and
+    was being blocked because of the size limit (to prevent zip bombs)
+    Increased max total zip size to 16gb and individual file size to 4gb
+
+    Blue Skies - Buffered Decode Size was too small, causing
+    the 'scripts.rpa' file to not extract
 
     Google Drive Downloads On MacOS Fixed
+
+    Fixed custom images not displaying
+    Window is now rounded properly.
+    Mac DMG download works correctly now, you still need to allow
+        DDMM through gatekeeper though
 
 - Note For Developers
 Uh? Remember me switching to Deno because of bun's

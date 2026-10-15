@@ -25,7 +25,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [patch.crates-io]
-rars = { git = "https://github.com/BKunzite/rars", branch = "patch-0.9.4" }
+rars = { git = "https://github.com/BKunzite/rars", rev = "a3e24b56fcc8a7b2d41f6f8efc4b4c39c924ff2f" }
 
 [dependencies]
 tauri = { version = "2.11.5", features = ["macos-private-api", "protocol-asset", "unstable"] }
@@ -56,3 +56,4 @@ tauri-plugin-fs-pro = "2.4.0"
 opener = { version = "0.8.5", features = ["reveal"] }
 unarc-rs = "0.7.2"
 os_info = "3.15.0"
+humansize = "2.1.3"

@@ -1,6 +1,14 @@
 use std::fs::{create_dir_all, File};
 use std::path::PathBuf;
+use std::sync::LazyLock;
+use unarc_rs::ArchiveOptions;
 use unarc_rs::unified::ArchiveFormat;
+
+static ARCHIVE_OPTIONS: LazyLock<ArchiveOptions> = LazyLock::new(||
+    ArchiveOptions::new()
+    .with_max_entry_size(Some(4 * 1024 * 1024 * 1024)) // 4 GiB per entry
+    .with_max_total_size(Some(16 * 1024 * 1024 * 1024)) // 16 GiB total output
+);
 
 pub fn is_archive_game_folder(
     path: &PathBuf,
@@ -24,6 +32,32 @@ pub fn is_archive_game_folder(
 
     Ok(is_game)
 }
+
+pub fn is_archive_nested(
+    path: &PathBuf,
+    tld: &str,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let mut archive = ArchiveFormat::open_path(path)?;
+    let mut is_compressed = None;
+
+    while let Some(entry) = archive.next_entry()? {
+        let mut name = strip_slash_prefix(entry.name());
+
+        if name.starts_with(tld) {
+            name = strip_slash_prefix(name.replacen(tld, "", 1).as_str());
+        }
+
+        if is_file_compressed(&name.trim()) {
+            is_compressed = Some(name);
+        } else {
+            is_compressed = None;
+            break;
+        }
+    }
+
+    Ok(is_compressed)
+}
+
 
 pub fn detect_nest(archive_file: &PathBuf) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let mut newest_found: Option<String> = None;
@@ -103,7 +137,7 @@ pub fn extract_archive(
             entry.file_name(),
             path.to_str().expect("Invalid Path")
         ));
-        archive.read_to(&entry, &mut output)?;
+        archive.read_to_with_options(&entry, &mut output, &*ARCHIVE_OPTIONS)?;
     }
 
     simple_logger.finish();
@@ -147,7 +181,7 @@ pub fn extract_archive_without_tld(
             entry.file_name(),
             path.to_str().expect("Invalid Path")
         ));
-        archive.read_to(&entry, &mut output)?;
+        archive.read_to_with_options(&entry, &mut output, &*ARCHIVE_OPTIONS)?;
     }
 
     simple_logger.finish();
@@ -187,4 +221,9 @@ pub fn is_game_folder(name: &str) -> bool {
         || name.ends_with(".rpa")
         || name.starts_with("mod_assets")
         || name.ends_with(".rpy")
+}
+
+pub fn is_file_compressed(name: &str) -> bool {
+    name.ends_with(".zip")
+        || name.ends_with(".rar")
 }

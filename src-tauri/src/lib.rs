@@ -40,6 +40,7 @@ use tokio::sync::oneshot;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use std::thread::sleep;
+use humansize::{format_size, DECIMAL};
 #[cfg(target_os = "windows")]
 use window_vibrancy::apply_acrylic;
 
@@ -861,8 +862,21 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     let config_data: ConfigData =
         serde_json::from_str(&config_contents).map_err(|e| e.to_string())?;
 
-    let source_file = PathBuf::from(&path);
+    let mut source_file = PathBuf::from(&path);
     let raw_rpa = path.ends_with(".rpa");
+
+    if let Some(nest) = is_archive_nested(&source_file, "").expect("failed to check for nest archive") {
+        stamp("Nested archive found!");
+        let temp_extract = get_current_dir().join("store/temp");
+        create_dir_all(temp_extract.clone()).expect("failed to create temp directory");
+        extract_archive(&source_file, &temp_extract).expect("failed to extract archive");
+        if temp_extract.join(nest.clone()).exists() {
+            source_file = temp_extract.join(nest.clone());
+        }
+    } else {
+        stamp("Archive is not nested.")
+    }
+
     let source_name = if raw_rpa {
         &format!("Unknown_{}", rng().random_range(0..99999))
     } else {
@@ -872,6 +886,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
             .to_str()
             .ok_or("Invalid source file name")?
     };
+
     let mut logger = SimpleLogger::new(format!(
         "Import_Mod {}",
         source_file
@@ -961,7 +976,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         create_dir_all(&macos_contents).expect("Failed to create temp extract");
         create_dir_all(&regular_contents).expect("Failed to create temp extract");
 
-        if path.ends_with(".rpa") {
+        if source_file.as_path().to_str().expect("failed to get path as str").ends_with(".rpa") {
 
         } else {
             let nest_check = detect_nest(&source_file).expect("Failed to get nest");
@@ -1245,12 +1260,14 @@ async fn download_file(app: &AppHandle, url: String, save_path: String) -> Resul
                 "download_percent",
                 StringData {
                     text: &format!(
-                        "{} | {:.1}% ({:.1} MB/s) | {}",
+                        "{} | {} of {} ({:.1} MB/s) - {:.1}% | {}",
                         url_clone,
-                        download_percent,
+                        format_size(downloaded, DECIMAL),
+                        format_size(total, DECIMAL),
                         (downloaded - last_downloaded) as f64
                             / start.elapsed().as_millis().max(1) as f64
                             / 1024f64,
+                        download_percent,
                         download_percent
                     ),
                 },
@@ -1988,6 +2005,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
     let clone_handle = handle.clone();
     let clone_handle2 = handle.clone();
     let downloads_dir = get_current_dir().join("store").join("downloads");
+    let temps_dir = get_current_dir().join("store").join("temp");
 
     tauri::async_runtime::spawn(async move {
         stamp("Starting Doki Doki Mod Manager");
@@ -2111,6 +2129,11 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
     if downloads_dir.exists() {
         stamp("Clearing Downloads Folder");
         let _ = remove_dir_all(downloads_dir);
+    }
+
+    if temps_dir.exists() {
+        stamp("Clearing Temps Download Folder");
+        let _ = remove_dir_all(temps_dir);
     }
 
     Ok(())

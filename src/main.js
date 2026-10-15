@@ -2282,7 +2282,7 @@ async function setupIPCListeners(onLoadStartTime) {
     })
 
     await listen("download_percent", async (e) => {
-	const [url, downloadString, downloadPercent] = e.payload.text.split(" | ");
+	const [url, downloadString, downloadPercent, downloadedMB, totalMB] = e.payload.text.split(" | ");
 	const downloadingObject = DownloadsManager.getDownload(url)
 
 	if (!Hud.isVoid(downloadingObject)) {
