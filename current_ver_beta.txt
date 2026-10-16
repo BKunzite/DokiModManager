@@ -1,4 +1,4 @@
-1.8.1-beta
+1.8.1-release
 Recommended (Bug fixes)
 
 Visual Bugs
