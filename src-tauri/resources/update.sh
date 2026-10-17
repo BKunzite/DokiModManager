@@ -1,6 +1,21 @@
 set -eu
 
 PACKAGE="$1"
+
+# Reject option-like strings (argument injection) and anything that is not
+# an existing regular file so an attacker cannot smuggle extra flags/paths
+# into the privileged (pkexec) package-manager invocation below.
+case "$PACKAGE" in
+  -*)
+    echo "Refusing invalid update-package path." >&2
+    exit 1
+    ;;
+esac
+if [ ! -f "$PACKAGE" ]; then
+  echo "Update package not found: $PACKAGE" >&2
+  exit 1
+fi
+
 mytitle="Doki Doki Mod Manager Updater"
 bold=$(tput bold)
 normal=$(tput sgr0)
