@@ -88,14 +88,14 @@ import Units from "./core/utils/Units";
 import SeasonsManager from "./core/seasonal/SeasonsManager";
 import {ProgramData} from "./core/utils/ConfigDataHelper";
 import AssetsManager from "./core/manager/AssetsManager";
-
-// ----- EXTERNAL ------- //
-import {Base64} from 'js-base64';
-import {Fzf} from 'fzf';
 import DOMBatch from "./core/fragment/DOMBatch";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import Optional from "./core/utils/Optional";
 import WaitInterval from "./core/utils/WaitInterval";
+
+// ----- EXTERNAL ------- //
+import {Base64} from 'js-base64';
+import {Fzf} from 'fzf';
 
 //// Profile Data
 
