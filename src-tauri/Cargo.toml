@@ -28,7 +28,7 @@ tauri-build = { version = "2", features = [] }
 rars = { git = "https://github.com/BKunzite/rars", rev = "a3e24b56fcc8a7b2d41f6f8efc4b4c39c924ff2f" }
 
 [dependencies]
-tauri = { version = "2.11.5", features = ["macos-private-api", "protocol-asset", "unstable"] }
+tauri = { version = "2.11.5", features = [ "protocol-asset", "unstable"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

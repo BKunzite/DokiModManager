@@ -81,8 +81,8 @@ pub fn setup_logs() {
     }
     let current_dir = crate::get_current_dir().join("store");
     let logs = current_dir.join("logs");
-    std::fs::create_dir_all(&logs).unwrap_or_else(|_| {
-        println!("Failed to create logs directory! Failed To Create Folder @ Location?: {}", &logs.as_path().to_str().unwrap());
+    std::fs::create_dir_all(&logs).unwrap_or_else(|e| {
+        println!("Failed to create logs directory! Failed To Create Folder!\nLocation?: {}\nError: {}", &logs.as_path().to_str().unwrap(), e.to_string());
     });
     let logs_size = logs.read_dir().unwrap().count();
     if logs_size > 10 {
