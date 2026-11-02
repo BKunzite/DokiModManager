@@ -75,25 +75,26 @@ impl SimpleLogger {
     }
 }
 
-pub fn setup_logs() {
-    if LOG_FILE.lock().unwrap().is_some() {
-        return;
+pub fn setup_logs() -> Result<(), Box<dyn std::error::Error>> {
+    if LOG_FILE.lock()?.is_some() {
+        return Ok(());
     }
     let current_dir = crate::get_current_dir().join("store");
     let logs = current_dir.join("logs");
     std::fs::create_dir_all(&logs).unwrap_or_else(|e| {
         println!("Failed to create logs directory! Failed To Create Folder!\nLocation?: {}\nError: {}", &logs.as_path().to_str().unwrap(), e.to_string());
     });
-    let logs_size = logs.read_dir().unwrap().count();
+    let logs_size = logs.read_dir()?.count();
     if logs_size > 10 {
-        let oldest_log = logs.read_dir().unwrap().nth(0).unwrap().unwrap();
+        let oldest_log = logs.read_dir()?.nth(0).unwrap()?;
         remove_file(oldest_log.path()).unwrap_or_else(|_| {
             println!("Failed to delete oldest log file!");
         })
     }
     let log_file_path = logs.join(format!("log_{}.txt", Timestamp::now().as_milliseconds()));
     let log_file = std::fs::File::create(&log_file_path).expect("Failed to create log file!");
-    LOG_FILE.lock().unwrap().replace(log_file);
+    LOG_FILE.lock()?.replace(log_file);
+    Ok(())
 }
 
 pub fn push_stamp(string: &str) {

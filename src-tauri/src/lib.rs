@@ -1995,7 +1995,10 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
         env::current_dir().expect("Could Not Get Current Directory")
     }).expect("failed to set current directory");
 
-    setup_logs();
+    setup_logs().unwrap_or_else(|e| {
+        CURRENT_DIR.set(app.path().data_dir().expect("Could Not Get Data Directory")).expect("Failed to set current dir");
+        setup_logs().unwrap();
+    });
     push_stamp("<INIT>");
     stamp(format!("Running at {:?}", CURRENT_DIR.get().expect("Failed to get current dir")).as_str());
 
