@@ -17,7 +17,7 @@ use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{LazyLock, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, ProcessesToUpdate, System};
@@ -62,7 +62,7 @@ use simple_logger::*;
 static RESOURCES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/resources");
 static COPY_POOL: OnceLock<ThreadPool> = OnceLock::new();
 static DOWNLOAD_STATE: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
-static CURRENT_DIR: OnceLock<PathBuf> = OnceLock::new();
+static CURRENT_DIR: LazyLock<Mutex<PathBuf>> = LazyLock::new(|| Mutex::new(PathBuf::new()));
 #[cfg(not(target_os = "windows"))]
 static RELEASES_URL: &str = "https://github.com/BKunzite/DokiModManager/releases";
 
@@ -1938,10 +1938,10 @@ async fn update_unrpyc() {
 
 pub fn get_current_dir() -> PathBuf {
     if cfg!(target_os = "windows") {
-        CURRENT_DIR.get().expect("Could Not Get Current Directory").to_path_buf()
+        CURRENT_DIR.lock().expect("Failed to get current_dir").to_path_buf()
     } else {
-        CURRENT_DIR.get()
-            .expect("Could Not Get Current Directory")
+        CURRENT_DIR.lock()
+            .expect("Failed to get current_dir")
             .join(".dokimodmanager")
             .to_path_buf()
     }
@@ -1989,14 +1989,14 @@ fn stamp_system_info() {
 }
 
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    CURRENT_DIR.set(if cfg!(target_os = "macos") && !cfg!(debug_assertions) {
+    *CURRENT_DIR.lock().expect("Failed to lock") = if cfg!(target_os = "macos") && !cfg!(debug_assertions) {
         app.path().data_dir().expect("Could Not Get Data Directory")
     } else {
         env::current_dir().expect("Could Not Get Current Directory")
-    }).expect("failed to set current directory");
+    };
 
     setup_logs().unwrap_or_else(|e| {
-        CURRENT_DIR.set(app.path().data_dir().expect("Could Not Get Data Directory")).expect("Failed to set current dir");
+        *CURRENT_DIR.lock().expect("Failed to lock") = app.path().data_dir().expect("Could Not Get Data Directory");
         setup_logs().unwrap();
     });
     push_stamp("<INIT>");
