@@ -1,34 +1,6 @@
-1.8.1-release
-Recommended (Bug fixes)
+1.8.2-rc
 
-Visual Bugs
-- Mods with a custom executable ending in 'DDLC.exe' i.e. 'TheOutside_DDLC.exe' would
-not be shown as containing a custom executable.
-- Padding for screenshots under mods has been fixed.
-
-- MacOS Fixes
-    Fallen Angle - Game Folder Mods Would Just Dump
-    Their Contents Into Autorun Instead Of Game
-
-    Exit Music Redux - Auto Nested Folder Detection Failed
-    Causing none of the mod files to be properly added
-
-    Doki Doki Downpour - Size of the zip was too big and
-    was being blocked because of the size limit (to prevent zip bombs)
-    Increased max total zip size to 16gb and individual file size to 4gb
-
-    Blue Skies - Buffered Decode Size was too small, causing
-    the 'scripts.rpa' file to not extract
-
-    Google Drive Downloads On MacOS Fixed
-
-    Fixed custom images not displaying
-    Window is now rounded properly.
-    Mac DMG download works correctly now, you still need to allow
-        DDMM through gatekeeper though
-
-- Note For Developers
-Uh? Remember me switching to Deno because of bun's
-controversy? Well now Deno is being shut down in a year.
-I will likely switch to Node just for its stability,
-but for now, i'll stick with Deno until the end.
+Routine Linux Patches
+- Properly fixed linux builds
+- Fixed 'rl_print' style errors (from readline.so.8)
+- Fixed Exit Music Redux & Salvation Remake

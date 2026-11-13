@@ -1,9 +1,40 @@
 import { getOSType, OS } from "./OSUtil";
 
 export let fileTerminator = getOSType() === OS.TYPE.WINDOWS ? "\\" : "/";
-export const INVALID_FOLDER_CHARACTERS = /[<>:"/\\|?*\u0000-\u001F]|[. ]$/g
-export const INVALID_FOLDER_NAMES = /^(con|prn|aux|nul|com\d|lpt\d)$/i
+export const INVALID_FOLDER_CHARACTERS = {
+  windows: /[<>:"/\\|?*\u0000-\u001F]|[. ]$/,
+  linux: /[/\u0000]/,
+  macos: /[/:\u0000]/
+}
+export const INVALID_FOLDER_NAMES = {
+  windows: /^(con|prn|aux|nul|com\d|lpt\d)$/i,
+  linux: /^(?:\.{1,2})?$/,
+  macos: /^(?:\.{1,2})?$/
+}
 const archiveRegex = /\.(zip|rar|tar|7z|gz)$/i;
+const encoder = new TextEncoder()
+
+/**
+ * Checks if a file name is valid on the current os.
+ * @param {string} name Name of the file
+ * @returns {boolean} true - valid; false - invalid
+ */
+
+export function validateName(name) {
+  if (encoder.encode(name).length >= 255) return false
+  switch (getOSType()) {
+    case OS.TYPE.WINDOWS:
+      return inverse(INVALID_FOLDER_NAMES.windows.test(name) || INVALID_FOLDER_CHARACTERS.windows.test(name))
+    case OS.TYPE.LINUX:
+      return inverse(INVALID_FOLDER_NAMES.linux.test(name) || INVALID_FOLDER_CHARACTERS.linux.test(name))
+    case OS.TYPE.MAC:
+      return inverse(INVALID_FOLDER_NAMES.macos.test(name) || INVALID_FOLDER_CHARACTERS.macos.test(name))
+  }
+}
+
+function inverse(a) {
+  return !a
+}
 
 /**
  * Replaces \\\\ with operating-system-specific terminator.

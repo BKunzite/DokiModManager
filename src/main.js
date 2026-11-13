@@ -74,11 +74,11 @@ import {
 } from "./core/Constants";
 import OSUtil, {DDLC_FOLDER_REGEX, getOSType, INVALID_MAC_BINARIES, OS} from "./core/utils/OSUtil";
 import {
-    fileTerminator,
-    INVALID_FOLDER_CHARACTERS,
-    INVALID_FOLDER_NAMES,
-    supportedModPackage,
-    terminatePath
+	fileTerminator,
+	INVALID_FOLDER_CHARACTERS,
+	INVALID_FOLDER_NAMES,
+	supportedModPackage,
+	terminatePath, validateName
 } from "./core/utils/FileSystem";
 import Logger from "./core/utils/Logger";
 import DownloadsManager from "./core/download/DownloadsManager"
@@ -1697,7 +1697,7 @@ async function renameMod() {
     const oldName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + name;
     const newName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + value;
 
-    if (value.length > 100 || INVALID_FOLDER_CHARACTERS.test(value) !== null || INVALID_FOLDER_NAMES.test(value) != null) {
+    if (!validateName(value)) {
 	await confirm("The name '" + value + "' is invalid!")
 	Hud.ofId("modtitle").value = formatModName(currentEntry);
 	return;

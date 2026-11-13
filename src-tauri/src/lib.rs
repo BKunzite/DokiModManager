@@ -1029,8 +1029,14 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         } else {
             let nest_check = detect_nest(&source_file).expect("Failed to get nest");
             let mut is_game = false;
+            let lib_check = does_archive_contain_libs(&source_file).expect("Failed to get lib");
 
             is_archive = true;
+
+            if cfg!(target_os = "linux") && lib_check {
+                stamp("Removing libs brought by ddlc.zip");
+                remove_dir_all(target_dir.join("lib")).expect("Failed to remove temp lib");
+            }
 
             if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder") {
                 target_dir = target_dir.join("game");
@@ -1824,17 +1830,6 @@ fn run_proc_linux(executor: String, path: String) {
         .expect("Failed to run script");
 }
 
-#[cfg(target_os = "linux")]
-fn run_solo_proc_linux(executor: String) {
-    let _ = Command::new("setsid")
-        .arg("--fork")
-        .arg("x-terminal-emulator")
-        .arg("-e")
-        .arg(executor)
-        .spawn()
-        .map_err(|e| e.to_string())
-        .expect("Failed to run script");
-}
 #[cfg(target_os = "windows")]
 async fn update_windows_binary() {
     println!("Updating Using {}", LATEST_ARTIFACT_WINDOWS);
@@ -1995,12 +1990,12 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
         env::current_dir().expect("Could Not Get Current Directory")
     };
 
-    setup_logs().unwrap_or_else(|e| {
+    setup_logs().unwrap_or_else(|_| {
         *CURRENT_DIR.lock().expect("Failed to lock") = app.path().data_dir().expect("Could Not Get Data Directory");
         setup_logs().unwrap();
     });
     push_stamp("<INIT>");
-    stamp(format!("Running at {:?}", CURRENT_DIR.get().expect("Failed to get current dir")).as_str());
+    stamp(format!("Running at {:?}", CURRENT_DIR.lock().expect("Failed to get current dir")).as_str());
 
     let handle = app.handle();
     let window = app.get_webview_window("main").unwrap();

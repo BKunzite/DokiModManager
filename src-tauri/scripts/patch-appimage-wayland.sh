@@ -6,6 +6,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 src_tauri_dir="$repo_root/src-tauri"
+blacklist_dir="$src_tauri_dir/linuxdeploy.blacklist.txt"
 hook_src="$src_tauri_dir/appimage/apprun-wayland-compat.sh"
 
 if [ ! -f "$hook_src" ]; then
@@ -73,7 +74,7 @@ chmod +x "$linuxdeploy_bin"
 
 out_dir="$(dirname "$appdir")"
 echo "repacking with $linuxdeploy_bin ..."
-APPIMAGE_EXTRACT_AND_RUN=1 ARCH="${ARCH:-x86_64}" "$linuxdeploy_bin" --appdir "$appdir" --output appimage
+APPIMAGE_EXTRACT_AND_RUN=1 ARCH="${ARCH:-x86_64}" "$linuxdeploy_bin" --appdir "$appdir" --output appimage --exclude-library 'libreadline.so*'
 
 new_appimage="$(find . -maxdepth 1 -type f -iname '*.AppImage' -newer "$appdir/AppRun" -print -quit)"
 if [ -n "$new_appimage" ]; then

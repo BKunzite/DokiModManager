@@ -33,6 +33,25 @@ pub fn is_archive_game_folder(
     Ok(is_game)
 }
 
+pub fn does_archive_contain_libs(
+    path: &PathBuf,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    let mut archive = ArchiveFormat::open_path(path)?;
+    let mut is_game = false;
+
+    while let Some(entry) = archive.next_entry()? {
+        let name = strip_slash_prefix(entry.name());
+
+        if name.contains("lib/python") || name.contains("lib/linux") || name.contains("lib/windows") ||
+            name.contains("lib\\python") || name.contains("lib\\linux") || name.contains("lib\\windows") {
+            is_game = true;
+            break;
+        }
+    }
+
+    Ok(is_game)
+}
+
 pub fn is_archive_nested(
     path: &PathBuf,
     tld: &str,
