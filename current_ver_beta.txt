@@ -1,4 +1,12 @@
-1.8.2-rc
+1.8.2-beta
+
+
+I have not been pushing out updates at the rate that I should be,
+I will try to push out a few more updates before Christmas comes.
+
+Bug Fixes
+- Fixed "Invalid Name" For Every Name
+- Fixed Set Install Directory on Home Page Ignoring Input
 
 Routine Linux Patches
 - Properly fixed linux builds

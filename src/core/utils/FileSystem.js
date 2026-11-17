@@ -24,16 +24,12 @@ export function validateName(name) {
   if (encoder.encode(name).length >= 255) return false
   switch (getOSType()) {
     case OS.TYPE.WINDOWS:
-      return inverse(INVALID_FOLDER_NAMES.windows.test(name) || INVALID_FOLDER_CHARACTERS.windows.test(name))
+      return !(INVALID_FOLDER_NAMES.windows.test(name) || INVALID_FOLDER_CHARACTERS.windows.test(name))
     case OS.TYPE.LINUX:
-      return inverse(INVALID_FOLDER_NAMES.linux.test(name) || INVALID_FOLDER_CHARACTERS.linux.test(name))
+      return !(INVALID_FOLDER_NAMES.linux.test(name) || INVALID_FOLDER_CHARACTERS.linux.test(name))
     case OS.TYPE.MAC:
-      return inverse(INVALID_FOLDER_NAMES.macos.test(name) || INVALID_FOLDER_CHARACTERS.macos.test(name))
+      return !(INVALID_FOLDER_NAMES.macos.test(name) || INVALID_FOLDER_CHARACTERS.macos.test(name))
   }
-}
-
-function inverse(a) {
-  return !a
 }
 
 /**

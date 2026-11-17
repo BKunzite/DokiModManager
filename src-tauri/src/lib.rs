@@ -977,7 +977,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         create_dir_all(&regular_contents).expect("Failed to create temp extract");
 
         if source_file.as_path().to_str().expect("failed to get path as str").ends_with(".rpa") {
-
+            // ToDo: MacOS .rpa support
         } else {
             let nest_check = detect_nest(&source_file).expect("Failed to get nest");
             let mut is_game = false;
@@ -1030,12 +1030,13 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
             let nest_check = detect_nest(&source_file).expect("Failed to get nest");
             let mut is_game = false;
             let lib_check = does_archive_contain_libs(&source_file).expect("Failed to get lib");
+            let linux_lib_path = target_dir.join("lib");
 
             is_archive = true;
 
-            if cfg!(target_os = "linux") && lib_check {
+            if cfg!(target_os = "linux") && lib_check && is_dir(linux_lib_path.clone()).await {
                 stamp("Removing libs brought by ddlc.zip");
-                remove_dir_all(target_dir.join("lib")).expect("Failed to remove temp lib");
+                remove_dir_all(&linux_lib_path).expect("Failed to remove temp lib");
             }
 
             if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder") {

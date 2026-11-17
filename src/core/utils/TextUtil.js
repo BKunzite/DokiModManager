@@ -6,7 +6,7 @@ const SHOULD_ESCAPE_HTML_PATTERN = /["&'<>]/;
 const replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
 const replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
 const replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
-const nameFormatRegex = /\b(?:ddlc|renpy7mod|renpy8mod)\b\s*[-_\s]*|[-_]+|\s+/gi;
+const nameFormatRegex = /\b(?:ddlc|renpy7mod|renpy8mod)\b[\s\-_+]*|[-_+]+|\s+/gi;
 export const STRINGS = {
     SPACE: " ",
     EMPTY: "",

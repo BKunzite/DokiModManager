@@ -746,7 +746,7 @@ async function requestDirectory(directoryPath = undefined) {
 
 	     */
 
-	    if (!Hud.isVoid(selectedPath)) {
+	    if (!Hud.isVoid(selectedPath) && Hud.isVoid(chosenPath)) {
 		return
 	    }
 	}
