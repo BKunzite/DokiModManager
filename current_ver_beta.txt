@@ -4,11 +4,22 @@
 I have not been pushing out updates at the rate that I should be,
 I will try to push out a few more updates before Christmas comes.
 
+Changes
+- Changed to Christmas Theme
+- Removed Old Report System
+- Added Discord Invite Button
+- Settings Panel
+    - Toggle On/Off Sound, Seasons, And Performance Mode
+
 Bug Fixes
 - Fixed "Invalid Name" For Every Name
 - Fixed Set Install Directory on Home Page Ignoring Input
+- Mod Descriptions Now Are Properly Formatted
+- Fixed Reset Data
 
 Routine Linux Patches
 - Properly fixed linux builds
 - Fixed 'rl_print' style errors (from readline.so.8)
 - Fixed Exit Music Redux & Salvation Remake
+
+ToDo: MacOS .rpa Support

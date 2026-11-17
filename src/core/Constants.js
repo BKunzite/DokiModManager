@@ -6,10 +6,11 @@ import {getOSType, OS} from "./utils/OSUtil";
  */
 
 export const CURRENT = {
-    SEASON: SeasonsManager.SEASON.NONE,
+    SEASON: SeasonsManager.SEASON.CHRISTMAS,
 };
 
 export const PROGRAM_NAME = "Doki Doki Mod Manager";
+export const PROGRAM_DISCORD = "https://discord.gg/gCJgyUrvjY";
 
 /*
     Static Data
@@ -59,8 +60,8 @@ export const CLIENT_THEMES = {
         image: "Other_Theme_Icons/snowflake.svg",
     },
     NORD: {
-        primary_color: [59, 66, 82],
-        primary_color_saturated: [136, 192, 208],
+        primary_color: [136, 192, 208],
+        primary_color_saturated: [59, 66, 82],
         image: "Other_Theme_Icons/crown.png",
     },
     CREAM: {

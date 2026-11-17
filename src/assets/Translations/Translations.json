@@ -87,7 +87,8 @@
     "extracting": "[Extracting]",
     "delete-mod": "Delete Mod",
     "reset-data": "Reset Current Profile Data",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "close": "Close"
   },
   "ru": {
     "metadata": {
@@ -177,7 +178,8 @@
     "extracting": "[Извлечение]",
     "delete-mod": "Удалить мод",
     "reset-data": "Сбросить данные текущего профиля",
-    "unknown": "Неизвестно"
+    "unknown": "Неизвестно",
+    "close": "Закрыть"
   },
   "pt": {
     "metadata": {
@@ -267,7 +269,8 @@
     "extracting": "[Extraindo]",
     "delete-mod": "Excluir Mod",
     "reset-data": "Redefinir dados do perfil atual",
-    "unknown": "Desconhecido"
+    "unknown": "Desconhecido",
+    "close": "Fechar"
   },
   "es": {
     "metadata": {
@@ -357,7 +360,8 @@
     "extracting": "[Extrayendo]",
     "delete-mod": "Eliminar Mod",
     "reset-data": "Restablecer datos del perfil actual",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "close": "Cerrar"
   },
   "fr": {
     "metadata": {
@@ -447,7 +451,8 @@
     "extracting": "[Extraction]",
     "delete-mod": "Supprimer le Mod",
     "reset-data": "Réinitialiser les données du profil",
-    "unknown": "Inconnu"
+    "unknown": "Inconnu",
+    "close": "Fermer"
   },
   "zh-HK": {
     "metadata": {
@@ -537,7 +542,8 @@
     "extracting": "[解壓中]",
     "delete-mod": "刪除模組",
     "reset-data": "重置當前設定檔數據",
-    "unknown": "未知"
+    "unknown": "未知",
+    "close": "關閉"
   },
   "jp": {
     "metadata": {
@@ -627,7 +633,8 @@
     "extracting": "[解凍中]",
     "delete-mod": "Modを削除",
     "reset-data": "現在のプロファイルデータをリセット",
-    "unknown": "不明"
+    "unknown": "不明",
+    "close": "閉じる"
   },
   "it": {
     "metadata": {
@@ -717,7 +724,8 @@
     "extracting": "[Estrazione in corso]",
     "delete-mod": "Elimina mod",
     "reset-data": "Reimposta i dati del profilo corrente",
-    "unknown": "Sconosciuto"
+    "unknown": "Sconosciuto",
+    "close": "Chiudi"
   },
   "pl": {
     "metadata": {
@@ -807,6 +815,7 @@
     "extracting": "[Wypakowywanie]",
     "delete-mod": "Usuń moda",
     "reset-data": "Zresetuj dane bieżącego profilu",
-    "unknown": "Nieznane"
+    "unknown": "Nieznane",
+    "close": "Zamknij"
   }
 }

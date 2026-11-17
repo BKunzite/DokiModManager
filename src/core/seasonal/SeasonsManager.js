@@ -2,8 +2,8 @@ import Christmas from "./Seasons/Christmas";
 
 class SeasonsManager {
     SEASON = {
-        "NONE": "0",
-        "CHRISTMAS": "1",
+        "NONE": 0x90,
+        "CHRISTMAS": 0x91,
     };
 
     async init(season = this.SEASON.NONE) {

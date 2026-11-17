@@ -111,10 +111,6 @@
       </div>
 
     </div>
-    <button class="report-open grab" id="report-open">
-      <span class="report-icon">&#59936;</span>
-      <span id="report-text" class="report-text">Report Issue</span>
-    </button>
     <button class="language" id="language">
       <img src="./assets/Flags/spain.png" class="language-flag" id="language-flag">
       <span id="language-text" class="language-text">es</span>
@@ -124,7 +120,10 @@
     </div>
     <button class="close grab" id="close">&#60313;</button>
     <button class="minimize grab" id="min">&#61870;</button>
-    <button class="downloads-show grab" id="downloads-show">&#60502;</button>
+    <button class="downloads-show grab" id="downloads-show">&#xEC5A;</button>
+    <button class="discord-button grab" id="discord-show">&#xEC37;</button>
+    <button class="settings-button grab" id="settings-show">&#xEC9C;</button>
+
     <div class="downloads-list smooth-hide hide" id="downloads-list">
       <header class="downloads-header" id="downloads-header">Downloads</header>
       <div class="inner-downloads-list" id="downloads-list-inner">
@@ -193,18 +192,12 @@
     <div class="image-picker" id="image-picker-bg">
       <button class="image-picker-cancel" id="image-picker-cancel">Cancel</button>
     </div>
-    <div class="report-bg smooth-hide hide" id="report-bg">
-      <header class="report-title" id="report-title">Report Issue</header>
-      <textarea class="report-textbox" id="report-textc"
-                placeholder="Type your issue here, please put specific details below!"></textarea>
-      <button class="report-send" id="report-send">Send</button>
-      <button class="report-close" id="report-close">Close</button>
-
-    </div>
-
   </div>
   <div id="pill-files" class="pill-files hide">
     <span style="font-family: Icon; color: rgb(var(--primary-color))">&#60792;</span> Open Folder
+  </div>
+  <div id="uikit">
+
   </div>
   <div id="changelog" class="changelog hide smooth-hide">
     <header class="changelog-title" id="changelog-title"></header>

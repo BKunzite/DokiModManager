@@ -2,6 +2,7 @@ import sound_beep from "../../assets/select.ogg";
 import sound_boop from "../../assets/hover.ogg";
 import sound_click from "../../assets/pageflip.ogg";
 import dart_sfx from "../../assets/dart_sfx.mp3";
+import programData from "../utils/ConfigDataHelper";
 
 class SoundManager {
     CLICK_SOUND = sound_click;
@@ -15,8 +16,10 @@ class SoundManager {
      */
 
     play(song) {
+        if (programData.getOr("sound", true) === false) return;
+
         let beep = new Audio(song);
-        beep.volume = 0.5;
+        beep.volume = 0.25;
 
         beep.play().then(() => {
         });

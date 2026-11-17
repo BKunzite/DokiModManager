@@ -38,6 +38,7 @@ import {
     regexImageName,
     shortToCoverIdMap
 } from "./core/utils/ImageUtils";
+import {Notification} from "./core/interface/uikit/Notification";
 import {CLIENT_VERSION, getLatest, shouldUpdate} from "./core/VersionHandler";
 import {TRANSLATION_ELEMENT_MAP, TRANSLATION_TABLE, TranslationUtil} from "./core/utils/TranslationUtil"
 import {
@@ -63,14 +64,14 @@ import {
     STRINGS
 } from "./core/utils/TextUtil";
 import {
-	AUTHOR_INPUT_SIZE,
-	CLIENT_START,
-	CLIENT_THEME_ENUM,
-	CLIENT_THEMES,
-	CURRENT,
-	DDLC_FOLDER_NAME,
-	PROGRAM_NAME,
-	WARN_GENERIC_DATA_PATHS
+    AUTHOR_INPUT_SIZE,
+    CLIENT_START,
+    CLIENT_THEME_ENUM,
+    CLIENT_THEMES,
+    CURRENT,
+    DDLC_FOLDER_NAME, PROGRAM_DISCORD,
+    PROGRAM_NAME,
+    WARN_GENERIC_DATA_PATHS
 } from "./core/Constants";
 import OSUtil, {DDLC_FOLDER_REGEX, getOSType, INVALID_MAC_BINARIES, OS} from "./core/utils/OSUtil";
 import {
@@ -86,7 +87,7 @@ import PreventDefaults from "./core/utils/PreventDefaults";
 import Hud from "./core/utils/HTMLHelper";
 import Units from "./core/utils/Units";
 import SeasonsManager from "./core/seasonal/SeasonsManager";
-import {ProgramData} from "./core/utils/ConfigDataHelper";
+import programData from "./core/utils/ConfigDataHelper";
 import AssetsManager from "./core/manager/AssetsManager";
 import DOMBatch from "./core/fragment/DOMBatch";
 import {getCurrentWindow} from "@tauri-apps/api/window";
@@ -96,6 +97,7 @@ import WaitInterval from "./core/utils/WaitInterval";
 // ----- EXTERNAL ------- //
 import {Base64} from 'js-base64';
 import {Fzf} from 'fzf';
+import {OptionsPanel} from "./core/interface/uikit/Options";
 
 //// Profile Data
 
@@ -119,13 +121,6 @@ let tutorialStep = 0;
 
 let currentBackgroundMaxOffset = 0;
 let currentBackgroundOffset = 0;
-/**
- * @type {{path: string, config: ProgramData}}
- */
-let localConfig = {
-    path: STRINGS.EMPTY,
-    config: null
-}
 let currentSavePath = STRINGS.EMPTY;
 let currentUserName = STRINGS.EMPTY;
 
@@ -146,7 +141,6 @@ let ddlcSelected = false
 let selectedPath;
 let localPath;
 let observer;
-
 
 /**
  * Initialize Translations
@@ -284,14 +278,20 @@ async function syncCovers() {
 }
 
 function onWindowFocusChanged(focus) {
+    if (programData.getOr("performant", false)) {
+	focus = false
+    }
+
     if (focus) {
 	for (const child of document.querySelectorAll(".play, .favorite")) {
 	    child.classList.remove("pause-for-unfocused")
 	}
+	document.getElementById("play").classList.remove("pause-for-unfocused")
     } else {
 	for (const child of document.querySelectorAll(".play, .favorite")) {
 	    child.classList.add("pause-for-unfocused")
 	}
+	document.getElementById("play").classList.add("pause-for-unfocused")
     }
 }
 
@@ -305,7 +305,9 @@ async function loadConfig(path) {
     const configPath = path + fileTerminator + "client-config.json";
     const hasConfig = await isExist(configPath)
     const hostname = await invoke("get_host_name", {})
-    let configData = await new ProgramData(hostname);
+    let configData = programData
+	.set("user_name", hostname)
+	.withPath(configPath)
 
     Logger.log("Local Path: " + path)
 
@@ -361,20 +363,24 @@ async function loadConfig(path) {
 	.default("language", STRINGS.EMPTY)
 	.default("bg_offset", 0)
 	.default("user_name", hostname)
+	.default("sound", true)
+	.default("seasons", true)
+	.default("performant", false)
 	.post()
 
     Logger.log("Cover Id: " + configData.get("coverId"))
-
-    localConfig = {
-	path: configPath,
-	config: configData
-    }
 
     totalPlayTime = configData.get("totalTime");
     currentBackgroundCover = configData.get("coverId");
     isTutorialComplete = configData.get("tutorial");
     currentBackgroundOffset = configData.get("bg_offset");
     currentUserName = configData.get("user_name");
+
+    await SeasonsManager.init(
+	programData.getOr("seasons", true) ? CURRENT.SEASON : SeasonsManager.SEASON.NONE
+    )
+
+    onWindowFocusChanged(true)
 
     TranslationUtil.setLanguage(configData.get("language"));
 
@@ -508,17 +514,15 @@ async function updateCoverImages(first_time = false) {
  */
 
 async function saveConfig() {
-    await writeTextFile(localConfig.path,
-	localConfig.config.map({
-	    coverId: currentBackgroundCover,
-	    totalTime: totalPlayTime,
-	    version: CLIENT_VERSION,
-	    tutorial: isTutorialComplete,
-	    language: TranslationUtil.getLanguage(),
-	    bg_offset: currentBackgroundOffset,
-	    user_name: currentUserName
-	}).getJSON()
-    )
+    await programData.map({
+	coverId: currentBackgroundCover,
+	totalTime: totalPlayTime,
+	version: CLIENT_VERSION,
+	tutorial: isTutorialComplete,
+	language: TranslationUtil.getLanguage(),
+	bg_offset: currentBackgroundOffset,
+	user_name: currentUserName
+    }).save()
 }
 
 /**
@@ -556,7 +560,7 @@ async function importMod(path) {
 				path: selectedPath
 			})
 		} catch (e) {
-			await confirm("Failed to import mod!\nDeleting Temp Data\n\nReason:\n" + e)
+			await sendAlertAsync("Failed to import mod!\nDeleting Temp Data\n\nReason:\n" + e)
 			DownloadsManager.complete(selectedPath)
 		}
 	} else {
@@ -566,7 +570,7 @@ async function importMod(path) {
 	    showContainers(true)
 	    Hud.hide("alert")
 
-	    await confirm("Unsupported Format! {Supported: .zip, .rar, .rpa}")
+	    await sendAlertAsync("Unsupported Format! {Supported: .zip, .rar, .rpa}")
 	}
     }
 }
@@ -626,7 +630,7 @@ async function setTheme(name, first) {
     document.body.style.setProperty("--primary-color", CLIENT_THEMES[name].primary_color)
     document.body.style.setProperty("--primary-color-saturated", CLIENT_THEMES[name].primary_color_saturated)
 
-    localConfig.config.set("theme", name)
+    programData.set("theme", name)
     if (!first) {
 	await saveConfig()
     }
@@ -974,7 +978,7 @@ async function addMod(name) {
 	configData.credits = modCredits;
 
 	if (modCredits !== undefined) {
-	    escapedModCredits = formattedHtmlEscape(modCredits)
+	    escapedModCredits = formattedHtmlEscape(modCredits.trim())
 	}
 	await saveModData();
     }
@@ -1029,7 +1033,7 @@ async function addMod(name) {
 	await searchGame();
     } else {
 	gameExePath = configData.executable;
-	escapedModCredits = configData.credits !== undefined ? htmlEscape(configData.credits) : undefined;
+	escapedModCredits = configData.credits !== undefined ? formattedHtmlEscape(configData.credits.trim()) : undefined;
     }
 
     if (Hud.isVoid(configData.coverId)) {
@@ -1046,6 +1050,10 @@ async function addMod(name) {
     const pinnedText = "<span style=\"font-family: Icon,serif\">&#61496;</span><span style='padding-left: 1vw'></span>" + "<span class='sidebutton-text'>" + shorthand + "</span>";
 
     let launch_time = Date.now();
+
+    if (programData.getOr("performant", false)) {
+	sidetext.classList.add("pause-for-unfocused")
+    }
 
     sidetext.classList.add("sidebutton");
     sidetext.id = elementId;
@@ -1317,15 +1325,22 @@ async function addMod(name) {
 			return x[x.length - 1]
 		}
 
-	    modDescription = name +
-		"<br>Renpy: "
+	    modDescription =
+		(escapedModCredits !== undefined ? escapedModCredits : "No credits.")
+		+ "<span style='color: rgb(150,150,150); font-size: 0.75rem'>"
+		+ "<br><br>"
+		+ "<div style='width: 100%; height: 1px; background-color: rgba(150,150,150, 0.5); border: none'></div>"
+		+ "<br>"
+	    	+ "Folder: " + name
+		+ "<br>Ren'Py: "
 		+ escapedDescription
-		+ "<br>Custom Exe: " +
+		+ "<br>Custom Executable: " +
 		(hasCustomExecutable ?
-		    TranslationUtil.of("yes") + " | " + (getOSType() === OS.TYPE.MAC && gameExePath.includes('/') ? getLastPath() : gameExePath) :
-		    TranslationUtil.of("no"))
-		+ "<br><br>Credits: <br>"
-		+ (escapedModCredits !== undefined ? escapedModCredits : "No Credits Found!");
+		    TranslationUtil.of("yes") + " — " + (getOSType() === OS.TYPE.MAC && gameExePath.includes('/') ? getLastPath() : gameExePath) :
+		    TranslationUtil.of("no"));
+		+ "</span>"
+
+
 
 	    Hud.setHeart(configData.favorite)
 	    AssetsManager.Sound.play(AssetsManager.Sound.BOOP_SOUND)
@@ -1698,13 +1713,13 @@ async function renameMod() {
     const newName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + value;
 
     if (!validateName(value)) {
-	await confirm("The name '" + value + "' is invalid!")
+	await sendAlertAsync("The name '" + value + "' is invalid!")
 	Hud.ofId("modtitle").value = formatModName(currentEntry);
 	return;
     }
 
     if (await isExist(await getLauncher(currentEntry).getFunctions().getPath() + fileTerminator + newName)) {
-	await confirm("Another mod with the name '" + value + "' already exists!")
+	await sendAlertAsync("Another mod with the name '" + value + "' already exists!")
 	Hud.ofId("modtitle").value = formatModName(currentEntry);
 	return;
     }
@@ -1721,7 +1736,7 @@ async function renameMod() {
 	    id: value
 	})
     } catch (e) {
-	await confirm("Cannot Rename The File Due To Error:\n\n" + e)
+	await sendAlertAsync("Cannot Rename The File Due To Error:\n\n" + e)
     }
 }
 
@@ -1999,8 +2014,7 @@ function createProfile(profile, position) {
 
     buttonSelect.addEventListener("click", (_) => {
 	if (profile === "Default") {
-	    confirm(TranslationUtil.of("error-profile_setname")).then(() => {
-	    })
+	    sendAlert(TranslationUtil.of("error-profile_setname"))
 	    return;
 	}
 	renameProfileTarget = background.id.replace("profile-", STRINGS.EMPTY);
@@ -2031,7 +2045,7 @@ function createProfile(profile, position) {
 
     buttonDelete.addEventListener("mousedown", async (_) => {
 	if (profile === "Default") {
-	    await confirm(TranslationUtil.of("error-profile_delete"))
+	    await sendAlertAsync(TranslationUtil.of("error-profile_delete"))
 	    return;
 	}
 	await remove(profilePath + fileTerminator + background.id.replace("profile-", STRINGS.EMPTY) + ".ddmm.profile.json");
@@ -2103,7 +2117,7 @@ function closeProfileRenamePrompt() {
 async function saveProfileName() {
     const name = Hud.ofId("input-prompt-box").value;
     if (name.includes("profile-") || name.toLowerCase() === "default") {
-	await confirm("The Name '" + name + "' is already taken!")
+	await sendAlertAsync("The Name '" + name + "' is already taken!")
 	return;
     }
     Logger.log("[MARKER] -> Rename")
@@ -2116,12 +2130,12 @@ async function saveProfileName() {
 	    const comparison = name.toLowerCase().replace("profile-", STRINGS.EMPTY);
 	    Logger.log(comparator, comparison, comparator === comparison)
 	    if (comparison === comparator || name.toLowerCase().includes("profile-")) {
-		await confirm("The Name '" + name + "' is already taken!")
+		await sendAlertAsync("The Name '" + name + "' is already taken!")
 		return;
 	    }
 	}
 	if (name.includes("-_at-") || name.includes("/") || name.includes(fileTerminator)) {
-	    await confirm("The Name '" + name + "' is invalid!")
+	    await sendAlertAsync("The Name '" + name + "' is invalid!")
 	    return;
 	}
 	for (const key in currentProfileData) {
@@ -2274,7 +2288,7 @@ async function setupIPCListeners(onLoadStartTime) {
 	Hud.ofId("language-list").classList.add("language-list-hide");
 
 	DownloadsManager.startDownload(url, path)
-	confirm("Close Other Windows?").then(async (e) => {
+	sendAlertAsync("Close Other Windows?").then(async (e) => {
 	    if (e) {
 		await invoke("goto_main")
 	    }
@@ -2387,9 +2401,9 @@ async function setupIPCListeners(onLoadStartTime) {
 		    Logger.warn("You are currently offline. Update will not be requested.")
 		}
 	    } else {
-		Logger.log("Installed Version?: " + CLIENT_VERSION, "Latest Online Version?: " + localConfig.config.get("version"))
+		Logger.log("Installed Version?: " + CLIENT_VERSION, "Latest Online Version?: " + programData.get("version"))
 		Hud.ofId("version").textContent = `(${CLIENT_VERSION})`
-		if (localConfig.config.get("version") !== CLIENT_VERSION) {
+		if (programData.get("version") !== CLIENT_VERSION) {
 		    if (STRINGS.isBlank(TranslationUtil.getLanguage())) {
 			forcedEnglishTranslation = true;
 		    }
@@ -2449,7 +2463,7 @@ async function setupIPCListeners(onLoadStartTime) {
 		let listener = async (e) => {
 		    e.preventDefault();
 			if (getOSType() === OS.TYPE.MAC) {
-				await confirm("Make sure you have 'Open safe files after downloading' off if you are using Safari!")
+				await sendAlertAsync("Make sure you have 'Open safe files after downloading' off if you are using Safari!")
 			}
 		    await openUrl("https://ddlc.moe")
 		};
@@ -2466,7 +2480,7 @@ async function setupIPCListeners(onLoadStartTime) {
 	    Hud.ofId("select-zip").remove();
 	    Logger.log("Theme (" + (Date.now() - onLoadStartTime) + "ms).")
 	    Hud.setLoadingSubtitle("Loading com.ddmm.THEME")
-	    await setTheme(localConfig.config.get("theme"), true)
+	    await setTheme(programData.get("theme"), true)
 	    Logger.log("Sync Covers (" + (Date.now() - onLoadStartTime) + "ms).")
 	    Hud.setLoadingSubtitle("Loading com.ddmm.SYNC_COVERS")
 	    await syncCovers()
@@ -2589,7 +2603,7 @@ async function setupIPCListeners(onLoadStartTime) {
 		let dir = await readDir(localPath + fileTerminator + terminatePath("store\\images") + fileTerminator)
 		await writeFile(localPath + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
 	    } else {
-		await confirm("Unsupported Format " + (path.includes("\.") ? path.split("\.").pop() : "None") + "! {Supported: .zip, .rar, .rpa}")
+		await sendAlertAsync("Unsupported Format '" + (path.includes("\.") ? path.split("\.").pop() : "None") + "' (Supported Formats: zip, rar, rpa)")
 	    }
 	}
 	setTimeout(async () => {
@@ -2644,7 +2658,7 @@ async function setupHTMListeners(onLoadStartTime) {
 
     Hud.onClick("backup-load-profile", async () => {
 	if (getOSType() === OS.TYPE.MAC) {
-	    await confirm("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
+	    await sendAlertAsync("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
 	    return
 	}
 	// create backup first -> failsafe
@@ -2944,7 +2958,7 @@ async function setupHTMListeners(onLoadStartTime) {
 
     Hud.ofId("delete").addEventListener("mouseup", async () => {
 	if (currentEntry !== STRINGS.EMPTY) {
-	    let confirmed = await confirm("Are you sure you want to delete '" + getLauncher(currentEntry).getFunctions().location + "' and its data?")
+	    let confirmed = await sendAlertAsync("Are you sure you want to delete '" + getLauncher(currentEntry).getFunctions().location + "' and its data?")
 	    if (confirmed) {
 		showContainers(false)
 		await invoke("delete_path", {
@@ -2978,13 +2992,14 @@ async function setupHTMListeners(onLoadStartTime) {
 		path = final + fileTerminator + terminatePath(terminatePath("game\\options.rpyc"));
 		if (!await isExist(path)) {
 		    Logger.warn("No save found!")
-		    await confirm("No save found!")
+		    await sendAlertAsync("No save found!")
 		    return;
 		}
 	    }
 	    let loc = await invoke("rpa_data", {
 		path: path,
-		out: final
+		out: final,
+		option: "save_directory"
 	    })
 	    let loc2 = final + fileTerminator + "game" + fileTerminator + "saves"
 	    let data = false
@@ -2996,7 +3011,7 @@ async function setupHTMListeners(onLoadStartTime) {
 		Hud.ofId("delete-context").textContent = "Are you sure you want to delete\n" + loc + (data ? " & " + loc2 : STRINGS.EMPTY) + "?"
 		currentSavePath = loc + "|" + (data ? loc2 : STRINGS.EMPTY);
 	    } else {
-		await confirm("Unknown Save Data Location!")
+		await sendAlertAsync("Unknown Save Data Location!")
 	    }
 
 	}
@@ -3005,7 +3020,7 @@ async function setupHTMListeners(onLoadStartTime) {
 
     Hud.ofId("delete-save").addEventListener("mouseup", async () => {
 	if (getOSType() === OS.TYPE.MAC) {
-	    await confirm("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
+	    await sendAlertAsync("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
 	    return
 	}
 	if (currentEntry !== STRINGS.EMPTY) {
@@ -3017,7 +3032,7 @@ async function setupHTMListeners(onLoadStartTime) {
 		scriptsPath = absoluteLocation + fileTerminator + terminatePath("game\\options.rpyc");
 		if (!await isExist(scriptsPath)) {
 		    Logger.warn("No save found!")
-		    await confirm("No save found!")
+		    await sendAlertAsync("No save found!")
 		    return;
 		}
 	    }
@@ -3067,7 +3082,7 @@ async function setupHTMListeners(onLoadStartTime) {
 	    } else {
 		for (const e of WARN_GENERIC_DATA_PATHS) {
 		    if (renpySaveDataLocation.endsWith(e)) {
-			await confirm("This mod uses a generic save folder name '" + e + "'. Mod data will be shared across mods with the same generic config folder. Consider making a profile with that name and loading it every time you play.")
+			await sendAlertAsync("This mod uses a generic save folder name '" + e + "'. Mod data will be shared across mods with the same generic config folder. Consider making a profile with that name and loading it every time you play.")
 		    }
 		}
 	    }
@@ -3085,7 +3100,7 @@ async function setupHTMListeners(onLoadStartTime) {
 		await updateProfiles(finalSaveDataLocation)
 	    } else {
 		Hud.hide("profile-blur")
-		await confirm("Unknown Save Data Location!")
+		await sendAlertAsync("Unknown Save Data Location!")
 	    }
 
 	}
@@ -3112,7 +3127,7 @@ async function setupHTMListeners(onLoadStartTime) {
 
     Hud.ofId("extract").addEventListener("mouseup", async () => {
 	if (getOSType() === OS.TYPE.MAC) {
-	    await confirm("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
+	    await sendAlertAsync("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
 	    return
 	}
 	if (currentEntry !== STRINGS.EMPTY) {
@@ -3130,7 +3145,7 @@ async function setupHTMListeners(onLoadStartTime) {
 		    path: getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "deobf"
 		})
 	    } else {
-		await confirm("No game script found!")
+		await sendAlertAsync("No game script found!")
 	    }
 
 	    await getLauncher(currentEntry).getFunctions().leftClick()
@@ -3199,34 +3214,19 @@ async function setupHTMListeners(onLoadStartTime) {
 	gotoHomePage()
     })
 
-    Hud.ofId("report-open").addEventListener("mouseup", async () => {
-	Hud.show("profile-blur")
-	Hud.show("report-bg")
-	Hud.ofId("report-textc").focus()
-    })
-
-    Hud.ofId("report-close").addEventListener("mouseup", async () => {
-	Hud.hide("profile-blur")
-	Hud.hide("report-bg")
-    })
-
-    Hud.ofId("report-send").addEventListener("mouseup", async () => {
-	if (Hud.ofId("report-textc").value !== STRINGS.EMPTY) {
-	    await Logger.sendEvent("issue", {
-		issue: Hud.ofId("report-textc").value
-	    })
-	    Logger.log(Hud.ofId("report-textc").value)
-	}
-	Hud.ofId("report-textc").value = STRINGS.EMPTY
-	Hud.hide("profile-blur")
-	Hud.hide("report-bg")
-    })
-
     Hud.ofId("cover-last").addEventListener("mouseup", async () => {
 	AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)
 	Hud.ofId("image-picker-cancel").textContent = TranslationUtil.of("cancel");
 	Hud.show("profile-blur")
 	Hud.ofId("image-picker-bg").classList.add("image-picker-visible")
+    })
+
+    Hud.ofId("discord-show").addEventListener("mouseup", async () => {
+	await openUrl(PROGRAM_DISCORD)
+    })
+
+    Hud.ofId("settings-show").addEventListener("mouseup", async () => {
+	new OptionsPanel()
     })
 
     Hud.ofId("close").addEventListener("mouseup", async () => {
@@ -3352,7 +3352,7 @@ async function setupHTMListeners(onLoadStartTime) {
 	    tutorialPointer.style.left = (Hud.getBoundingBoxOf("modlist").x + (Hud.getBoundingBoxOf("modlist").width / 2)) + "px"
 	    Hud.ofId("tutorial-title").textContent = TranslationUtil.sub("tutorial").sub(4).of("title");
 	    Hud.ofId("tutorial-context").textContent = TranslationUtil.sub("tutorial").sub(4).of("context");
-	    await confirm(TranslationUtil.sub("tutorial").of("select"))
+	    await sendAlertAsync(TranslationUtil.sub("tutorial").of("select"))
 	    return
 	}
 	tutorialStep++;
@@ -3458,7 +3458,7 @@ async function setupHTMListeners(onLoadStartTime) {
     })
 
     Hud.ofId("themeselect").addEventListener("mouseup", async (e) => {
-	let next = CLIENT_THEME_ENUM.indexOf(localConfig.config.get("theme")) + (e.button === 0 ? 1 : -1);
+	let next = CLIENT_THEME_ENUM.indexOf(programData.get("theme")) + (e.button === 0 ? 1 : -1);
 	if (next > CLIENT_THEME_ENUM.length - 1) {
 	    next = 0;
 	}
@@ -3594,6 +3594,25 @@ async function setupObserver(onLoadStartTime) {
 }
 
 /**
+ * If you're staying on latest, this is where messages are handled
+ * @param {string} alertText
+ * @param {string} header
+ */
+
+function sendAlert(alertText, header = "Hey!") {
+    new Notification(header, alertText);
+}
+
+function sendAlertAsync(alertText, header = "Hey!") {
+    let notification = new Notification(header, alertText);
+    return new Promise((resolve) => {
+	notification.kiterface.onClose(() => {
+	    resolve()
+	})
+    })
+}
+
+/**
  * Called Upon DOM On-Load
  * @example ```javascript
  * document.addEventListener('DOMContentLoaded', onLoad);
@@ -3608,7 +3627,7 @@ async function onLoad() {
 
     PreventDefaults.init()
     OSUtil.init()
-    await SeasonsManager.init(CURRENT.SEASON)
+    programData.init()
 
     Logger.log("Initializing Listeners. (" + (Date.now() - onLoadStartTime) + "ms).");
 

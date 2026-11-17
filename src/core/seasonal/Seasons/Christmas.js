@@ -1,16 +1,25 @@
 import jingle from "../../../assets/jingle_punks_copyrightfree.mp3";
+import programData from "../../utils/ConfigDataHelper";
 
 let jingle_audio = new Audio(jingle);
 
 class Christmas {
+    #internalInterval = 0;
+
     constructor() {
     }
 
     async init() {
-        setInterval(this.snowflake, 100);
-        jingle_audio.volume = 0.5;
+        this.#internalInterval = setInterval(this.snowflake, 100);
+        jingle_audio.volume = 0.1;
         jingle_audio.loop = true;
+        if (programData.getOr("sound", true) === false) return;
         await jingle_audio.play();
+    }
+
+    async destroy() {
+        jingle_audio.pause();
+        clearInterval(this.#internalInterval);
     }
 
     unfocus() {
@@ -18,6 +27,7 @@ class Christmas {
     }
 
     focus() {
+        if (programData.getOr("sound", true) === false) return;
         jingle_audio.play().then((r) => {
         });
     }

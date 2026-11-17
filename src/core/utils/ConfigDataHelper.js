@@ -1,9 +1,12 @@
 import {CLIENT_THEME_ENUM} from "../Constants";
+import HTMLHelper from "./HTMLHelper";
+import {writeTextFile} from "@tauri-apps/plugin-fs";
 
-export class ProgramData {
+class ProgramData {
     #unmappedData = {};
+    #path = "";
 
-    constructor(username = "") {
+    init() {
         this.#unmappedData = {
             coverId: 0,
             totalTime: 0,
@@ -12,12 +15,19 @@ export class ProgramData {
             language: "",
             version: "0.0.0-release",
             bg_offset: 0,
-            user_name: username,
+            user_name: "",
+            seasons: true,
+            sound: true,
         };
     }
 
+    withPath(path) {
+        this.#path = path;
+        return this;
+    }
+
     /**
-     * @param {"coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name"} id
+     * @param {"coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name", "seasons", "sound", "performant"} id
      * @returns {*}
      */
     get(id) {
@@ -25,7 +35,16 @@ export class ProgramData {
     }
 
     /**
-     * @param {"coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name"} id
+     * @param {"coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name", "seasons", "sound", "performant"} id
+     * @param {*} defaultV
+     * @returns {*}
+     */
+    getOr(id, defaultV) {
+        return HTMLHelper.isVoid(this.#unmappedData[id]) ? defaultV : this.#unmappedData[id];
+    }
+
+    /**
+     * @param {"coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name", "seasons", "sound", "performant"} id
      * @param val
      * @returns {ProgramData}
      */
@@ -43,6 +62,10 @@ export class ProgramData {
             this.#unmappedData[key] = map[key];
         }
         return this;
+    }
+
+    async save() {
+        await writeTextFile(this.#path, this.getJSON())
     }
 
     /**
@@ -70,3 +93,6 @@ export class ProgramData {
         return JSON.stringify(this.#unmappedData, null, "\t");
     }
 }
+
+let programData = new ProgramData();
+export default programData;

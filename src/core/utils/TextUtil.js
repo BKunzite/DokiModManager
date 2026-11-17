@@ -3,6 +3,7 @@
  * @type {RegExp}
  */
 const SHOULD_ESCAPE_HTML_PATTERN = /["&'<>]/;
+const SHOULD_ESCAPE_HTML_PATTERN_FANCY = /["&'<>\n]/;
 const replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
 const replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
 const replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
@@ -72,7 +73,7 @@ export function htmlEscape(text) {
  * @returns {string} Escaped HTML Text
  */
 export function formattedHtmlEscape(text) {
-    let match_case = SHOULD_ESCAPE_HTML_PATTERN.exec(text);
+    let match_case = SHOULD_ESCAPE_HTML_PATTERN_FANCY.exec(text);
     if (match_case === null) {
         return text;
     }
@@ -102,6 +103,9 @@ export function formattedHtmlEscape(text) {
                 break;
             case 10: // Char: \n
                 char = "<br>";
+                break;
+            case 13: // Char: \r
+                char = ""
                 break;
             default:
                 break;
