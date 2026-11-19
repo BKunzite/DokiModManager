@@ -1,3 +1,4 @@
+// macOS fixes contributed, 2026-11-19: bounded checks with explicit offline status.
 import Logger from "./utils/Logger";
 import BRANCHES from "./enum/BRANCHES";
 
@@ -16,21 +17,20 @@ const VERSION_URL = `https://raw.githubusercontent.com/BKunzite/DokiModManager/r
  * @returns {Promise<string>}
  */
 
-export async function getLatest() {
+export async function getLatest({strict = false} = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-	const response = await fetch(VERSION_URL)
-
-	if (!response.ok) {
-	    Logger.warn(`Client Version Check Failed! Returned Status ${response.status}`)
-	    return CLIENT_VERSION;
-	}
-
-	const version = await response.text();
-	return version.trim()
+        const response = await fetch(VERSION_URL, {signal: controller.signal});
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return (await response.text()).trim();
     } catch (error) {
-	Logger.warn(`Client Version Check Failed! Error with: ${error}`)
+        Logger.warn(`Client Version Check Failed! Error with: ${error}`);
+        if (strict) throw error;
+        return CLIENT_VERSION;
+    } finally {
+        clearTimeout(timeout);
     }
-    return CLIENT_VERSION;
 }
 
 /**

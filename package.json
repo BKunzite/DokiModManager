@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "node --experimental-vm-modules --test tests/*.test.mjs",
+    "test:launch": "mkdir -p src-tauri/target && rustc --edition=2021 --test src-tauri/src/macos_launch.rs -o src-tauri/target/macos-launch-tests && src-tauri/target/macos-launch-tests",
+    "test:ui": "node tests/ui/verify.mjs"
   },
   "dependencies": {
     "@aptabase/tauri": "^0.4.1",

@@ -1,4 +1,6 @@
+<!-- macOS fixes contributed, 2026-11-19: import and framing editors. -->
 <script setup>
+import {CLIENT_VERSION} from "./core/VersionHandler";
 </script>
 
 <template>
@@ -8,7 +10,7 @@
     <div class="background"></div>
     <button class="import-zip hide" id="select-zip">Import Zip</button>
     <header class="load-subtitle" id="loadingsub">PLEASE REFRESH THIS APPLICATION (Control + R)</header>
-    <header class="load-title" id="loadinghead">Doki Doki Mod Manager <span class="load-title-version" id="load-title-version">/ 1.8.0</span></header>
+    <header class="load-title" id="loadinghead">Doki Doki Mod Manager <span class="load-title-version" id="load-title-version">/ {{ CLIENT_VERSION }}</span></header>
 
     <div class="wheel" id="throbber"></div>
     <div class="loading-bar">
@@ -27,7 +29,7 @@
     <header class="title"><span class="title-colored">Doki Doki</span> Mod Manager</header>
     <div class="container-a smooth-hide" id="modlist">
       <header class="sidetext sticky"><span id="main-text">Main</span> <span
-          style="font-weight: normal; font-size: 0.75rem; cursor: grab; color: rgb(220,220,220)" id="version">(v1.0.0-release)</span>
+          style="font-weight: normal; font-size: 0.75rem; cursor: grab; color: rgb(220,220,220)" id="version">({{ CLIENT_VERSION }})</span>
       </header>
       <button class="sidebutton sidebutton2 sticky" id="options"><span
           style="font-family: Icon,serif; padding-right: 10px;">&#61669;</span> <span id="home-text">Home</span>
@@ -57,8 +59,7 @@
     <div class="container-b smooth-hide" id="container">
       <div class="cover hide" id="cove">
         <p id="covertext"></p>
-        <div class="cover-update" style="left: 8vh;" id="cover-up">&#59982;</div>
-        <div class="cover-update" style="left: 14vh;" id="cover-down">&#59990;</div>
+        <button class="cover-background-adjust hide" id="background-adjust" title="Frame the window background">Background…</button>
         <div class="cover-update" id="cover-last">&#61000;</div>
       </div>
       <div class="covers" id="covers">
@@ -84,7 +85,7 @@
       </div>
 
       <header class="rename-header hide" style="left: 28rem;" id="setinfo-header"><span style="font-family: Icon;">&#62551; </span>
-        <span id="description-text">Description</span></header>
+        <span id="description-text">Description</span><button id="description-edit" class="description-edit-button" title="Edit mod description">Edit</button></header>
       <div class="info hide" id="info"></div>
 
       <div id="optionsmenu" class="hide">
@@ -190,8 +191,46 @@
       <button class="tutorial-warn-deny" id="delete-no">No</button>
     </div>
     <div class="image-picker" id="image-picker-bg">
-      <button class="image-picker-cancel" id="image-picker-cancel">Cancel</button>
+      <div class="image-picker-toolbar">
+        <button class="image-picker-import" id="image-picker-import">Import Images…</button>
+        <button class="image-picker-import" id="image-picker-adjust">Adjust current crop…</button>
+        <button class="image-picker-cancel" id="image-picker-cancel">Cancel</button>
+      </div>
+      <div class="image-picker-items" id="image-picker-items"></div>
     </div>
+    <section class="cover-crop-editor hide" id="cover-crop-editor" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+      <h2 id="crop-title">Frame your cover</h2>
+      <p>Drag the image or use the sliders. The original image stays unchanged.</p>
+      <label id="crop-target-label" class="crop-target-label hide2">Editing <select id="crop-target" aria-label="Crop target"></select></label>
+      <div class="crop-layout">
+        <div class="crop-preview-column">
+          <div id="crop-stage" aria-label="Cover crop preview"></div>
+          <div class="crop-small-preview"><div id="crop-thumbnail"></div><span id="crop-thumbnail-label">Playing thumbnail</span></div>
+        </div>
+        <div class="crop-controls">
+          <label for="crop-fit">Framing</label>
+          <select id="crop-fit"><option value="cover">Fill cover</option><option value="contain">Fit whole image</option></select>
+          <label for="crop-zoom">Zoom <output id="crop-zoom-value">100%</output></label>
+          <input id="crop-zoom" type="range" min="1" max="4" step="0.01" value="1" />
+          <label for="crop-x">Horizontal position</label>
+          <input id="crop-x" type="range" min="0" max="1" step="0.01" value="0.5" />
+          <label for="crop-y">Vertical position</label>
+          <input id="crop-y" type="range" min="0" max="1" step="0.01" value="0.5" />
+          <button id="crop-reset">Reset framing</button>
+        </div>
+      </div>
+      <p id="crop-error" role="alert"></p>
+      <div class="crop-actions"><button id="crop-cancel">Cancel</button><button id="crop-save">Use this crop</button></div>
+    </section>
+    <section class="description-editor hide" id="description-editor" role="dialog" aria-modal="true" aria-labelledby="description-editor-title">
+      <h2 id="description-editor-title">Edit description</h2>
+      <textarea id="description-input" maxlength="10000" placeholder="Add your own description…" aria-label="Mod description" spellcheck="true"></textarea>
+      <p id="description-error" role="alert"></p>
+      <div class="description-editor-actions">
+        <button id="description-cancel">Cancel</button>
+        <button id="description-save">Save description</button>
+      </div>
+    </section>
   </div>
   <div id="pill-files" class="pill-files hide">
     <span style="font-family: Icon; color: rgb(var(--primary-color))">&#60792;</span> Open Folder

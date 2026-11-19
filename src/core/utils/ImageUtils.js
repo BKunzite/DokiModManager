@@ -1,4 +1,6 @@
+// Modified for the local macOS fixes, 2026-11-19.
 import {readFile} from "@tauri-apps/plugin-fs";
+import {imageMimeType} from "./ImageFormat.js";
 
 import {USE_CACHED_IMAGING} from "../Constants";
 import {getOSType, OS} from "./OSUtil";
@@ -56,6 +58,8 @@ class ImageCover {
 class PreloadImageCover {
     reset() {
 	localPreloadCovers = {};
+	localPreloadCoverShorts = {};
+	localPreloadCoverShortsInverse = {};
 	return this;
     }
 
@@ -86,13 +90,13 @@ class PreloadImageCover {
     }
 
     ofCover(coverId) {
-	return localPreloadCovers[covers.get(coverId)];
+	return localPreloadCovers[covers.get(coverId)] ?? this.getOfShort(coverId);
     }
 }
 
 function createURL(contents, fileName) {
     let blob = new Blob([contents], {
-	type: "image/" + fileName.split(".").pop(),
+	type: imageMimeType(fileName),
     });
     const url = URL.createObjectURL(blob);
     blob = null;
@@ -216,6 +220,12 @@ export async function preloadImageObject(src) {
     const img = new Image();
     img.decoding = "async";
     img.src = await getImage(src, true)
+    try {
+        await img.decode();
+    } catch (error) {
+        _internal_deref(img.src);
+        throw error;
+    }
     return img;
 }
 

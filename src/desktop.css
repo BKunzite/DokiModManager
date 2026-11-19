@@ -1,157 +1,76 @@
-:root {
-  --bar-position: 0%;
-}
-
-#app {
-  aspect-ratio: 2/1;
-}
-
-.taskbar {
-  width: 100vw;
-  height: 7vh;
-  left: 0;
-  bottom: 0;
+/* macOS fixes contributed, 2026-11-19. Scope every rule to the Updates view. */
+.updates-panel {
   position: absolute;
-  padding: 0;
-  background-color: rgb(40, 40, 40);
-}
-
-.icon-holder {
-  width: 5vw;
-  height: 12.5vh;
-  border-radius: 5px;
-}
-
-.icon-holder:hover {
-  background-color: rgba(255, 255, 255, 0.25);
-}
-
-.icon-image {
-  width: 4vw;
-  height: 4vw;
-  left: 50%;
-  position: absolute;
-  transform: translateX(-50%) translateY(5px);
-}
-
-.icon-text {
-  font: 1vw "Aller";
-  color: white;
-  text-align: center;
-  transform: translateY(10vh);
-}
-
-.desktop-close {
-  left: 1vh;
-  top: 1vh;
-  width: 5vh;
-  height: 5vh;
-  position: absolute;
-  cursor: grab;
-}
-
-.icons {
-  position: absolute;
-  left: 2vw;
-  top: 2vw;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 1.5rem;
   display: grid;
-  grid-auto-flow: row;
-  gap: 2vw;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 1.25rem;
+  background: #202025;
+  color: #f6f4fa;
+  font-family: "Aller", sans-serif;
 }
-
-.update-version {
-  font: 2.75vw "Aller";
-  font-weight: bold;
-  color: rgb(255, 157, 198);
-  text-shadow: -9px 9px 5px rgba(255, 157, 198, 0.5);
-}
-
-.update-heaader {
-  font: 2.25vw "Aller";
-  font-weight: bold;
-  color: white;
-  padding-top: 1.5vw;
-  padding-bottom: 0.5vw;
-  text-shadow: -7px 7px 5px rgba(255, 255, 255, 0.5);
-}
-
-.update-text {
-  font: 1.25vw "Aller";
-  color: white;
-  text-shadow: -5px 5px 5px rgba(255, 255, 255, 0.5);
-}
-
-.updates {
-  position: absolute;
-  right: 2vw;
-  top: 2vw;
-  display: list-item;
-  justify-items: right;
-  gap: 2vw;
-  list-style: none;
-}
-
-.console-bg {
-  position: absolute;
-  background: rgb(40, 40, 40);
-  width: 50vw;
-  height: 70vh;
-  left: 50vw;
-  top: 50vh;
-  border: rgb(150, 150, 150) solid 0.1vh;
-  transform: translate(-50%, -50%);
-}
-
-.console-texts {
-  position: absolute;
-  width: 50vw;
-  top: calc(5vh + 1.5vw);
-  height: calc(65vh - 1.5vw);
-  overflow-y: scroll;
-  scrollbar-width: none;
+.updates-panel .updates-heading, .updates-panel .updates-footer {
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: column;
-  flex-flow: column;
-  list-style: none;
-  vertical-align: bottom;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+}
+.updates-panel h1 { margin: 0; font-size: 1.8rem; }
+.updates-panel h2 { margin: 0 0 1rem; font-size: 1.2rem; }
+.updates-panel .updates-eyebrow { color: #c4acd9; font-size: .75rem; letter-spacing: .12em; margin: 0 0 .4rem; }
+.updates-panel #desktop-version { color: #c7c2d0; margin: .4rem 0 0; font-size: .95rem; }
+.updates-panel .updates-card {
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid #4b4554;
+  background: #2b2931;
+  border-radius: 1rem;
+  padding: 1.25rem;
+}
+.updates-panel .release-panel { display: flex; flex-direction: column; overflow: hidden; }
+.updates-panel .release-panel h2 { flex: none; }
+.updates-panel .release-panel .release-notes { flex: 1; min-height: 0; overflow: auto; }
+.updates-panel .release-panel .updates-status, .updates-panel .release-panel .updates-actions { flex: none; }
+.updates-panel .release-notes { padding-left: 1.2rem; margin: 0; line-height: 1.5; }
+.updates-panel .release-notes li { margin-bottom: .6rem; }
+.updates-panel .updates-status { margin-top: auto; padding-top: 1rem; color: #d4c7df; line-height: 1.4; }
+.updates-panel .updates-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.updates-panel .updates-button {
+  appearance: none;
+  border: 1px solid #756180;
+  border-radius: .65rem;
+  padding: .65rem .9rem;
+  color: #f7f1fc;
+  background: #46394f;
+  font: inherit;
+  cursor: pointer;
+}
+.updates-panel .updates-button:hover { background: #5b4668; }
+.updates-panel .updates-button:disabled { opacity: .6; cursor: wait; }
+.updates-panel .logs-panel { display: flex; flex-direction: column; }
+.updates-panel .console-texts { min-height: 0; overflow: auto; flex: 1; }
+.updates-panel .console-text-holder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .75rem;
+  padding: .65rem 0;
+  border-top: 1px solid #403b46;
+  align-items: start;
+}
+.updates-panel .console-text { color: #e5e0eb; overflow-wrap: anywhere; line-height: 1.35; font-size: .85rem; }
+.updates-panel .console-text-right { color: #ada3b8; font-size: .75rem; white-space: nowrap; padding-top: .1rem; }
+.updates-panel .console-warn .console-text { color: #f3d58d; }
+.updates-panel .updates-footer { color: #bbb1c5; font-size: .8rem; }
+@media (max-width: 800px) {
+  .updates-panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr) auto; padding: 1rem; }
+  .updates-panel .updates-footer { flex-wrap: wrap; }
 }
 
-.console-bar {
-  position: absolute;
-  width: 100%;
-  height: 5vh;
-  background: rgb(60, 60, 60);
-}
-
-.console-text-holder {
-  width: 100%;
-  height: auto;
-}
-
-.console-warn {
-  background-color: rgba(200, 200, 0, 0.5);
-}
-
-.console-text {
-  position: relative;
-  font: 1.5vw "Aller";
-  padding-top: 1vw;
-  padding-bottom: 1vw;
-  text-align: left;
-  color: white;
-  left: 1.5vw;
-  width: calc(100% - 12vw);
-  height: auto;
-  word-wrap: break-word;
-}
-
-.console-text-right {
-  position: absolute;
-  font: 1vw "Aller";
-  color: rgb(200, 200, 200);
-  width: 95%;
-  height: 5vh;
-  right: 1vw;
-  text-align: right;
-  transform: translateY(-5vh);
-}
+.updates-panel pre.release-notes { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding-left: 0; font: inherit; }
+.updates-panel [hidden] { display: none !important; }

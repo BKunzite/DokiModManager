@@ -34,3 +34,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated regression and UI-test artifacts.
+ui-results
+/src-tauri/gen
