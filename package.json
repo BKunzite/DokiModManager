@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test:rename": "node --experimental-vm-modules --test tests/rename.test.mjs && mkdir -p src-tauri/target && rustc --edition=2021 --test src-tauri/src/mod_rename.rs -o src-tauri/target/mod-rename-tests && src-tauri/target/mod-rename-tests"
   },
   "dependencies": {
     "@aptabase/tauri": "^0.4.1",

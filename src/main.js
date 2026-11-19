@@ -141,6 +141,7 @@ let ddlcSelected = false
 let selectedPath;
 let localPath;
 let observer;
+let renamingMod = false;
 
 /**
  * Initialize Translations
@@ -1700,43 +1701,55 @@ async function updateConcurrentGameInfo() {
  */
 
 async function renameMod() {
-    if (STRINGS.isEmpty(currentEntry)) return;
+    if (renamingMod || STRINGS.isEmpty(currentEntry)) return;
     const value = Hud.ofId("modtitle").value.trim();
     const name = getLauncher(currentEntry).getFunctions().getName();
-
+    const resetTitle = () => { Hud.ofId("modtitle").value = formatModName(name); };
     if (value === name || value.length === 0) {
-	Hud.ofId("modtitle").value = formatModName(currentEntry);
-	return;
+        resetTitle();
+        return;
     }
-
-    const oldName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + name;
-    const newName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + value;
-
     if (!validateName(value)) {
-	await sendAlertAsync("The name '" + value + "' is invalid!")
-	Hud.ofId("modtitle").value = formatModName(currentEntry);
-	return;
+        await sendAlertAsync("The name '" + value + "' is invalid!");
+        resetTitle();
+        return;
     }
-
-    if (await isExist(await getLauncher(currentEntry).getFunctions().getPath() + fileTerminator + newName)) {
-	await sendAlertAsync("Another mod with the name '" + value + "' already exists!")
-	Hud.ofId("modtitle").value = formatModName(currentEntry);
-	return;
+    if (getIsLaunchedFlag()) {
+        await sendAlertAsync("Close the running game before renaming a mod.");
+        resetTitle();
+        return;
     }
-
+    renamingMod = true;
+    let renamed = false;
     try {
-	Hud.show("loader")
-	Hud.hide("main")
-	Hud.setLoadingSubtitle("Renaming Mod")
-	Hud.setLoadingBar(0, false)
-	Hud.setLoadingBar(100, true)
-	await invoke("rename_dir", {
-	    path: oldName,
-	    newName: newName,
-	    id: value
-	})
-    } catch (e) {
-	await sendAlertAsync("Cannot Rename The File Due To Error:\n\n" + e)
+        const parent = await getLauncher(currentEntry).getFunctions().getPath();
+        const oldName = parent + fileTerminator + name;
+        const newName = parent + fileTerminator + value;
+        if (await isExist(newName)) {
+            await sendAlertAsync("Another mod with the name '" + value + "' already exists!");
+            resetTitle();
+            return;
+        }
+        Hud.show("loader");
+        Hud.hide("main");
+        Hud.setLoadingSubtitle("Renaming Mod");
+        Hud.setLoadingBar(100, true);
+        await invoke("rename_dir", {path: oldName, newName});
+        renamed = true;
+        Logger.log("Renamed mod: " + name + " -> " + value);
+        await requestDirectory(parent);
+        const launcher = getLauncher(value);
+        if (launcher) await launcher.getFunctions().leftClick();
+        else gotoHomePage();
+    } catch (error) {
+        Logger.warn("Mod rename failed: " + error);
+        if (!renamed) resetTitle();
+        await sendAlertAsync((renamed ? "The mod was renamed, but the list could not refresh. Reopen the manager.\n\n"
+            : "Cannot rename the mod:\n\n") + error);
+    } finally {
+        Hud.hide("loader");
+        Hud.show("main");
+        renamingMod = false;
     }
 }
 
@@ -2570,21 +2583,6 @@ async function setupIPCListeners(onLoadStartTime) {
 	    Hud.setLoadingSubtitle(event.payload.text)
 	}
     });
-
-    // Listens For Rename Finishing
-
-    await listen("rename_done", async (event) => {
-	const value = event.payload.text;
-
-	await requestDirectory(selectedPath);
-	while (Hud.isHidden("loader")) {
-	}
-
-	Logger.log(value)
-	if (getLauncher(value)) {
-	    await getLauncher(value).getFunctions().leftClick();
-	}
-    })
 
     Logger.log("Loading Drag/Drop")
 
