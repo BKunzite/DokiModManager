@@ -136,6 +136,10 @@ mod tests {
         fs::create_dir(&target).unwrap();
         assert!(rename_mod_directory(&source, &target).is_err());
         assert!(source.is_dir() && target.is_dir());
+        fs::write(target.join("keep.txt"), b"destination data").unwrap();
+        assert!(rename_mod_directory(&source, &target).is_err());
+        assert!(source.is_dir());
+        assert_eq!(fs::read(target.join("keep.txt")).unwrap(), b"destination data");
     }
 
     #[test]
