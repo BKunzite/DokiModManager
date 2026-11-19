@@ -282,6 +282,23 @@ test("a spawn failure clears playing state and preserves play history", async ()
     assert.equal(h.config.time, 123);
 });
 
+test("overlapping Play events cannot spawn a second game while launch is pending", async () => {
+    const h = launchHarness();
+    let finish;
+    h.context.invoke = async command => {
+        h.events.push(command);
+        if (command === "launch") await new Promise(resolve => { finish = resolve; });
+    };
+    const first = h.run();
+    while (!finish) await new Promise(resolve => setImmediate(resolve));
+    await h.run();
+    assert.equal(h.events.filter(event => event === "launch").length, 1);
+    assert.equal(h.context.launchPending, true);
+    finish();
+    await first;
+    assert.equal(h.context.launchPending, false);
+});
+
 test("Home framing separates portrait thumbnail from background and retains legacy position", () => {
     const config = {coverId: "logo.png", bg_offset: 35};
     const result = frames.homeFrames(config, "logo.png");

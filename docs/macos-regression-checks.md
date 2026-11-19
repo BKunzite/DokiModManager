@@ -17,7 +17,7 @@ npm run test:launch
 npm run build
 ```
 
-`npm test` runs 23 checks using synthetic data. These exercise image import,
+`npm test` runs 24 checks using synthetic data. These exercise image import,
 exclusive creation and collisions, cancellation, stable cover identities,
 metadata preservation and rollback, HTML escaping, framing geometry, the actual
 frontend launch handler's preflight/error/concurrency behavior, and bounded
