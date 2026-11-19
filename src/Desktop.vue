@@ -1,50 +1,40 @@
+<!-- macOS fixes contributed, 2026-11-19: Updates and logs use separate grid panels. -->
+<script setup>
+import {CLIENT_VERSION} from "./core/VersionHandler";
+</script>
+
 <template>
-  <body>
-  <div data-tauri-drag-region style="width: 100%; height: 100%; position: absolute; top: 0; left: 0"></div>
-  <div class="taskbar">
-    <img class="desktop-close" id="desktop-close" src="./assets/wired-outline-63-home-loop-3d-roll.gif">
-  </div>
-  <div class="icons">
-    <div class="icon-holder" id="desktop-launch">
-      <img src="./assets/icon.png" class="icon-image">
-      <header class="icon-text">Launch</header>
-    </div>
-    <div class="icon-holder" id="desktop-update">
-      <img src="./assets/wired-outline-213-arrow-2-rounded-loop-cycle.gif" class="icon-image">
-      <header class="icon-text">Update</header>
-    </div>
-    <div class="icon-holder" id="desktop-close2">
-      <img src="./assets/wired-outline-63-home-loop-3d-roll.gif" class="icon-image">
-      <header class="icon-text">Exit</header>
-    </div>
-    <div class="console-bg">
-
-      <div class="console-texts" id="console">
-
+  <div class="updates-panel">
+    <header class="updates-heading" data-tauri-drag-region>
+      <div>
+        <p class="updates-eyebrow">DOKI DOKI MOD MANAGER</p>
+        <h1>Updates</h1>
+        <p id="desktop-version">Doki Doki Mod Manager {{ CLIENT_VERSION }}</p>
       </div>
-      <div class="console-bar">
+      <button id="desktop-launch" class="updates-button">Back to mods</button>
+    </header>
+    <section class="updates-card release-panel" aria-label="Release notes">
+      <h2>This version</h2>
+      <pre class="release-notes" id="desktop-release-notes">Loading release notes…</pre>
+      <p class="updates-status" id="desktop-update-status" role="status">Check the configured upstream release channel or open GitHub releases.</p>
+      <div class="updates-actions">
+        <button id="desktop-update" class="updates-button">Check for updates</button>
+        <button id="desktop-install" class="updates-button" hidden>Install update</button>
+        <button id="desktop-releases" class="updates-button">Open releases</button>
       </div>
-    </div>
+    </section>
+    <section class="updates-card logs-panel" aria-label="Application log">
+      <h2>Application log</h2>
+      <div class="console-texts" id="console" tabindex="0"></div>
+    </section>
+    <footer class="updates-footer">
+      <span>BKunzite · Apache-2.0</span>
+      <div class="updates-actions">
+        <button id="desktop-project" class="updates-button">Project on GitHub</button>
+        <button id="desktop-close2" class="updates-button">Quit</button>
+      </div>
+    </footer>
   </div>
-  <div class="updates">
-    <div class="update-version" id="desktop-version">Version 1.7.0-release</div>
-    <div class="update-heaader">Bug Fixes & UI</div>
-    <div class="update-text">Polished UI</div>
-    <div class="update-text">Linux Arch Fixes</div>
-    <div class="update-text">Better RAR Support</div>
-    <div class="update-heaader">Performance</div>
-    <div class="update-text">Memory Optimization</div>
-    <div class="update-heaader">New Downloads</div>
-    <div class="update-text">Multiple Downloads</div>
-    <div class="update-heaader">OS</div>
-    <div class="update-text">MacOS Alpha Support Is Here</div>
-    <div class="update-heaader">Codebase</div>
-    <div class="update-text">Several Cleanups/Refactors</div>
-  </div>
-  </body>
 </template>
 
 <style src="./desktop.css"></style>
-<script setup>
-
-</script>

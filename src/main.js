@@ -1,3 +1,4 @@
+// macOS fixes contributed, 2026-11-19: launch checks, covers, descriptions and Updates.
 "use strict";
 //// Vue
 
@@ -99,6 +100,151 @@ import {Base64} from 'js-base64';
 import {Fzf} from 'fzf';
 import {OptionsPanel} from "./core/interface/uikit/Options";
 
+import {importImages} from "./core/utils/ImageImport.js";
+import {applyCoverFrame, normalizeFrame, updateModCover, homeFrames, updateHomeFrames} from "./core/utils/CoverFrame.js";
+import {CoverCropEditor} from "./core/utils/CoverCropEditor.js";
+import {descriptionHtml, updateModDescription} from "./core/utils/ModDescription.js";
+
+let coverEditor;
+let importingImages = false;
+let descriptionTarget = null;
+let savingDescription = false;
+let desktopOpen = false;
+
+async function editCover(cover, target = "cover") {
+    try {
+        const isHome = STRINGS.isEmpty(currentEntry);
+        const launcher = isHome ? null : getLauncher(currentEntry).getFunctions();
+        const data = isHome ? programData.post() : await launcher.getData();
+        const id = isHome ? currentBackgroundCover : data.coverId;
+        const image = cover ? preloadCovers.get(cover) : preloadCovers.ofCover(id);
+        const source = cover ? preloadCovers.convertToShort(cover) : (coverIdToShortMap.get(id) ?? id);
+        if (!image) throw new Error("The current image is unavailable. Select another image in the picker.");
+        if (!coverEditor?.root.isConnected) coverEditor = new CoverCropEditor();
+        const coverElement = Hud.ofId("cove");
+        const aspect = coverElement.clientWidth / coverElement.clientHeight || .75;
+        const frames = isHome ? homeFrames(data, source) : null;
+        Hud.show("profile-blur");
+        coverEditor.open({image, source, frame: data.coverFrame, aspect, target,
+            targets: isHome ? {
+                cover: {label: "Home thumbnail", aspect, frame: frames.cover},
+                background: {label: "Window background", aspect: window.innerWidth / window.innerHeight, frame: frames.background}
+            } : undefined,
+            onClose: () => {
+                if (!Hud.ofId("image-picker-bg").classList.contains("image-picker-visible")) Hud.hide("profile-blur");
+            },
+            onSave: async (frame, allFrames) => {
+                if (isHome) {
+                    const previous = currentBackgroundCover;
+                    await updateHomeFrames(data, source, allFrames, async () => {
+                        currentBackgroundCover = source;
+                        try { await saveConfig(); }
+                        catch (error) { currentBackgroundCover = previous; throw error; }
+                    });
+                    await setCover(source);
+                } else {
+                    await launcher.setCover(source, frame);
+                }
+                Hud.ofId("image-picker-bg").classList.remove("image-picker-visible");
+                Hud.hide("profile-blur");
+            }});
+    } catch (error) {
+        Logger.warn("Cannot open cover editor: " + error);
+        await sendAlertAsync("Cannot open cover editor:\n" + error);
+    }
+}
+
+function openCoverPicker() {
+    Hud.ofId("image-picker-cancel").textContent = TranslationUtil.of("cancel");
+    Hud.show("profile-blur");
+    Hud.ofId("image-picker-bg").classList.add("image-picker-visible");
+}
+
+function bindCoverControls() {
+    Hud.onClick("image-picker-adjust", () => editCover());
+    Hud.onClick("background-adjust", () => editCover(undefined, "background"));
+    Hud.onClick("cover-last", openCoverPicker);
+}
+
+function bindHeaderControls() {
+    Hud.onClick("discord-show", () => openUrl(PROGRAM_DISCORD));
+    Hud.onClick("settings-show", () => new OptionsPanel());
+}
+
+async function selectImageFiles() {
+    if (importingImages) return;
+    importingImages = true;
+    try {
+        const selected = await open({
+            directory: false, multiple: true, title: "Import Images",
+            filters: [{name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "tif", "tiff"]}]
+        });
+        if (!selected) return;
+        await addImagesToLibrary(Array.isArray(selected) ? selected : [selected]);
+    } catch (error) {
+        Logger.warn("Image import failed: " + error);
+        await sendAlertAsync("Cannot import images:\n" + error);
+    } finally {
+        importingImages = false;
+    }
+}
+
+async function addImagesToLibrary(paths) {
+    const directory = localPath + fileTerminator + terminatePath("store\\images");
+    const result = await importImages(paths, directory);
+    if (result.imported.length) {
+        await updateCoverImages();
+        Hud.show("profile-blur");
+        Hud.ofId("image-picker-bg").classList.add("image-picker-visible");
+    }
+    if (result.errors.length) {
+        Logger.warn("Image import: " + result.errors.join(" | "));
+        await sendAlertAsync("Some images could not be imported:\n" + result.errors.join("\n"));
+    }
+}
+
+async function openDescriptionEditor() {
+    if (!currentEntry || savingDescription) return;
+    const launcher = getLauncher(currentEntry);
+    if (!launcher) return;
+    descriptionTarget = currentEntry;
+    Hud.ofId("description-error").textContent = "";
+    Hud.ofId("description-input").value = (await launcher.getFunctions().getData()).description ?? "";
+    Hud.show("profile-blur");
+    Hud.show("description-editor");
+    Hud.ofId("description-input").focus();
+}
+
+function closeDescriptionEditor() {
+    if (savingDescription) return;
+    descriptionTarget = null;
+    Hud.hide("description-editor");
+    Hud.hide("profile-blur");
+}
+
+async function saveDescription() {
+    if (!descriptionTarget || savingDescription) return;
+    const target = descriptionTarget;
+    const launcher = getLauncher(target);
+    if (!launcher) return;
+    savingDescription = true;
+    const button = Hud.ofId("description-save");
+    button.disabled = true;
+    Hud.ofId("description-error").textContent = "";
+    try {
+        await launcher.getFunctions().setDescription(Hud.ofId("description-input").value);
+        savingDescription = false;
+        closeDescriptionEditor();
+        if (currentEntry === target) await launcher.getFunctions().leftClick();
+    } catch (error) {
+        Logger.warn("Description save failed: " + error);
+        Hud.ofId("description-error").textContent = "Cannot save description: " + error;
+    } finally {
+        savingDescription = false;
+        button.disabled = false;
+    }
+}
+
 //// Profile Data
 
 let currentGameDataPath = STRINGS.EMPTY;
@@ -119,7 +265,6 @@ let tutorialStep = 0;
 
 //// Config Variables
 
-let currentBackgroundMaxOffset = 0;
 let currentBackgroundOffset = 0;
 let currentSavePath = STRINGS.EMPTY;
 let currentUserName = STRINGS.EMPTY;
@@ -204,80 +349,55 @@ function loadTranslation(lang, first) {
  */
 
 async function syncCovers() {
-    const imageLocation = terminatePath("\\store\\images")
-
-    covers.reset().add(
-	"DefaultCovers/house.webp",
-	"DefaultCovers/wallpapers.png",
-	"DefaultCovers/natsuki.jpg",
-	"DefaultCovers/yuri.jpg",
-	"DefaultCovers/sayori.jpg",
-	"DefaultCovers/monika.png"
-    )
-
-    preloadCovers.reset()
-    let imageLoaded = 0
-    let imagePrepared = 0
-
-    for (const cover of covers.asList()) {
-	imagePrepared++
-	coverIdToShortMap.set(covers.indexOf(cover), cover)
-	shortToCoverIdMap.set(cover, covers.indexOf(cover))
-
-	new Promise(async (resolve, reject) => {
-	    try {
-		const img = await preloadImageObject(cover)
-		preloadCovers.set(cover, img, cover)
-		resolve()
-	    } catch (e) {
-		reject(e)
-	    }
-	}).then(() => {
-	    imageLoaded++
-	}).catch(() => {
-	    imageLoaded++
-	})
+    // Preserve loaded mods' cover identities before rebuilding numeric indices.
+    for (const launcher of Object.values(getLaunchers())) {
+        const data = await launcher.getFunctions().getData();
+        data.coverId = coverIdToShortMap.get(data.coverId) ?? data.coverId;
     }
-
-    const pathPrefix = localPath + imageLocation;
-    const pathOptional = await Optional.readDir(pathPrefix)
-
-    if (pathOptional.isSome()) {
-	for (const image of await pathOptional.getResult()) {
-	    if (regexImageName(image.name)) {
-		const path = localPath + imageLocation + fileTerminator + image.name;
-		covers.add(path)
-		coverIdToShortMap.set(covers.indexOf(path), image.name)
-		shortToCoverIdMap.set(image.name, covers.indexOf(path))
-		imagePrepared++
-		new Promise(async (resolve, reject) => {
-		    try {
-			const img = await preloadImageObject(path)
-			preloadCovers.set(path, img, image.name)
-			resolve()
-		    } catch (e) {
-			reject(e)
-		    }
-		}).then(() => {
-		    imageLoaded++
-		}).catch(() => {
-		    imageLoaded++
-		})
-	    }
-	}
+    const previousOrder = new Map(covers.asList().map((path, index) => [path, index]));
+    covers.reset();
+    preloadCovers.reset();
+    coverIdToShortMap.clear();
+    shortToCoverIdMap.clear();
+    const imageLocation = localPath + fileTerminator + terminatePath("store\\images");
+    const entries = [
+        "DefaultCovers/house.webp", "DefaultCovers/wallpapers.png",
+        "DefaultCovers/natsuki.jpg", "DefaultCovers/yuri.jpg",
+        "DefaultCovers/sayori.jpg", "DefaultCovers/monika.png"
+    ].map(path => ({path, short: path}));
+    const localImages = await Optional.readDir(imageLocation);
+    if (localImages.isSome()) {
+        const localEntries = await localImages.getResult();
+        // Adding files must not change the numeric IDs held by loaded mods.
+        localEntries.sort((a, b) =>
+            (previousOrder.get(imageLocation + fileTerminator + a.name) ?? Number.MAX_SAFE_INTEGER) -
+            (previousOrder.get(imageLocation + fileTerminator + b.name) ?? Number.MAX_SAFE_INTEGER));
+        for (const image of localEntries) {
+            if (!image.isDirectory && regexImageName(image.name)) {
+                entries.push({path: imageLocation + fileTerminator + image.name, short: image.name});
+            }
+        }
     }
-
-    await new Promise(resolve => {
-	WaitInterval.waitFor((resolve2) => {
-	    if (imageLoaded === imagePrepared) {
-		resolve2()
-		resolve()
-	    }
-	}, 50)
-    })
+    const loaded = await Promise.all(entries.map(async entry => {
+        try {
+            return {...entry, image: await preloadImageObject(entry.path)};
+        } catch (error) {
+            Logger.warn("Cannot load cover: " + entry.short + " | " + error);
+            return null;
+        }
+    }));
+    for (const entry of loaded) {
+        if (!entry) continue;
+        covers.add(entry.path);
+        const id = covers.indexOf(entry.path);
+        coverIdToShortMap.set(id, entry.short);
+        shortToCoverIdMap.set(entry.short, id);
+        preloadCovers.set(entry.path, entry.image, entry.short);
+    }
 }
 
 function onWindowFocusChanged(focus) {
+    if (desktopOpen) return;
     if (programData.getOr("performant", false)) {
 	focus = false
     }
@@ -407,52 +527,21 @@ async function updateCoverImages(first_time = false) {
 	}
     }
 
-    DOMBatch.batchRender("image-picker-bg", (frag) => {
+    DOMBatch.batchRender("image-picker-items", (frag) => {
 	for (const cover in preloadCovers.asList()) {
 	    let cover_img = preloadCovers.get(cover)
-	    let x = 1;
-	    let y = 1;
-	    let aspect = cover_img.naturalWidth / cover_img.naturalHeight;
+            const div = document.createElement("div");
+            const img = cover_img.cloneNode(true);
+            div.classList.add("image-picker-cover");
+            img.className = "image-picker-cover-img";
+            img.alt = preloadCovers.convertToShort(cover);
+            img.loading = "lazy";
+            img.decoding = "async";
 
-	    const div = document.createElement("div");
-	    const img = cover_img.cloneNode(true);
+            img.addEventListener("mouseup", async event => {
+                if (event.button === 0) await editCover(cover);
+            });
 
-	    div.classList.add("image-picker-cover");
-	    img.alt = covers.indexOf(cover) + " | " + cover
-	    img.loading = "lazy";
-	    img.decoding = "async";
-
-	    if (aspect > 1.6) {
-		x = 2;
-		img.classList.add("image-picker-cover-img");
-	    } else if (aspect > 1.2) {
-		x = 2;
-		y = 2;
-		img.classList.add("image-picker-cover-img-vertical");
-	    } else if (aspect < 0.9) {
-		y = 2;
-		img.classList.add("image-picker-cover-img-vertical");
-	    } else {
-		if (aspect > 1) {
-		    img.classList.add("image-picker-cover-img-vertical");
-		} else {
-		    img.classList.add("image-picker-cover-img");
-		}
-	    }
-
-	    img.addEventListener("mouseup", async (e) => {
-		if (currentEntry !== STRINGS.EMPTY && e.button === 0) {
-		    await getLauncher(currentEntry).getFunctions().setCover(covers.indexOf(cover));
-		} else if (e.button === 0) {
-		    currentBackgroundCover = preloadCovers.convertToShort(cover);
-		    await setCover(currentBackgroundCover)
-		}
-		AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)
-		Hud.hide("profile-blur")
-		Hud.ofId("image-picker-bg").classList.remove("image-picker-visible");
-	    })
-
-	    div.classList.add("image-" + x + "x" + y);
 	    div.appendChild(img);
 	    frag.appendChild(div);
 	}
@@ -477,12 +566,11 @@ async function updateCoverImages(first_time = false) {
 	    cover_text.classList.add("covers-text");
 	    cover_text.innerHTML = "&#60450;"
 
-	    cover_img.addEventListener("mouseup", () => {
-		currentBackgroundCover = coverIdToShortMap.get(i);
-		setCover(currentBackgroundCover)
-	    })
+            cover_img.addEventListener("mouseup", async event => {
+                if (event.button === 0) await editCover(covers.get(i));
+            });
 
-	    if (i > 5) {
+	    if (covers.get(i).startsWith(localPath + fileTerminator)) {
 		cover_text.addEventListener("mouseup", () => {
 		    remove(covers.get(i));
 		    covers.splice(i, 1);
@@ -590,25 +678,20 @@ async function setCover(id) {
 	}
     }
 
-    let image = isNaN(id) ? preloadCovers.getOfShort(id).src : preloadCovers.ofCover(id).src
-    if (image === undefined) {
-	image = await getImage(id)
-    }
+    const preloaded = isNaN(id) ? preloadCovers.getOfShort(id) : preloadCovers.ofCover(id);
+    const image = preloaded?.src ?? preloadCovers.ofCover(0)?.src;
+    if (!image) return;
 
-    Hud.ofId("cove").style.backgroundImage = 'url("' + image + '")';
-
+    const source = coverIdToShortMap.get(id) ?? id;
+    const resolved = preloaded ?? preloadCovers.ofCover(0);
     if (STRINGS.isEmpty(currentEntry)) {
-	Hud.ofId("bg").style.backgroundImage = 'url("' + image + '")';
-	const img = new Image();
-	img.src = image;
-
-	img.onload = () => {
-	    currentBackgroundMaxOffset = img.naturalHeight * (1200 / img.naturalWidth);
-	    Hud.ofId("bg").style.height = (currentBackgroundMaxOffset) + "px";
-	    Hud.ofId("bg").style.backgroundPositionY = ((600 - currentBackgroundMaxOffset) * (currentBackgroundOffset / 100)) + "px";
-	    img.remove()
-	};
-	await saveConfig()
+        const frames = homeFrames(programData.post(), source);
+        applyCoverFrame(Hud.ofId("cove"), resolved, frames.cover);
+        Hud.ofId("bg").style.height = "100%";
+        applyCoverFrame(Hud.ofId("bg"), resolved, frames.background);
+    } else {
+        const data = await getLauncher(currentEntry).getFunctions().getData();
+        applyCoverFrame(Hud.ofId("cove"), resolved, normalizeFrame(data.coverFrame, source));
     }
 }
 
@@ -899,6 +982,7 @@ async function addMod(name) {
     }
 
     let gameExePath;
+    let launchPending = false;
     let modCredits;
     let escapedModCredits;
     let saveModData = async () => {
@@ -1110,6 +1194,9 @@ async function addMod(name) {
 	getData: async () => {
 	    return configData
 	},
+        setDescription: async description => {
+            await updateModDescription(configData, description, saveModData);
+        },
 	setAuthor: async (author) => {
 	    configData.author = author;
 	    await saveModData();
@@ -1154,44 +1241,37 @@ async function addMod(name) {
 
 	    await saveModData();
 	},
-	open: async () => {
-	    await Logger.sendEvent("game_launch", {
-		mod: name
-	    })
+        open: async () => {
+            if (launchPending || getIsLaunchedFlag()) return;
+            launchPending = true;
+            try {
+                if (Hud.isVoid(gameExePath)) await searchGame();
+                if (Hud.isVoid(gameExePath)) throw new Error("No game launcher was found.");
+                const path = modDirectory + fileTerminator + gameExePath;
+                // A rejected preflight must not hide the UI, start a timer, or mark the mod played.
+                await invoke("check_launch", {path});
+                showContainers(false);
+                flagModLaunched();
+                await mainTicker();
+                for (const id of ["pill", "pill-files", "pill-contains"]) Hud.show(id);
+                const image = preloadCovers.ofCover(configData.coverId) ?? preloadCovers.ofCover(0);
+                const source = coverIdToShortMap.get(configData.coverId) ?? configData.coverId;
+                applyCoverFrame(Hud.ofId("pill-profile"), image, normalizeFrame(configData.coverFrame, source));
+                await Logger.sendEvent("game_launch", {mod: name});
+                AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND);
+                launch_time = Date.now();
+                await invoke("launch", {path, id: name, renpy: configData.renpy || TranslationUtil.of("unknown")});
+            } catch (error) {
+                removeModLaunchedFlag();
+                for (const id of ["pill", "pill-files", "pill-contains"]) Hud.hide(id);
+                showContainers(true);
+                Logger.warn("Game launch failed: " + error);
+                await sendAlertAsync("Cannot launch this mod:\n\n" + error);
+            } finally {
+                launchPending = false;
+            }
+        },
 
-	    showContainers(false)
-	    await mainTicker()
-	    flagModLaunched()
-
-	    Hud.show("pill")
-	    Hud.show("pill-files")
-	    Hud.show("pill-contains")
-
-	    if (!Hud.isVoid(covers.get(configData.coverId), preloadCovers.ofCover(configData.coverId))) {
-		Hud.ofId("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(configData.coverId).src + '")';
-	    } else {
-		Hud.ofId("pill-profile").style.backgroundImage = 'url("' + preloadCovers.ofCover(0).src + '")';
-	    }
-
-	    setTimeout(async () => {
-		AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)
-		launch_time = Date.now();
-		if (Hud.isVoid(configData.renpy)) {
-		    configData.renpy = await getRenpy(modDirectory);
-		    await saveModData();
-		}
-
-		if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
-		    await searchGame()
-		}
-
-		await invoke("launch", {
-		    path: modDirectory + fileTerminator + gameExePath,
-		    id: name,
-		    renpy: configData.renpy || TranslationUtil.of("unknown")
-		})
-	    }, 500)
-	},
 	get_time: async () => {
 	    return Date.now() - launch_time;
 	},
@@ -1200,9 +1280,9 @@ async function addMod(name) {
 		path: modDirectory
 	    })
 	},
-	setCover: async (coverId) => {
-	    configData.coverId = coverId;
-	    await saveModData();
+	setCover: async (coverId, frame) => {
+            const source = coverIdToShortMap.get(coverId) ?? coverId;
+            await updateModCover(configData, source, frame ?? configData.coverFrame, saveModData);
 	    await setCover(configData.coverId);
 	},
 	onFavorite: async () => {
@@ -1331,14 +1411,13 @@ async function addMod(name) {
 		+ "<br><br>"
 		+ "<div style='width: 100%; height: 1px; background-color: rgba(150,150,150, 0.5); border: none'></div>"
 		+ "<br>"
-	    	+ "Folder: " + name
+        + "Folder: " + htmlEscape(name)
 		+ "<br>Ren'Py: "
 		+ escapedDescription
 		+ "<br>Custom Executable: " +
 		(hasCustomExecutable ?
-		    TranslationUtil.of("yes") + " — " + (getOSType() === OS.TYPE.MAC && gameExePath.includes('/') ? getLastPath() : gameExePath) :
-		    TranslationUtil.of("no"));
-		+ "</span>"
+		    TranslationUtil.of("yes") + " — " + htmlEscape(getOSType() === OS.TYPE.MAC && gameExePath.includes('/') ? getLastPath() : gameExePath) :
+		    TranslationUtil.of("no")) + "</span>";
 
 
 
@@ -1360,17 +1439,17 @@ async function addMod(name) {
 	    }
 
 	    if (configData.size === 0) {
-		updateDisplayInfo(name, configData.author, "Reading...", Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, "Never")
+		updateDisplayInfo(name, configData.author, "Reading...", Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, "Never", configData.description)
 		setTimeout(async () => {
 		    let data = await metadata(selectedPath + fileTerminator + name);
 		    configData.size = data.size;
 		    if (currentEntry === name) {
-			updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), name + "<br>Renpy: " + escapedDescription + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== STRINGS.EMPTY && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed)
+			updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), name + "<br>Renpy: " + escapedDescription + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== STRINGS.EMPTY && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed, configData.description)
 		    }
 		    data = null
 		}, 0)
 	    } else {
-		updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.round(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, lastPlayed)
+		updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.round(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, lastPlayed, configData.description)
 	    }
 
 	    if (!containsScreenshots) {
@@ -1531,7 +1610,7 @@ function showContainers(show) {
  * let time_played = "0h 100m";
  * let description = mod_name + "<br>Ren'Py 8.1";
  *
- * updateDisplayInfo(mod_name, author, storage_size, time_played, description);
+ * updateDisplayInfo(mod_name, author, storage_size, time_played, description, configData.description);
  * ```
  * @param {string} mod Mod Name
  * @param {string} author Author Name
@@ -1542,7 +1621,7 @@ function showContainers(show) {
  * @returns {void}
  */
 
-function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
+function updateDisplayInfo(mod, author, space, time, renpy, lastTime, description) {
     Hud.show("pin-holder")
     Hud.ofId("modtitle").value = formatModName(mod)
     Hud.show("modtitle");
@@ -1557,7 +1636,7 @@ function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
 	Hud.show("setinfo-header");
 	Hud.show("info");
 	if (renpy !== undefined) {
-	    Hud.ofId("info").innerHTML = renpy;
+	    Hud.ofId("info").innerHTML = descriptionHtml(description, renpy);
 	} else {
 	    Hud.ofId("info").textContent = "No Information Found!";
 	}
@@ -1568,8 +1647,7 @@ function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
 	Hud.show("delete-save");
 	Hud.show("play");
 	Hud.hide("optionsmenu");
-	Hud.hide("cover-up");
-	Hud.hide("cover-down");
+	Hud.hide("background-adjust");
 	Hud.ofId("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span><input class='author-header' autocomplete='off' spellcheck='false' id='authinput' placeholder='" + author + "'><span style=\"font-family: Icon; padding-left: 20px;\">&#60755;</span> " + space + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61966;</span> " + time + " <span style=\"font-family: Icon; padding-left: 20px;\">&#61974;</span> " + lastTime;
 	Hud.ofId("authinput").style.width = Math.min(getTextWidth(author, "normal " + AUTHOR_INPUT_SIZE + "rem Aller"), 150) + "px"
 	if (space !== "Reading...") {
@@ -1603,8 +1681,7 @@ function updateDisplayInfo(mod, author, space, time, renpy, lastTime) {
 	Hud.hide("extract");
 	Hud.hide("delete-save");
 	Hud.hide("play");
-	Hud.show("cover-up");
-	Hud.show("cover-down");
+	Hud.show("background-adjust");
 	Hud.show("optionsmenu");
 	Hud.ofId("modinfo").innerHTML = "<span style=\"font-family: Icon,serif;\">&#62038;</span> Kunzite <span style=\"font-family: Icon,serif; padding-left: 20px;\">&#61966;</span> " + Math.floor(min / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + (min % 60) + TranslationUtil.sub("timeUnits").of("m");
     }
@@ -1660,6 +1737,7 @@ async function sendKeepAlive() {
  */
 
 async function mainTicker() {
+    if (desktopOpen) { Logger.tick(); return; }
     Hud.tick()
     DownloadsManager.tick()
     Logger.tick()
@@ -2171,7 +2249,7 @@ async function updateClient() {
 	await Logger.sendEvent("update_launcher", {
 	    from: CLIENT_VERSION
 	})
-	Hud.setLoadingSubtitle(TranslationUtil.of("updating") + " " + PROGRAM_NAME)
+        if (!desktopOpen) Hud.setLoadingSubtitle(TranslationUtil.of("updating") + " " + PROGRAM_NAME)
 	await invoke("update_exe")
     } else {
 	Logger.warn("Already Up To Date (" + CLIENT_VERSION + ")")
@@ -2179,56 +2257,61 @@ async function updateClient() {
 }
 
 async function launchDesktop() {
+    desktopOpen = true;
     previous_app.unmount();
-    previous_app = createApp(Desktop)
+    previous_app = createApp(Desktop);
     previous_app.mount("#app");
-    const logs = Logger.instant()
-
-    for (const log in logs) {
-	const data = logs[log];
-	const holder = document.createElement("div");
-	const text = document.createElement("header");
-	const timestamp = document.createElement("header");
-	const difference = data.timestamp - CLIENT_START;
-
-	holder.classList.add("console-text-holder")
-	text.classList.add("console-text")
-	timestamp.classList.add("console-text-right")
-
-	if (data.isWarn) {
-	    holder.classList.add("console-warn")
-	}
-
-	text.innerHTML = formattedHtmlEscape(data.msg)
-	timestamp.textContent = (difference < 1000 ? difference + "ms" : (difference > 60000 ? (difference / 60000).toFixed(2) + "m" : (difference / 1000).toFixed(2) + "s"));
-
-	holder.appendChild(text);
-	holder.appendChild(timestamp);
-
-	Hud.ofId("console").appendChild(holder);
+    const logs = Logger.instant();
+    for (const data of logs) {
+        const holder = document.createElement("div");
+        const text = document.createElement("div");
+        const timestamp = document.createElement("time");
+        const difference = data.timestamp - CLIENT_START;
+        holder.className = "console-text-holder";
+        if (data.isWarn) holder.classList.add("console-warn");
+        text.className = "console-text";
+        timestamp.className = "console-text-right";
+        text.textContent = data.msg;
+        timestamp.textContent = difference < 1000 ? difference + "ms"
+            : difference > 60000 ? (difference / 60000).toFixed(2) + "m"
+            : (difference / 1000).toFixed(2) + "s";
+        holder.append(text, timestamp);
+        Hud.ofId("console").appendChild(holder);
     }
-
-    Hud.ofId("console").scrollTo(0, Hud.ofId("console").scrollHeight)
-    Hud.ofId("desktop-version").textContent = PROGRAM_NAME + " " + CLIENT_VERSION
-    Hud.ofId("desktop-launch").addEventListener("mouseup", () => {
-	window.location.reload()
-    })
-
-    Hud.ofId("desktop-close2").addEventListener("mouseup", () => {
-	invoke("close");
-    })
-
-    Hud.ofId("desktop-close").addEventListener("mouseup", () => {
-	invoke("close");
-    })
-
-    Hud.ofId("desktop-update").addEventListener("mouseup", () => {
-	if (shouldUpdate()) {
-	    previous_app.unmount()
-	    createApp(App).mount("#app")
-	    updateClient()
-	}
-    })
+    Hud.ofId("console").scrollTop = Hud.ofId("console").scrollHeight;
+    Hud.onClick("desktop-launch", () => window.location.reload());
+    Hud.onClick("desktop-close2", () => invoke("close"));
+    Hud.onClick("desktop-project", () => openUrl("https://github.com/BKunzite/DokiModManager"));
+    Hud.onClick("desktop-releases", () => openUrl("https://github.com/BKunzite/DokiModManager/releases"));
+    const showNotes = async (strict = false) => {
+        const notes = await getLatest({strict});
+        if (Hud.ofId("desktop-release-notes")) Hud.ofId("desktop-release-notes").textContent = notes;
+        return notes.split("\n")[0];
+    };
+    await showNotes();
+    Hud.onClick("desktop-update", async () => {
+        const button = Hud.ofId("desktop-update");
+        button.disabled = true;
+        const status = Hud.ofId("desktop-update-status");
+        status.textContent = "Checking for updates…";
+        try {
+            const latest = await showNotes(true);
+            const available = latest !== CLIENT_VERSION;
+            status.textContent = available ? `Available: ${latest}. Installed: ${CLIENT_VERSION}.`
+                : `You are up to date. Installed: ${CLIENT_VERSION}.`;
+            Hud.ofId("desktop-install").hidden = !available;
+        } catch (error) {
+            status.textContent = "Could not check updates. Open the releases page to check manually.";
+            Logger.warn("Update check: " + error);
+        } finally { button.disabled = false; }
+    });
+    Hud.onClick("desktop-install", async () => {
+        const button = Hud.ofId("desktop-install");
+        button.disabled = true;
+        try { await updateClient(); }
+        catch (error) { Hud.ofId("desktop-update-status").textContent = `Update failed: ${error}`; }
+        finally { button.disabled = false; }
+    });
 }
 
 /**
@@ -2600,8 +2683,7 @@ async function setupIPCListeners(onLoadStartTime) {
 		Hud.show("downloads-list")
 		await importMod(path)
 	    } else if (regexImageName(path)) {
-		let dir = await readDir(localPath + fileTerminator + terminatePath("store\\images") + fileTerminator)
-		await writeFile(localPath + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
+                await addImagesToLibrary([path]);
 	    } else {
 		await sendAlertAsync("Unsupported Format '" + (path.includes("\.") ? path.split("\.").pop() : "None") + "' (Supported Formats: zip, rar, rpa)")
 	    }
@@ -2619,6 +2701,16 @@ async function setupIPCListeners(onLoadStartTime) {
  * @returns {Promise<void>}
  */
 async function setupHTMListeners(onLoadStartTime) {
+    Hud.onClick("description-edit", openDescriptionEditor);
+    Hud.onClick("description-cancel", closeDescriptionEditor);
+    Hud.onClick("description-save", saveDescription);
+    Hud.ofId("description-input").addEventListener("keydown", event => {
+        if (event.key === "Escape") { event.preventDefault(); closeDescriptionEditor(); }
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault(); saveDescription();
+        }
+    });
+
     Hud.onClick("save-profile", async () => {
 	Hud.hide("profile-bg")
 	await saveProfile();
@@ -2701,30 +2793,6 @@ async function setupHTMListeners(onLoadStartTime) {
 	deref(Hud.ofId("view-image").src);
     }
 
-    Hud.onClick("cover-up", () => {
-	if (currentEntry !== STRINGS.EMPTY) return;
-	if ((currentBackgroundOffset += 5) > 100) currentBackgroundOffset = 0;
-	Hud.ofId("bg").style.backgroundPositionY = ((600 - currentBackgroundMaxOffset) * (currentBackgroundOffset / 100)) + "px";
-	saveConfig();
-    })
-
-    Hud.onClick("cover-down", () => {
-	if (currentEntry !== STRINGS.EMPTY) return;
-	if ((currentBackgroundOffset -= 5) < 0) currentBackgroundOffset = 100;
-	Hud.ofId("bg").style.backgroundPositionY = ((600 - currentBackgroundMaxOffset) * (currentBackgroundOffset / 100)) + "px";
-	saveConfig();
-    })
-
-    Hud.ofId("cove").addEventListener("wheel", (e) => {
-	if (currentEntry !== STRINGS.EMPTY) return;
-	currentBackgroundOffset += e.deltaY / 20;
-	if (currentBackgroundOffset < 0) currentBackgroundOffset = 0;
-	if (currentBackgroundOffset > 100) currentBackgroundOffset = 100;
-
-	Hud.ofId("bg").style.backgroundPositionY = ((600 - currentBackgroundMaxOffset) * (currentBackgroundOffset / 100)) + "px";
-	saveConfig();
-    })
-
     Hud.onClick("load-profile", async () => {
 	await loadCurrentProfileData(true)
 	Hud.hide("profile-blur")
@@ -2738,6 +2806,7 @@ async function setupHTMListeners(onLoadStartTime) {
     })
 
     Hud.ofId("profile-blur").addEventListener("mouseup", (e) => {
+        if (coverEditor && !coverEditor.root.classList.contains("hide")) return;
 	if (Hud.ofId("image-picker-bg").classList.contains("image-picker-visible")) {
 	    Hud.ofId("image-picker-bg").classList.remove("image-picker-visible");
 	    Hud.hide("profile-blur")
@@ -3214,20 +3283,8 @@ async function setupHTMListeners(onLoadStartTime) {
 	gotoHomePage()
     })
 
-    Hud.ofId("cover-last").addEventListener("mouseup", async () => {
-	AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)
-	Hud.ofId("image-picker-cancel").textContent = TranslationUtil.of("cancel");
-	Hud.show("profile-blur")
-	Hud.ofId("image-picker-bg").classList.add("image-picker-visible")
-    })
-
-    Hud.ofId("discord-show").addEventListener("mouseup", async () => {
-	await openUrl(PROGRAM_DISCORD)
-    })
-
-    Hud.ofId("settings-show").addEventListener("mouseup", async () => {
-	new OptionsPanel()
-    })
+    bindCoverControls();
+    bindHeaderControls();
 
     Hud.ofId("close").addEventListener("mouseup", async () => {
 	exitProgram()
@@ -3469,11 +3526,8 @@ async function setupHTMListeners(onLoadStartTime) {
 	await setTheme(CLIENT_THEME_ENUM[next], false);
     })
 
-    Hud.ofId("importimage").addEventListener("mouseup", async () => {
-	await invoke("open_path", {
-	    path: localPath + fileTerminator + terminatePath("store\\images")
-	})
-    })
+    Hud.onClick("importimage", selectImageFiles);
+    Hud.onClick("image-picker-import", selectImageFiles);
 
     Hud.ofId("import").addEventListener("mouseup", async () => {
 	AssetsManager.Sound.play(AssetsManager.Sound.BEEP_SOUND)

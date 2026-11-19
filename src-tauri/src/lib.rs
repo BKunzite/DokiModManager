@@ -1,3 +1,4 @@
+// macOS fixes contributed, 2026-11-19: preflight and non-destructive launch.
 use dirs::{download_dir, home_dir};
 use futures_util::TryStreamExt;
 use include_dir::{include_dir, Dir};
@@ -51,6 +52,8 @@ mod constants;
 mod discord_rpc;
 mod downloader;
 mod hash;
+#[cfg(target_os = "macos")]
+mod macos_launch;
 mod simple_logger;
 mod unarc_extractor;
 
@@ -607,7 +610,45 @@ fn chmod_x_directory(execs: &PathBuf) {
 }
 
 #[tauri::command]
+async fn check_launch(path: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    macos_launch::check(Path::new(path))?;
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+async fn launch_on_macos(app: AppHandle, path: &str, id: &str) -> Result<(), String> {
+    // Check before minimizing the manager or changing any game permissions.
+    macos_launch::check(Path::new(path))?;
+    let _ = app.get_webview_window("main").unwrap().minimize();
+    set_playing(id);
+    let path = PathBuf::from(path);
+    let output = tauri::async_runtime::spawn_blocking(move || {
+        macos_launch::command(&path)?.output().map_err(|error| error.to_string())
+    }).await.map_err(|error| error.to_string()).and_then(|output| output);
+    discord_rpc::set_activity("In Main Menu");
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    let output = output?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let message = format!("The game exited with {}.\n\n{}", output.status, stderr);
+        stamp(&message);
+        return Err(message);
+    }
+    app.emit("closed", ReturnData { id }).map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    { return launch_on_macos(app, path, id).await; }
+    #[cfg(not(target_os = "macos"))]
+    {
     let _ = app.get_window("main").unwrap().minimize();
     let scripts = PathBuf::from(&path).parent().unwrap().join("game");
     let dir = PathBuf::from(&path).parent().unwrap().display().to_string();
@@ -822,6 +863,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
         .expect("Failed to focus");
 
     Ok(())
+    }
 }
 
 fn version_f32(s: &str) -> Option<f32> {
@@ -2151,6 +2193,7 @@ pub async fn run() {
             close,
             minimize,
             launch,
+            check_launch,
             path_select,
             request_path,
             open_path,
