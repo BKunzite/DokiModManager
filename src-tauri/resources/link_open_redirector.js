@@ -1,5 +1,3 @@
-let __TAURI__APP = window.__TAURI__;
-window.__TAURI__ = null;
 
 /**
  * This function block is here to hide the
@@ -9,6 +7,54 @@ window.__TAURI__ = null;
  */
 
 (() => {
+    let __TAURI__APP = window.__TAURI__;
+    window.__TAURI__ = undefined;
+
+    if (window.location.href.includes("drive.google.com") && window.location.href.includes("/d/")) {
+        // https://drive.google.com/file/d/14qUSCCmX3aItv1q18STLfwV5cB9hI5xB/view
+        // To
+        // https://drive.usercontent.google.com/download?id=14qUSCCmX3aItv1q18STLfwV5cB9hI5xB&export=download&authuser=0
+        let id = window.location.href.split("/d/")[1];
+        if (id) {
+            if (id.includes("/")) id = id.split("/")[0];
+            window.location.href = "https://drive.usercontent.google.com/download?id=" + id + "&export=download&authuser=0";
+            return;
+        }
+    }
+
+    /**
+     * Fix Links That Open To _blank
+     */
+
+    document.addEventListener("click", (e) => {
+        const a = e.target.closest?.("a[href]");
+        if (!a) return;
+
+        const href = a.href || "";
+        if (a.target === "_blank" || a.rel?.includes("noopener")) {
+            e.preventDefault();
+
+            const label = "external-" + Date.now();
+            __TAURI__APP.event.emit("open_webview", {
+                url: href,
+                name: label
+            })
+        }
+    }, true);
+
+    /**
+     * Hijack New Window And Re-route It Through Tauri
+     */
+
+    window.open = function (url, _target, _features) {
+	__TAURI__APP.event.emit("open_webview", {
+	    url: url,
+	    name: "external_webview_" + Date.now()
+	})
+
+	return null;
+    };
+
     console.log("LINK REDIRECT - DOKI DOKI MOD MANAGER - INJECTED")
     const isUnix = navigator.userAgent.toLowerCase().includes("linux") || navigator.userAgent.toLowerCase().includes("mac");
 
@@ -46,6 +92,7 @@ window.__TAURI__ = null;
         console.log("New URL: " + url)
         if (url.startsWith("ipc://") || url.startsWith("ipc:") ||
             url.startsWith("tauri://") || url.startsWith("asset://")) {
+	    console.log("IPC URL BLOCKED! " + url)
             return false;
         }
         if (url.trim().startsWith("https://drive.usercontent.google.com/") && !url.includes("confirm")) {
@@ -174,35 +221,3 @@ window.__TAURI__ = null;
     };
 })();
 
-/**
- * Fix Links That Open To _blank
- */
-
-document.addEventListener("click", (e) => {
-    const a = e.target.closest?.("a[href]");
-    if (!a) return;
-
-    const href = a.href || "";
-    if (a.target === "_blank" || a.rel?.includes("noopener")) {
-        e.preventDefault();
-
-        const label = "external-" + Date.now();
-        __TAURI__APP.event.emit("open_webview", {
-            url: href,
-            name: label
-        })
-    }
-}, true);
-
-/**
- * Hijack New Window And Re-route It Through Tauri
- */
-
-window.open = function (url, _target, _features) {
-    __TAURI__APP.event.emit("open_webview", {
-        url: url,
-        name: "external_webview_" + Date.now()
-    })
-
-    return null;
-};

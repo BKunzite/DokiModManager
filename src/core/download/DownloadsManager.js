@@ -1,4 +1,4 @@
-import { fileTerminator } from "../utils/FileSystem";
+import { pathSeparator } from "../utils/FileSystem";
 import HTMLHelper from "../utils/HTMLHelper";
 import { formatModName } from "../utils/TextUtil";
 import { TranslationUtil } from "../utils/TranslationUtil";
@@ -20,7 +20,7 @@ class DownloadingObject {
   constructor(url, path, percent) {
     this.#url = url;
     this.#path = path;
-    this.#file = path.split(fileTerminator).pop();
+    this.#file = path.split(pathSeparator).pop();
     this.#percent = percent;
 
     this.#div = document.createElement("div");
@@ -152,11 +152,17 @@ class DownloadsManager {
     return download;
   }
 
+  getSize() {
+    return Object.keys(this.#ongoingDownloads).length;
+  }
+
   swap(urlA, urlB) {
     const downloadA = this.#ongoingDownloads[urlA];
     const downloadB = this.#ongoingDownloads[urlB];
     this.#ongoingDownloads[urlA] = downloadB;
     this.#ongoingDownloads[urlB] = downloadA;
+    if (HTMLHelper.isVoid(this.#ongoingDownloads[urlA])) delete this.#ongoingDownloads[urlA];
+    if (HTMLHelper.isVoid(this.#ongoingDownloads[urlB])) delete this.#ongoingDownloads[urlB];
   }
 
   tick() {

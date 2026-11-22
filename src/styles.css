@@ -1,6 +1,6 @@
 :root {
-    --primary-color: 128, 239, 128;
-    --primary-color-saturated: 118, 138, 118;
+    --primary-color: 255, 255, 255;
+    --primary-color-saturated: 255, 255, 255;
     --bg-offset: 0%;
 }
 
@@ -248,6 +248,16 @@
 
 /* UIKit */
 
+.uikit-bg {
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0,0,0, 0.5);
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 998;
+}
+
 .uikit-panel {
     width: 40rem;
     height: auto;
@@ -261,7 +271,7 @@
     border-radius: 4rem;
     corner-shape: squircle;
     overflow: hidden;
-    z-index: 12;
+    z-index: 999;
     box-shadow: 0 0 200px 50px rgba(0, 0, 0, 0.8);
 }
 
@@ -316,6 +326,7 @@
     text-wrap: nowrap;
     align-content: center;
     justify-content: right;
+    cursor: pointer;
 }
 
 .uikit-textwidget {
@@ -471,6 +482,7 @@
 
 .title-colored {
     color: rgb(var(--primary-color));
+    transition: color 0.2s ease-out;
 }
 
 .glow {
@@ -551,25 +563,6 @@
 
 [os-type="linux"] .tutorial-warn {
     border-radius: 1.5rem;
-}
-
-.delete-warn {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 30vw;
-    height: 35vh;
-    background-color: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(20px) saturate(50%);
-    border-radius: 3rem;
-    display: flex;
-    justify-content: center;
-    overflow: hidden;
-    z-index: 10;
-    box-shadow: 0 0 2000px 500px rgba(0, 0, 0, 0.8);
-    corner-shape: squircle;
-    transition: top ease-out 0.5s, box-shadow ease-out 0.5s;
 }
 
 .tutorial-warn-title {
@@ -665,21 +658,6 @@
     position: absolute;
     border-radius: 100%;
     background-color: rgba(var(--primary-color), 0.5);
-    transform: translate(-50%, -50%);
-    filter: blur(100px);
-    z-index: -1;
-}
-
-
-.delete-warn::before {
-    content: "";
-    top: 0;
-    left: 0;
-    width: 50vw;
-    height: 50vw;
-    position: absolute;
-    border-radius: 100%;
-    background-color: rgba(185, 40, 40, 0.5);
     transform: translate(-50%, -50%);
     filter: blur(100px);
     z-index: -1;
@@ -928,8 +906,7 @@
     transform: translateX(53vh);
 }
 
-.tutorial-warn:after,
-.delete-warn::after {
+.tutorial-warn:after {
     content: "";
     position: absolute;
     inset: 0;
@@ -1073,7 +1050,7 @@
 .load-subtitle {
     position: absolute;
     font-family: "Aller", sans-serif;
-    color: white;
+    color: rgb(220, 220, 220);
     font-size: 1rem;
     left: 5vw;
     top: 10vw;
@@ -2029,6 +2006,80 @@ body {
     line-height: 1;
 }
 
+.sortlist {
+    width: auto;
+    border: none;
+    border-radius: 5px;
+    height: 20px;
+    right: 0.75rem;
+    transform: translateY(-100%);
+    background-color: rgb(var(--primary-color-saturated), 0.5);
+    position: absolute;
+    transition: scale 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    background-color 0.3s ease-out;
+    display: flex;
+    box-shadow: 0 0 5px rgba(var(--primary-color-saturated), 0.5);
+}
+
+.sortlist:hover {
+    scale: 1.1;
+    background-color: rgb(var(--primary-color), 0.75);
+    cursor: pointer;
+}
+
+.sortlist-title {
+    font-family: "Aller", sans-serif;
+    color: white;
+    font-weight: bold;
+    font-size: 10px;
+    line-height: 10px;
+    padding: 6px;
+}
+
+.sortlist-drop {
+    font-family: "Icon", sans-serif;
+    color: white;
+    font-size: 10px;
+    line-height: 10px;
+    padding: 6px 6px 6px 0;
+}
+
+.sortlist-menu {
+    position: absolute;
+    top: 25px;
+    width: auto;
+    height: auto;
+    right: 0;
+    background-color: rgb(var(--primary-color-saturated), 0.5);
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(var(--primary-color-saturated), 0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+.sortlist-menu-item {
+    font-family: "Aller", sans-serif;
+    color: white;
+    font-size: 10px;
+    line-height: 12px;
+    border-radius: 5px;
+    width: auto;
+    height: 12px;
+    padding: 10px;
+    transition: background-color 0.1s ease-out;
+    text-align: right;
+}
+
+.sortlist-menu-item:not(:first-child) {
+    margin-top: -11px;
+}
+
+.sortlist-menu-item:hover {
+    background-color: rgb(var(--primary-color), 0.75);
+    cursor: pointer;
+    scale: 1.05;
+}
+
 .sidebutton {
     flex-shrink: 0;
     scale: 0.8;
@@ -2045,7 +2096,11 @@ body {
     background: transparent;
     text-align: left;
     cursor: grab;
-    transition: all cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s;
+    transition: height cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s,
+        opacity cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s,
+        scale cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s,
+        font-weight cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s,
+        transform cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s;
     text-wrap: nowrap;
     transform: translateX(-50px);
     will-change: transform;
@@ -2487,6 +2542,7 @@ body {
 
 .sticky {
     order: -999;
+    z-index: 999;
 }
 
 .favorite {
@@ -2898,6 +2954,7 @@ li:not(.sticky):not(.favorite) {
     background-size: cover;
     transition: top 10s linear;
     pointer-events: none;
+    will-change: transform;
 }
 
 .update-log {

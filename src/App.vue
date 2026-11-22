@@ -1,4 +1,6 @@
 <script setup>
+import {CLIENT_VERSION} from "./core/VersionHandler";
+import {PROGRAM_NAME_TITLE_UNCOLORED, PROGRAM_NAME_TITLE_COLORED} from "./core/Constants";
 </script>
 
 <template>
@@ -8,7 +10,7 @@
     <div class="background"></div>
     <button class="import-zip hide" id="select-zip">Import Zip</button>
     <header class="load-subtitle" id="loadingsub">PLEASE REFRESH THIS APPLICATION (Control + R)</header>
-    <header class="load-title" id="loadinghead">Doki Doki Mod Manager <span class="load-title-version" id="load-title-version">/ 1.8.0</span></header>
+    <header class="load-title" id="loadinghead"><span class="title-colored">{{PROGRAM_NAME_TITLE_COLORED}}</span> {{PROGRAM_NAME_TITLE_UNCOLORED}} <span class="load-title-version" id="load-title-version">/ {{CLIENT_VERSION}}</span></header>
 
     <div class="wheel" id="throbber"></div>
     <div class="loading-bar">
@@ -24,13 +26,13 @@
     <div class="background-clip">
       <div data-tauri-drag-region class="bg" id="bg"></div>
     </div>
-    <header class="title"><span class="title-colored">Doki Doki</span> Mod Manager</header>
+    <header class="title"><span class="title-colored">{{PROGRAM_NAME_TITLE_COLORED}}</span> {{PROGRAM_NAME_TITLE_UNCOLORED}}</header>
     <div class="container-a smooth-hide" id="modlist">
       <header class="sidetext sticky"><span id="main-text">Main</span> <span
-          style="font-weight: normal; font-size: 0.75rem; cursor: grab; color: rgb(220,220,220)" id="version">(v1.0.0-release)</span>
+          style="font-weight: normal; font-size: 0.75rem; cursor: grab; color: rgb(220,220,220)" id="version">({{CLIENT_VERSION}})</span>
       </header>
       <button class="sidebutton sidebutton2 sticky" id="options"><span
-          style="font-family: Icon,serif; padding-right: 10px;">&#61669;</span> <span id="home-text">Home</span>
+          style="font-family: Icon,serif; padding-right: 10px;">&#xEE19;</span> <span id="home-text">Home</span>
       </button>
       <button class="sidebutton sidebutton2 sticky" id="reddit"><span
           style="font-family: Icon,serif; padding-right: 10px">&#61537;</span> Reddit
@@ -46,7 +48,14 @@
           id="update-text">Updates (Desktop)</span></button>
 
       <header class="sidetext sticky" id="modcount"><span id="mods-text">Mods</span> <span
-          style="font-weight: normal; font-size: 0.75rem; color: rgb(220,220,220)" id="nummods">0</span></header>
+          style="font-weight: normal; font-size: 0.75rem; color: rgb(220,220,220)" id="nummods">0</span><div class="sortlist" id="sortlist-drop">
+        <header class="sortlist-title" id="sortlist-type">Alphabetical</header>
+        <header class="sortlist-drop">&#xF306</header>
+        <div class="sortlist-menu hide smooth-hide" id="sortlist-menu">
+
+        </div>
+      </div></header>
+
     </div>
 
     <div class="container-a-border smooth-hide" id="container-boarder"></div>
@@ -134,7 +143,7 @@
       <header class="alert-title">Download Watcher</header>
       <header class="alert-subtitle" id="download-watcher">Allow this mod to be extracted and imported?</header>
       <header class="alert-subtitle2"><span style="font-family: Icon;">&#60807;</span> <span id="alert-name"
-                                                                                              style="font-weight: bold; position: absolute; font-size: 1rem; padding-top: 10px; padding-left: 10px;">BrokenPoet.zip</span>
+                                                                                              style="font-weight: bold; position: absolute; font-size: 1rem; padding-top: 10px; padding-left: 10px;">Unknown.zip</span>
       </header>
       <header class="alert-subtitle3" id="sub3"><span style="font-family: Icon;">&#60766;</span> Size: <span
           id="alert-size" style="color: rgb(var(--primary-color))">800mb</span><br><span style="font-family: Icon;">&#60901;</span>
@@ -181,20 +190,15 @@
       <button class="tutorial-warn-accept" id="tutorial">Yes</button>
       <button class="tutorial-warn-deny" id="tutorial-no">No</button>
     </div>
-    <div class="delete-warn hide smooth-hide" id="delete-prompt">
-      <header class="tutorial-warn-title" id="delete-title">Delete</header>
-      <header class="tutorial-warn-text" id="delete-context" style="text-wrap: pretty; word-break: break-all">Would You
-        Like To Delete The Save Date?
-      </header>
-      <button class="tutorial-warn-accept" id="delete-yes">Yes</button>
-      <button class="tutorial-warn-deny" id="delete-no">No</button>
-    </div>
     <div class="image-picker" id="image-picker-bg">
       <button class="image-picker-cancel" id="image-picker-cancel">Cancel</button>
     </div>
   </div>
   <div id="pill-files" class="pill-files hide">
     <span style="font-family: Icon; color: rgb(var(--primary-color))">&#60792;</span> Open Folder
+  </div>
+  <div id="uikit_blur" class="uikit-bg hide smooth-hide">
+
   </div>
   <div id="uikit">
 
@@ -218,9 +222,9 @@
         style="font-family: Icon; font-size: 0.5rem; padding-top: 0.3rem; left: 1.2rem; position: absolute; color: rgb(255,100,100)">&#62401;</span>
     Playing <span
       style="font-style: italic; color: rgb(var(--primary-color)); mask-image: linear-gradient(90deg, rgb(255,255,255) 100px,rgba(255,255,255,0) 150px); padding-left: 2px; white-space: nowrap; vertical-align: top; overflow: hidden; max-width: 150px; display: inline-block"
-      id="pill-game">Dark On Me LAAAAAAAAA</span> <span style="padding-left: 4px">by</span> <span
-      style="font-style: italic; color: rgb(var(--primary-color))" id="pill-author">unknown</span>
-    <span style="right: 1.5rem; position: absolute; color: rgb(200,200,200)" id="pill-time">2h 2m</span>
+      id="pill-game">Failed To Load!</span> <span style="padding-left: 4px">by</span> <span
+      style="font-style: italic; color: rgb(var(--primary-color))" id="pill-author">Failed To Load!</span>
+    <span style="right: 1.5rem; position: absolute; color: rgb(200,200,200)" id="pill-time">Failed To Load!</span>
   </div>
 </template>
 <style src="./styles.css"></style>

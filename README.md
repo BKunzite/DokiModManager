@@ -103,10 +103,10 @@ The linux build will go outside of beta once 2.0.0 (26.xx.xx/27.xx.xx) comes out
 1.8.2 Release Candidate <br>
 1.8.2 Release <br>
 
-| Tasks (Descending Importance For 1.8.5 / 27.1.0) | Time Required | Completed? |
+| Tasks (Descending Importance For 1.8.2 / 27.1.0) | Time Required | Completed? |
 |--------------------------------------------------|---------------|------------|
-| Settings Builder (1.8.5)                         | 1 Day(s)      | &#9744;    |
-| Opt-Out Snow Theme (1.8.5)                       | 1 Day(s)      | &#9744;    |
+| Settings Builder (1.8.5)                         | 1 Day(s)      | ☑          |
+| Opt-Out Christmas Theme (1.8.5)                  | 1 Day(s)      | ☑          |
 | Search Options (1.8.5)                           | 1 Day(s)      | &#9744;    |
 | Resizing                                         | 1 - 2 Week(s) | &#9744;    |
 

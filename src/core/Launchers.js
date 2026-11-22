@@ -1,4 +1,5 @@
 import Hud from "./utils/HTMLHelper";
+import Logger from "./utils/Logger";
 
 let launchers_list = {};
 let isGameRunning = false;
@@ -14,7 +15,7 @@ export class LauncherAbstract {
      * Launcher Abstract Class
      * @returns {{item: HTMLElement, location: String, absolute_location: String, preload: {String: HTMLElement}, isFavorite: Boolean, nameId: String, getOrder: () => Number, preloadImages: () => Promise<void>, getData: () => {}, setAuthor: (author: String) => Promise<void>, getPath: () => Promise<String>,
      *     getName: () => string, resetOrder: () => void, setPinned: (pinned: boolean=any) => Promise<void>, open: () => Promise<void>,
-     *     get_time: () => Promise<Number>, path: () => Promise<void>, setCover: (coverId: number) => Promise<void>, onFavorite: () => Promise<void>, close: () => Promise<void>, leftClick: () => Promise<void>}}
+     *     get_time: () => Promise<Number>, path: () => Promise<void>, getExecutable: () => Promise<String>, setCover: (coverId: number) => Promise<void>, onFavorite: () => Promise<void>, close: () => Promise<void>, leftClick: () => Promise<void>}}
      */
     getFunctions() {
         return this.list;
@@ -44,6 +45,16 @@ export function getIsLaunchedFlag() {
 
 export function addLauncher(name, launcher) {
     launchers_list[name] = launcher;
+}
+
+export function removeLauncher(name) {
+    if (Hud.isVoid(launchers_list[name])) {
+        Logger.info("Launcher " + name + " not found!")
+        return
+    }
+
+    launchers_list[name].getFunctions().item.remove()
+    delete launchers_list[name];
 }
 
 export function getLaunchers() {

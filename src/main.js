@@ -6,7 +6,7 @@ import {createApp} from "vue";
 //// Tauri
 import {invoke} from '@tauri-apps/api/core';
 import {listen} from "@tauri-apps/api/event";
-import {confirm, open} from '@tauri-apps/plugin-dialog';
+import {open} from '@tauri-apps/plugin-dialog';
 import {openUrl} from "@tauri-apps/plugin-opener";
 import {
     create,
@@ -49,7 +49,7 @@ import {
     getIsLaunchedFlag,
     getLauncher,
     getLaunchers,
-    LauncherAbstract,
+    LauncherAbstract, removeLauncher,
     removeModLaunchedFlag,
     updateModCount
 } from "./core/Launchers"
@@ -69,18 +69,13 @@ import {
     CLIENT_THEME_ENUM,
     CLIENT_THEMES,
     CURRENT,
-    DDLC_FOLDER_NAME, PROGRAM_DISCORD,
+    DDLC_FOLDER_NAME,
+    PROGRAM_DISCORD,
     PROGRAM_NAME,
     WARN_GENERIC_DATA_PATHS
 } from "./core/Constants";
 import OSUtil, {DDLC_FOLDER_REGEX, getOSType, INVALID_MAC_BINARIES, OS} from "./core/utils/OSUtil";
-import {
-	fileTerminator,
-	INVALID_FOLDER_CHARACTERS,
-	INVALID_FOLDER_NAMES,
-	supportedModPackage,
-	terminatePath, validateName
-} from "./core/utils/FileSystem";
+import {pathSeparator, supportedModPackage, terminatePath, validateName} from "./core/utils/FileSystem";
 import Logger from "./core/utils/Logger";
 import DownloadsManager from "./core/download/DownloadsManager"
 import PreventDefaults from "./core/utils/PreventDefaults";
@@ -98,6 +93,9 @@ import WaitInterval from "./core/utils/WaitInterval";
 import {Base64} from 'js-base64';
 import {Fzf} from 'fzf';
 import {OptionsPanel} from "./core/interface/uikit/Options";
+import TestSuite from "./core/manager/TestSuite";
+import SORT_TYPE from "./core/enum/SORT_TYPE";
+import {formatDate} from "@vueuse/core";
 
 //// Profile Data
 
@@ -138,9 +136,18 @@ let totalPlayTime = 0;
 let pinDragStart = 0;
 let previous_app = null
 let ddlcSelected = false
+let activeSortingMethod = SORT_TYPE.Alphabetical
 let selectedPath;
 let localPath;
 let observer;
+
+function resetModOrder() {
+    for (const index in getLaunchers()) {
+	const element = getLauncher(index).getFunctions();
+	element.item.classList.remove("hide2");
+	element.resetOrder()
+    }
+}
 
 /**
  * Initialize Translations
@@ -245,7 +252,7 @@ async function syncCovers() {
     if (pathOptional.isSome()) {
 	for (const image of await pathOptional.getResult()) {
 	    if (regexImageName(image.name)) {
-		const path = localPath + imageLocation + fileTerminator + image.name;
+		const path = localPath + imageLocation + pathSeparator + image.name;
 		covers.add(path)
 		coverIdToShortMap.set(covers.indexOf(path), image.name)
 		shortToCoverIdMap.set(image.name, covers.indexOf(path))
@@ -302,7 +309,7 @@ function onWindowFocusChanged(focus) {
  */
 
 async function loadConfig(path) {
-    const configPath = path + fileTerminator + "client-config.json";
+    const configPath = path + pathSeparator + "client-config.json";
     const hasConfig = await isExist(configPath)
     const hostname = await invoke("get_host_name", {})
     let configData = programData
@@ -393,15 +400,15 @@ async function loadConfig(path) {
  * Removes all cover images, then creates all new cover images with
  * their respective aspect ratio.
  *
- * @param {boolean} first_time Scroll To The Left
+ * @param {boolean} isLoading Scroll To The Left
  * @returns {Promise<void>}
  */
 
-async function updateCoverImages(first_time = false) {
-    if (!first_time) await syncCovers()
+async function updateCoverImages(isLoading = false) {
+    if (!isLoading) await syncCovers()
     const images = Hud.ofId("images")
 
-    if (!first_time) {
+    if (!isLoading) {
 	for (const child of document.querySelectorAll(".image-picker-cover")) {
 	    child.remove()
 	}
@@ -409,13 +416,13 @@ async function updateCoverImages(first_time = false) {
 
     DOMBatch.batchRender("image-picker-bg", (frag) => {
 	for (const cover in preloadCovers.asList()) {
-	    let cover_img = preloadCovers.get(cover)
+	    let coverImage = preloadCovers.get(cover)
 	    let x = 1;
 	    let y = 1;
-	    let aspect = cover_img.naturalWidth / cover_img.naturalHeight;
+	    let aspect = coverImage.naturalWidth / coverImage.naturalHeight;
 
 	    const div = document.createElement("div");
-	    const img = cover_img.cloneNode(true);
+	    const img = coverImage.cloneNode(true);
 
 	    div.classList.add("image-picker-cover");
 	    img.alt = covers.indexOf(cover) + " | " + cover
@@ -458,7 +465,7 @@ async function updateCoverImages(first_time = false) {
 	}
     })
 
-    if (!first_time) {
+    if (!isLoading) {
 	for (const cover of document.querySelectorAll(".covers-cover")) {
 	    cover.remove()
 	}
@@ -466,24 +473,24 @@ async function updateCoverImages(first_time = false) {
 
     DOMBatch.batchRender(images, (image_fragment) => {
 	for (let i = covers.length() - 1; i >= 0; i--) {
-	    const cover_bg = document.createElement("div");
-	    const cover_img = preloadCovers.ofCover(i).cloneNode(true);
-	    const cover_text = document.createElement("button");
+	    const coverBackground = document.createElement("div");
+	    const coverImage = preloadCovers.ofCover(i).cloneNode(true);
+	    const coverText = document.createElement("button");
 
-	    cover_img.classList.add("covers-image");
+	    coverImage.classList.add("covers-image");
 
-	    cover_bg.classList.add("covers-cover");
+	    coverBackground.classList.add("covers-cover");
 
-	    cover_text.classList.add("covers-text");
-	    cover_text.innerHTML = "&#60450;"
+	    coverText.classList.add("covers-text");
+	    coverText.innerHTML = "&#60450;"
 
-	    cover_img.addEventListener("mouseup", () => {
+	    coverImage.addEventListener("mouseup", () => {
 		currentBackgroundCover = coverIdToShortMap.get(i);
 		setCover(currentBackgroundCover)
 	    })
 
 	    if (i > 5) {
-		cover_text.addEventListener("mouseup", () => {
+		coverText.addEventListener("mouseup", () => {
 		    remove(covers.get(i));
 		    covers.splice(i, 1);
 		    setTimeout(async () => {
@@ -495,15 +502,15 @@ async function updateCoverImages(first_time = false) {
 			})
 		    }, 100)
 		})
-		cover_bg.appendChild(cover_text);
+		coverBackground.appendChild(coverText);
 	    }
 
-	    cover_bg.appendChild(cover_img);
-	    image_fragment.appendChild(cover_bg);
+	    coverBackground.appendChild(coverImage);
+	    image_fragment.appendChild(coverBackground);
 	}
     })
 
-    if (first_time) {
+    if (isLoading) {
 	images.scrollTo(-images.scrollWidth, 0)
     }
 }
@@ -548,7 +555,7 @@ async function importMod(path) {
 	    return
 	}
 	await Logger.sendEvent("manual_download", {
-	    name: selectedPath.split(fileTerminator).pop()
+	    name: selectedPath.split(pathSeparator).pop()
 	})
 	DownloadsManager.startDownload(selectedPath, selectedPath)
 	Hud.show("downloads-list")
@@ -556,13 +563,13 @@ async function importMod(path) {
     if (selectedPath != null) {
 	if (supportedModPackage(selectedPath)) {
 	    try {
-			await invoke("import_mod", {
-				path: selectedPath
-			})
-		} catch (e) {
-			await sendAlertAsync("Failed to import mod!\nDeleting Temp Data\n\nReason:\n" + e)
-			DownloadsManager.complete(selectedPath)
-		}
+		await invoke("import_mod", {
+		    path: selectedPath
+		})
+	    } catch (e) {
+		await sendAlertAsync("Failed to import mod!\nDeleting Temp Data\n\nReason:\n" + e)
+		DownloadsManager.complete(selectedPath)
+	    }
 	} else {
 	    Hud.hide("loader")
 	    Hud.show("main")
@@ -688,13 +695,13 @@ function createScreenshotDiv(src, entryName, dir, image, entry, preload) {
     newScreenshot.src = src;
 
     newScreenshot.addEventListener("mouseup", async () => {
-	Hud.ofId("view-image").src = await getImage(dir + fileTerminator + image);
+	Hud.ofId("view-image").src = await getImage(dir + pathSeparator + image);
 	Hud.ofId("view-image").classList.add("zoom")
 	Hud.show("view-background")
     })
 
     cover_text.addEventListener("click", async () => {
-	await remove(dir + fileTerminator + image);
+	await remove(dir + pathSeparator + image);
 	await getLauncher(entryName).getFunctions().leftClick();
 
 	if (getLauncher(entry).getFunctions().preload[image]) {
@@ -786,11 +793,16 @@ async function requestDirectory(directoryPath = undefined) {
 	let working_mods_count = 0
 	let docFrag = DOMBatch.inline("modlist")
 	const startTime = Date.now()
+	const creation_dates = await TestSuite.timeFunction("get_creation_dates", async () => {
+	    await invoke("get_creation_date", {
+		pathStr: selectedPath
+	    })
+	})
 
 	for (const entry of files) {
 	    if (entry.isDirectory) {
 		mods_to_complete++;
-		addMod(entry.name)
+		addMod(entry.name, creation_dates)
 		    .then((val) => {
 			finished_mods++;
 			if (val === undefined) return
@@ -836,20 +848,37 @@ async function requestDirectory(directoryPath = undefined) {
 
 }
 
+function formatTimeSince(time) {
+    const msSinceLastPlayed = Date.now() - time;
+    let date = new Date(time).toLocaleString();
+    if (msSinceLastPlayed < Units.MillisMap.MINUTE) {
+	return TranslationUtil.of("just-now");
+    } else if (msSinceLastPlayed < Units.MillisMap.DAY) {
+	const is_prefix = TranslationUtil.getLanguage() === "es" || TranslationUtil.getLanguage() === "fr";
+	return (is_prefix ? TranslationUtil.of("ago") + STRINGS.SPACE : STRINGS.EMPTY) + (msSinceLastPlayed >= Units.MillisMap.HOUR ? Math.floor(msSinceLastPlayed / Units.MillisMap.HOUR) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE : STRINGS.EMPTY) + (Math.floor(msSinceLastPlayed / Units.MillisMap.MINUTE) % 60) + TranslationUtil.sub("timeUnits").of("m") + STRINGS.SPACE + (!is_prefix ? TranslationUtil.of("ago") : STRINGS.EMPTY);
+    } else if (msSinceLastPlayed < Units.MillisMap.DAY * 2) {
+	return TranslationUtil.of("yesterday");
+    } else if (msSinceLastPlayed) {
+	return date
+    }
+}
+
 /**
  * Add Mods to List
  * @param {string} name Name Of Mod To Add
+ * @param {{}} creation_dates
+ * @param {boolean} install
  * @returns {Promise<HTMLElement | undefined>}
  */
 
-async function addMod(name) {
-    let modDirectory = selectedPath + fileTerminator + name;
+async function addMod(name, creation_dates = undefined, install = false) {
+    let modDirectory = selectedPath + pathSeparator + name;
     let isValidMod = false;
 
     const localFilesOptional = await Optional.readDir(modDirectory);
 
     if (localFilesOptional.isNone()) {
-	Logger.warn("Mod " + name + " Does Not Exist! (path: " + selectedPath + fileTerminator + name + ")")
+	Logger.warn("Mod " + name + " Does Not Exist! (path: " + selectedPath + pathSeparator + name + ")")
 	return undefined
     }
 
@@ -863,7 +892,7 @@ async function addMod(name) {
     }
 
     if (!isValidMod) {
-	modDirectory = selectedPath + fileTerminator + name + fileTerminator + DDLC_FOLDER_NAME
+	modDirectory = selectedPath + pathSeparator + name + pathSeparator + DDLC_FOLDER_NAME
 	const optional = await Optional.readDir(modDirectory)
 
 	if (optional.isSome()) {
@@ -884,7 +913,7 @@ async function addMod(name) {
     // Create SideButton And Load Config
 
     let hasConfig = false;
-    const configPath = selectedPath + fileTerminator + name + fileTerminator + ".ddmm.config.json";
+    const configPath = selectedPath + pathSeparator + name + pathSeparator + ".ddmm.config.json";
     let configData = {
 	author: TranslationUtil.of("unknown"),
 	time: 0,
@@ -895,7 +924,8 @@ async function addMod(name) {
 	executable: undefined,
 	credits: undefined,
 	pinned: false,
-	last_played: -1
+	last_played: -1,
+	install_date: install ? Date.now() : -1,
     }
 
     let gameExePath;
@@ -928,7 +958,7 @@ async function addMod(name) {
 	    } else if (osType === OS.TYPE.MAC) {
 		if (localEntry.name.trim().endsWith(".app")) {
 		    Logger.log(localEntry.name + " Entrypoint Into " + name)
-		    const contentsFolder = fileTerminator + localEntry.name + fileTerminator + terminatePath("Contents/MacOS")
+		    const contentsFolder = pathSeparator + localEntry.name + pathSeparator + terminatePath("Contents/MacOS")
 		    const folderOptional = await Optional.readDir(modDirectory + contentsFolder)
 
 		    if (folderOptional.isNone()) {
@@ -939,7 +969,7 @@ async function addMod(name) {
 		    for (const contentEntry of await folderOptional.getResult()) {
 			Logger.warn("Entrypoint found - " + contentEntry.name)
 			if (!INVALID_MAC_BINARIES.includes(contentEntry.name) && contentEntry.isFile) {
-			    gameExePath = contentsFolder.substring(1) + fileTerminator + contentEntry.name
+			    gameExePath = contentsFolder.substring(1) + pathSeparator + contentEntry.name
 			    Logger.warn("Final Entry Point - " + gameExePath)
 			    break
 			}
@@ -948,7 +978,7 @@ async function addMod(name) {
 	    }
 
 	    if (localEntry.name.toLowerCase().includes("credit") && modCredits === undefined) {
-		modCredits = await readTextFile(modDirectory + fileTerminator + localEntry.name);
+		modCredits = await readTextFile(modDirectory + pathSeparator + localEntry.name);
 	    }
 	}
 
@@ -956,9 +986,9 @@ async function addMod(name) {
 	    if (osType === OS.TYPE.WINDOWS) {
 		gameExePath = OS.EXECUTABLE.WINDOWS;
 	    } else if (osType === OS.TYPE.LINUX) {
-		gameExePath = await isExist(modDirectory + fileTerminator + OS.EXECUTABLE.LINUX_OTHER) ? OS.EXECUTABLE.LINUX_OTHER : OS.EXECUTABLE.LINUX
+		gameExePath = await isExist(modDirectory + pathSeparator + OS.EXECUTABLE.LINUX_OTHER) ? OS.EXECUTABLE.LINUX_OTHER : OS.EXECUTABLE.LINUX
 	    } else if (osType === OS.TYPE.MAC) {
-		const contentsFolder = fileTerminator + "DDLC.app" + fileTerminator + terminatePath("Contents/MacOS/DDLC")
+		const contentsFolder = pathSeparator + "DDLC.app" + pathSeparator + terminatePath("Contents/MacOS/DDLC")
 		if (!await isExist(modDirectory + contentsFolder)) {
 		    Logger.warn("Invalid APP Found")
 		} else {
@@ -966,7 +996,7 @@ async function addMod(name) {
 		}
 	    }
 
-	    if (gameExePath === undefined || !await isExist(modDirectory + fileTerminator + gameExePath)) {
+	    if (gameExePath === undefined || !await isExist(modDirectory + pathSeparator + gameExePath)) {
 		Logger.warn("No functional executable found in " + modDirectory)
 		throw new Error("No executable found!\nPath: " + modDirectory + "\nExecutable: " + gameExePath + "\nFiles: " + localFiles.map(v => v.name).join(", "))
 	    } else {
@@ -1023,12 +1053,18 @@ async function addMod(name) {
 
     if (!hasConfig) {
 	await create(configPath)
-	const data = await metadata(selectedPath + fileTerminator + name);
+	const data = await metadata(selectedPath + pathSeparator + name);
 	configData.size = data.size;
 	await saveModData();
     }
 
-    if (configData.executable === undefined || configData.executable.length === 0 || !await isExist(modDirectory + fileTerminator + configData.executable)) {
+    if (configData.install_date === -1 && creation_dates !== undefined && !Hud.isVoid(creation_dates[name])) {
+	Logger.log("Setting install date for " + name)
+	configData.install_date = creation_dates[name]
+	await saveModData();
+    }
+
+    if (configData.executable === undefined || configData.executable.length === 0 || !await isExist(modDirectory + pathSeparator + configData.executable)) {
 	Logger.log("searching for executable in " + modDirectory + " (" + name + ")")
 	await searchGame();
     } else {
@@ -1057,21 +1093,6 @@ async function addMod(name) {
 
     sidetext.classList.add("sidebutton");
     sidetext.id = elementId;
-    sidetext.style.order = prefixCharacterIndex
-
-    if (configData.favorite) {
-	sidetext.style.order = prefixCharacterIndex - 122
-	sidetext.classList.add("favorite")
-    } else {
-	sidetext.classList.remove("favorite")
-    }
-
-    if (configData.pinned) {
-	sidetext.classList.add("pinned")
-	sidetext.style.order = prefixCharacterIndex - 244
-    } else {
-	sidetext.classList.remove("pinned")
-    }
 
     if (configData.pinned) {
 	sidetext.innerHTML = pinnedText
@@ -1084,12 +1105,23 @@ async function addMod(name) {
     observer.observe(sidetext);
     const launcher = new LauncherAbstract({
 	item: sidetext,
-	location: selectedPath + fileTerminator + name,
+	location: selectedPath + pathSeparator + name,
 	absolute_location: modDirectory,
 	preload: {},
 	isFavorite: configData.favorite,
 	nameId: name.toLowerCase(),
-	getOrder: () => configData.pinned ? prefixCharacterIndex - 244 : (configData.favorite ? prefixCharacterIndex - 122 : prefixCharacterIndex),
+	getOrder: () => {
+	    switch (activeSortingMethod) {
+		case SORT_TYPE.Alphabetical:
+		    return configData.pinned ? prefixCharacterIndex - 244 : (configData.favorite ? prefixCharacterIndex - 122 : prefixCharacterIndex)
+		case SORT_TYPE.Size:
+		    return configData.size === 0 ? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER - configData.size;
+		case SORT_TYPE.Install_Date:
+		    return configData.install_date === -1 ? Number.MAX_SAFE_INTEGER : Math.round((Date.now() - configData.install_date)/10_000);
+		case SORT_TYPE.Last_Played:
+		    return configData.last_played === -1 ? Number.MAX_SAFE_INTEGER : Math.round((Date.now() - configData.last_played)/10_000);
+	    }
+	},
 	preloadImages: async () => {
 	    const list = launcher.getFunctions()
 	    let images = 0;
@@ -1097,7 +1129,7 @@ async function addMod(name) {
 
 	    for (const localEntry of await readDir(modDirectory)) {
 		if (localEntry.name.includes("screenshot")) {
-		    list.preload[localEntry.name] = await createScreenshotDiv(await getImage(modDirectory + fileTerminator + localEntry.name), name, modDirectory, localEntry.name, name, true);
+		    list.preload[localEntry.name] = await createScreenshotDiv(await getImage(modDirectory + pathSeparator + localEntry.name), name, modDirectory, localEntry.name, name, true);
 		    list.preload[localEntry.name].classList.add("preload-image")
 		    images++
 
@@ -1116,6 +1148,12 @@ async function addMod(name) {
 	},
 	getPath: async () => {
 	    return selectedPath
+	},
+	getExecutable: async () => {
+	    if (Hud.isVoid(gameExePath) || (getOSType() === OS.TYPE.LINUX && !gameExePath.endsWith(".sh")) || (getOSType() === OS.TYPE.WINDOWS && !gameExePath.endsWith(".exe"))) {
+		await searchGame()
+	    }
+	    return gameExePath
 	},
 	getName: () => name,
 	resetOrder: () => {
@@ -1186,7 +1224,7 @@ async function addMod(name) {
 		}
 
 		await invoke("launch", {
-		    path: modDirectory + fileTerminator + gameExePath,
+		    path: modDirectory + pathSeparator + gameExePath,
 		    id: name,
 		    renpy: configData.renpy || TranslationUtil.of("unknown")
 		})
@@ -1222,7 +1260,7 @@ async function addMod(name) {
 	},
 	close: async () => {
 	    const playTime = Date.now() - launch_time;
-	    const data = await metadata(selectedPath + fileTerminator + name);
+	    const data = await metadata(selectedPath + pathSeparator + name);
 
 	    if (alertPath === undefined) {
 		showContainers(true)
@@ -1280,7 +1318,6 @@ async function addMod(name) {
 	    const screenshotsChildren = Array.from(Hud.ofId("screenshots").children);
 	    const escapedDescription = htmlEscape(modDescription);
 	    const playTimeMinutes = Math.floor(configData.time / Units.MillisMap.MINUTE);
-	    const msSinceLastPlayed = Date.now() - configData.last_played;
 	    const pinHolder = Hud.ofId("pin-holder");
 
 	    if (!STRINGS.isEmpty(pinHolder.style.top)) {
@@ -1320,10 +1357,10 @@ async function addMod(name) {
 	    const isLinuxExecutable = gameExePath.toString() === OS.EXECUTABLE.LINUX || gameExePath.toString() === OS.EXECUTABLE.LINUX_OTHER;
 
 	    const hasCustomExecutable = !(noExecutable || isRawExecutable || isWindowsExecutable || isLinuxExecutable);
-		const getLastPath = () => {
-			let x = gameExePath.split('/');
-			return x[x.length - 1]
-		}
+	    const getLastPath = () => {
+		let x = gameExePath.split('/');
+		return x[x.length - 1]
+	    }
 
 	    modDescription =
 		(escapedModCredits !== undefined ? escapedModCredits : "No credits.")
@@ -1331,38 +1368,29 @@ async function addMod(name) {
 		+ "<br><br>"
 		+ "<div style='width: 100%; height: 1px; background-color: rgba(150,150,150, 0.5); border: none'></div>"
 		+ "<br>"
-	    	+ "Folder: " + name
+		+ "Folder: " + name
 		+ "<br>Ren'Py: "
 		+ escapedDescription
-		+ "<br>Custom Executable: " +
+		+ "<br>Installed: "
+		+ formatTimeSince(configData.install_date)
+		+ "<br>Custom Binary: " +
 		(hasCustomExecutable ?
 		    TranslationUtil.of("yes") + " — " + (getOSType() === OS.TYPE.MAC && gameExePath.includes('/') ? getLastPath() : gameExePath) :
 		    TranslationUtil.of("no"));
-		+ "</span>"
-
+	    +"</span>"
 
 
 	    Hud.setHeart(configData.favorite)
 	    AssetsManager.Sound.play(AssetsManager.Sound.BOOP_SOUND)
 
 	    if (configData.last_played !== -1) {
-		let date = new Date(configData.last_played).toLocaleString();
-		if (msSinceLastPlayed < Units.MillisMap.MINUTE) {
-		    lastPlayed = TranslationUtil.of("just-now");
-		} else if (msSinceLastPlayed < Units.MillisMap.DAY) {
-		    const is_prefix = TranslationUtil.getLanguage() === "es" || TranslationUtil.getLanguage() === "fr";
-		    lastPlayed = (is_prefix ? TranslationUtil.of("ago") + STRINGS.SPACE : STRINGS.EMPTY) + (msSinceLastPlayed >= Units.MillisMap.HOUR ? Math.floor(msSinceLastPlayed / Units.MillisMap.HOUR) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE : STRINGS.EMPTY) + (Math.floor(msSinceLastPlayed / Units.MillisMap.MINUTE) % 60) + TranslationUtil.sub("timeUnits").of("m") + STRINGS.SPACE + (!is_prefix ? TranslationUtil.of("ago") : STRINGS.EMPTY);
-		} else if (msSinceLastPlayed < Units.MillisMap.DAY * 2) {
-		    lastPlayed = TranslationUtil.of("yesterday");
-		} else if (msSinceLastPlayed) {
-		    lastPlayed = date
-		}
+		lastPlayed = formatTimeSince(configData.last_played)
 	    }
 
 	    if (configData.size === 0) {
 		updateDisplayInfo(name, configData.author, "Reading...", Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, "Never")
 		setTimeout(async () => {
-		    let data = await metadata(selectedPath + fileTerminator + name);
+		    let data = await metadata(selectedPath + pathSeparator + name);
 		    configData.size = data.size;
 		    if (currentEntry === name) {
 			updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), name + "<br>Renpy: " + escapedDescription + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== STRINGS.EMPTY && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed)
@@ -1385,7 +1413,7 @@ async function addMod(name) {
 
 		    DOMBatch.batchRender("screenshots", async (frag) => {
 			for (const image_url of images) {
-			    let imageS = createScreenshotDiv(await getImage(modDirectory + fileTerminator + image_url, true), name, modDirectory, image_url, name, false)
+			    let imageS = createScreenshotDiv(await getImage(modDirectory + pathSeparator + image_url, true), name, modDirectory, image_url, name, false)
 			    frag.appendChild(
 				imageS
 			    );
@@ -1395,7 +1423,7 @@ async function addMod(name) {
 				lazyDeref(clazz_children[0].src);
 				caches.delete(clazz_children[0].src);
 			    }).catch(err => {
-				Logger.warn("Failed To Unload Image: " + modDirectory + fileTerminator + image_url + " Error: " + err)
+				Logger.warn("Failed To Unload Image: " + modDirectory + pathSeparator + image_url + " Error: " + err)
 			    })
 			}
 		    })
@@ -1410,6 +1438,10 @@ async function addMod(name) {
 	    modDescription = null
 	}
     })
+
+    sidetext.style.order = launcher.getFunctions().getOrder().toString()
+    configData.favorite ? sidetext.classList.add("favorite") : sidetext.classList.remove("favorite")
+    configData.pinned ? sidetext.classList.add("pinned") : sidetext.classList.remove("pinned")
 
     addLauncher(name, launcher)
     launcher.getFunctions().preloadImages().then(() => {
@@ -1455,7 +1487,7 @@ async function getRenpy(dir) {
     for (const localEntry of dirFiles) {
 	switch (localEntry.name) {
 	    case "__init__.py": {
-		const code = await readTextFile(tld + fileTerminator + localEntry.name);
+		const code = await readTextFile(tld + pathSeparator + localEntry.name);
 		const lines = code.split("\n");
 		for (const line of lines) {
 		    if (line.startsWith("version_tuple = ") && !line.includes("*")) {
@@ -1469,7 +1501,7 @@ async function getRenpy(dir) {
 		break;
 	    }
 	    case "vc_version.py": {
-		const code = await readTextFile(tld + fileTerminator + localEntry.name);
+		const code = await readTextFile(tld + pathSeparator + localEntry.name);
 		const lines = code.split("\n");
 		for (const line of lines) {
 		    if (line.startsWith("version = ")) {
@@ -1482,6 +1514,8 @@ async function getRenpy(dir) {
 	}
 	if (renpy !== undefined) break;
     }
+
+    Logger.log("Ren'Py Version: " + renpy);
 
     return renpy
 }
@@ -1654,6 +1688,100 @@ async function sendKeepAlive() {
     })
 }
 
+async function syncTestSuite() {
+    if (TestSuite.isActive()) {
+	TestSuite.setActive(false)
+	setTimeout(async () => {
+	    let downloads = TestSuite.getModDownloadList()
+	    let folder = localPath + pathSeparator + "store" + pathSeparator + "testSuite"
+	    let downloadsFolder = localPath + pathSeparator + "store" + pathSeparator + "testSuiteDownloads"
+	    let oldDirectory = selectedPath
+
+	    if (await isDir(folder)) {
+	    	await delDir(folder)
+	    }
+
+	    await mkdir(folder)
+
+	    if (!await isDir(downloadsFolder)) {
+		await mkdir(downloadsFolder)
+	    }
+
+	    await invoke("path_select", {
+		path: folder
+	    })
+
+	    requestDirectory(folder).then(() => {
+		gotoHomePage()
+		Hud.toggle("downloads-list")
+		Hud.ofId("language-list").classList.add("language-list-hide");
+
+		setTimeout(async () => {
+		    let promises = []
+
+		    for (const mod in downloads) {
+			promises.push(new Promise(async () => {
+			    let parts = downloads[mod].split(".")
+			    let path = downloadsFolder + pathSeparator + "mod_" + mod + "." + parts[parts.length - 1]
+			    if (!await isExist(path)) {
+				await invoke("run_download",{
+				    url: downloads[mod],
+				    path: path
+				})
+			    } else {
+				let download = DownloadsManager.startDownload(path, path)
+				download.setPercent(100)
+				download.setUpdateString("Finished Downloading")
+				await importMod(path)
+			    }
+			}))
+		    }
+
+		    for (const promise of promises) {
+			promise.then(() => {})
+		    }
+
+		    await WaitInterval.wait(1, Units.MillisMap.SECOND)
+		    WaitInterval.waitFor(async (resolve) => {
+			let size = DownloadsManager.getSize()
+			Logger.info(size)
+			if (size <= 0) {
+			    resolve()
+			    await WaitInterval.wait(1, Units.MillisMap.SECOND)
+			    for (const launcher in getLaunchers()) {
+				await getLauncher(launcher).getFunctions().leftClick();
+				await getLauncher(launcher).getFunctions().open();
+				await WaitInterval.wait(40, Units.MillisMap.SECOND)
+				const exec = await getLauncher(launcher).getFunctions().getExecutable()
+				if (getIsLaunchedFlag()) {
+				    Logger.log(":) Test Suite Passed For " + launcher)
+				    Logger.log("Sending Kill Signal For " + exec)
+				    await invoke("send_kill",{
+					modName: exec
+				    })
+				} else {
+				    Logger.log(">:( Test Suite Failed For " + launcher)
+				}
+
+				await WaitInterval.wait(10, Units.MillisMap.SECOND)
+			    }
+
+			    await invoke("path_select", {
+				path: oldDirectory
+			    })
+			    requestDirectory(oldDirectory).then(() => {
+				gotoHomePage()
+			    })
+			}
+
+		    })
+
+		}, 5000)
+	    })
+	}, 100)
+    }
+}
+
 /**
  * Interval: Runs main tick - once every second
  * @returns {Promise<void>}
@@ -1663,6 +1791,7 @@ async function mainTicker() {
     Hud.tick()
     DownloadsManager.tick()
     Logger.tick()
+    await syncTestSuite()
     await updateConcurrentGameInfo()
 }
 
@@ -1703,24 +1832,29 @@ async function renameMod() {
     if (STRINGS.isEmpty(currentEntry)) return;
     const value = Hud.ofId("modtitle").value.trim();
     const name = getLauncher(currentEntry).getFunctions().getName();
+    const invalidate = async (msg) => {
+	if (msg !== undefined) {
+	    await sendAlertAsync(msg)
+	}
+	Hud.ofId("modtitle").value = formatModName(currentEntry);
+    }
 
     if (value === name || value.length === 0) {
-	Hud.ofId("modtitle").value = formatModName(currentEntry);
+	await invalidate();
 	return;
     }
 
-    const oldName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + name;
-    const newName = (await getLauncher(currentEntry).getFunctions().getPath()) + fileTerminator + value;
+    const oldName = (await getLauncher(currentEntry).getFunctions().getPath()) + pathSeparator + name;
+    const newName = (await getLauncher(currentEntry).getFunctions().getPath()) + pathSeparator + value;
+
 
     if (!validateName(value)) {
-	await sendAlertAsync("The name '" + value + "' is invalid!")
-	Hud.ofId("modtitle").value = formatModName(currentEntry);
+	await invalidate("The name '" + value + "' is invalid!");
 	return;
     }
 
-    if (await isExist(await getLauncher(currentEntry).getFunctions().getPath() + fileTerminator + newName)) {
-	await sendAlertAsync("Another mod with the name '" + value + "' already exists!")
-	Hud.ofId("modtitle").value = formatModName(currentEntry);
+    if (await isExist(await getLauncher(currentEntry).getFunctions().getPath() + pathSeparator + newName)) {
+	await invalidate("Another mod with the name '" + value + "' already exists!");
 	return;
     }
 
@@ -1733,10 +1867,12 @@ async function renameMod() {
 	await invoke("rename_dir", {
 	    path: oldName,
 	    newName: newName,
-	    id: value
+	    id: name
 	})
     } catch (e) {
 	await sendAlertAsync("Cannot Rename The File Due To Error:\n\n" + e)
+	Hud.hide("loader")
+	Hud.show("main")
     }
 }
 
@@ -1748,7 +1884,7 @@ async function renameMod() {
 
 async function updateProfiles(path) {
     const profiles_path = path + "--profiles";
-    const current_info_path = profiles_path + fileTerminator + ".info.json";
+    const current_info_path = profiles_path + pathSeparator + ".info.json";
 
     if (Hud.ofId("profiles").children !== null) {
 	Hud.ofId("profiles").replaceChildren();
@@ -1799,9 +1935,9 @@ async function updateProfiles(path) {
 
 function getProfilePath(name) {
     if (name === null) {
-	return profilePath + fileTerminator + "null"
+	return profilePath + pathSeparator + "null"
     }
-    return profilePath + fileTerminator + (name === undefined ? currentEntry : name).replace("profile-", STRINGS.EMPTY) + ".ddmm.profile.json"
+    return profilePath + pathSeparator + (name === undefined ? currentEntry : name).replace("profile-", STRINGS.EMPTY) + ".ddmm.profile.json"
 }
 
 async function saveProfileData() {
@@ -1833,7 +1969,7 @@ async function saveProfileData() {
 
     Logger.log("profile data | sorted", profiles_data, sorted)
 
-    writeTextFile(profilePath + fileTerminator + ".info.json", JSON.stringify(profiles_data, null, "\t")).then(_ => {
+    writeTextFile(profilePath + pathSeparator + ".info.json", JSON.stringify(profiles_data, null, "\t")).then(_ => {
     });
 }
 
@@ -1850,18 +1986,18 @@ async function saveCurrentGamePath(path = undefined, recursive = false) {
     let data = {}
     for (const file of await readDir(path)) {
 	if (file.isDirectory) {
-	    data[file.name] = await saveCurrentGamePath(path + fileTerminator + file.name, true)
+	    data[file.name] = await saveCurrentGamePath(path + pathSeparator + file.name, true)
 	} else {
-	    data[file.name] = Base64.fromUint8Array(await readFile(path + fileTerminator + file.name));
+	    data[file.name] = Base64.fromUint8Array(await readFile(path + pathSeparator + file.name));
 	}
     }
 
     if (getLauncher(currentEntry) !== undefined && !recursive) {
-	const data_path = getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "game" + fileTerminator + "saves"
+	const data_path = getLauncher(currentEntry).getFunctions().absolute_location + pathSeparator + "game" + pathSeparator + "saves"
 	if (await isExist(data_path)) {
 	    const data_path_contents = await readDir(data_path)
 	    for (const file of data_path_contents) {
-		const data_file_path = data_path + fileTerminator + file.name
+		const data_file_path = data_path + pathSeparator + file.name
 		if (!file.isDirectory) {
 		    data["mod_saves_folder:" + file.name] = Base64.fromUint8Array(await readFile(data_file_path));
 		}
@@ -1874,7 +2010,7 @@ async function saveCurrentGamePath(path = undefined, recursive = false) {
 
 async function loadCurrentProfileData(reload, reset_data) {
     if (reset_data !== true) {
-	let profiles_data = JSON.parse(await readTextFile(profilePath + fileTerminator + ".info.json"));
+	let profiles_data = JSON.parse(await readTextFile(profilePath + pathSeparator + ".info.json"));
 	selectedProfileName = profiles_data.selected == null ? "profile-Default" : "profile-" + profiles_data.selected;
 	currentProfile = profiles_data.current ?? "Default";
 	originalProfile = currentProfile;
@@ -1887,7 +2023,7 @@ async function loadCurrentProfileData(reload, reset_data) {
 
     if (reload) {
 	await delDir(currentGameDataPath);
-	await delDir(getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "game" + fileTerminator + "saves");
+	await delDir(getLauncher(currentEntry).getFunctions().absolute_location + pathSeparator + "game" + pathSeparator + "saves");
 
 	let data = await readTextFile(getProfilePath(currentProfile));
 	const self_data = JSON.parse(data);
@@ -1900,26 +2036,26 @@ async function loadProfileData(self_data, upstream) {
     for (const f in self_data) {
 	const file = self_data[f]
 	if (typeof file === "object") {
-	    await mkdir(upstream + fileTerminator + f);
-	    await loadProfileData(file, upstream + fileTerminator + f)
+	    await mkdir(upstream + pathSeparator + f);
+	    await loadProfileData(file, upstream + pathSeparator + f)
 	    continue;
 	}
-	let n = f.replaceAll(fileTerminator, "/");
+	let n = f.replaceAll(pathSeparator, "/");
 
 	if (f.startsWith("mod_saves_folder:")) {
-	    let global_path = getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "game" + fileTerminator + "saves"
+	    let global_path = getLauncher(currentEntry).getFunctions().absolute_location + pathSeparator + "game" + pathSeparator + "saves"
 	    let path = f.replace(/mod_saves_folder:/, STRINGS.EMPTY)
-	    n = path.replaceAll(fileTerminator, "/")
+	    n = path.replaceAll(pathSeparator, "/")
 	    if (await isExist(global_path)) {
 		if (n.includes("/")) {
 		    for (const dir of n.split("/")) {
 			if (dir === n.split("/").pop()) continue;
-			await mkdir(global_path + fileTerminator + dir, {recursive: true});
+			await mkdir(global_path + pathSeparator + dir, {recursive: true});
 		    }
 		}
 
 		try {
-		    await writeFile(global_path + fileTerminator + path,
+		    await writeFile(global_path + pathSeparator + path,
 			Base64.toUint8Array(file));
 		} catch (e) {
 		    Logger.log(f + " is not encoded in base64!")
@@ -1929,11 +2065,11 @@ async function loadProfileData(self_data, upstream) {
 	    if (n.includes("/")) {
 		for (const dir of n.split("/")) {
 		    if (dir === n.split("/").pop()) continue;
-		    await mkdir(upstream + fileTerminator + dir, {recursive: true});
+		    await mkdir(upstream + pathSeparator + dir, {recursive: true});
 		}
 	    }
 	    try {
-		await writeFile(upstream + fileTerminator + f,
+		await writeFile(upstream + pathSeparator + f,
 		    Base64.toUint8Array(file));
 	    } catch (e) {
 		Logger.log(f + " is not encoded in base64!")
@@ -1947,13 +2083,8 @@ async function delDir(path) {
 	Logger.log("Path does not exist: " + path)
 	return;
     }
-    for (const file of await readDir(path)) {
-	Logger.log("DELDIR!:", path, file.name)
-	if (file.isDirectory) {
-	    await delDir(path + fileTerminator + file.name)
-	}
-	await remove(path + fileTerminator + file.name);
-    }
+
+    await remove(path, {recursive: true});
 }
 
 async function saveProfile() {
@@ -2048,7 +2179,7 @@ function createProfile(profile, position) {
 	    await sendAlertAsync(TranslationUtil.of("error-profile_delete"))
 	    return;
 	}
-	await remove(profilePath + fileTerminator + background.id.replace("profile-", STRINGS.EMPTY) + ".ddmm.profile.json");
+	await remove(profilePath + pathSeparator + background.id.replace("profile-", STRINGS.EMPTY) + ".ddmm.profile.json");
 
 	currentProfile = "Default"
 	selectedProfileName = "profile-Default"
@@ -2134,7 +2265,7 @@ async function saveProfileName() {
 		return;
 	    }
 	}
-	if (name.includes("-_at-") || name.includes("/") || name.includes(fileTerminator)) {
+	if (name.includes("-_at-") || name.includes("/") || name.includes(pathSeparator)) {
 	    await sendAlertAsync("The Name '" + name + "' is invalid!")
 	    return;
 	}
@@ -2231,6 +2362,76 @@ async function launchDesktop() {
     })
 }
 
+async function resetModData(renpySaveDataLocation) {
+    let absoluteLocation = getLauncher(currentEntry).getFunctions().absolute_location;
+    let scriptsPath = absoluteLocation + pathSeparator + terminatePath("game\\scripts.rpa");
+    if (!await isExist(scriptsPath)) {
+	scriptsPath = absoluteLocation + pathSeparator + terminatePath("game\\options.rpyc");
+	if (!await isExist(scriptsPath)) {
+	    Logger.warn("No save found!")
+	    await sendAlertAsync("No save found!")
+	    return;
+	}
+    }
+
+    const modName = await invoke("rpa_data", {
+	path: scriptsPath,
+	out: absoluteLocation,
+	option: "config.name"
+    })
+
+    const localDataLocation = absoluteLocation + pathSeparator + "game" + pathSeparator + "saves"
+    const backupDataLocation = localPath + pathSeparator + terminatePath("store\\save_data_secondary")
+    let backupDataName = STRINGS.isBlank(modName) ? backupDataLocation + pathSeparator + currentEntry : modName + "_DDMM_data"
+    let canUseBackupLocation = false
+
+    Logger.log(localDataLocation, backupDataLocation, renpySaveDataLocation, modName)
+
+    if (STRINGS.isBlank(renpySaveDataLocation)) {
+	let secondary_name = backupDataName.split(pathSeparator).pop()
+	if (secondary_name.match(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/g) || secondary_name.match(/^(con|prn|aux|nul|com\d|lpt\d)$/i)) {
+	    secondary_name = secondary_name.replace(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/gi, STRINGS.EMPTY)
+	    secondary_name = secondary_name.replace(/^(con|prn|aux|nul|com\d|lpt\d)$/gi, STRINGS.EMPTY)
+	    let comps = backupDataName.split(pathSeparator)
+	    comps.pop()
+	    backupDataName = comps.join(pathSeparator) + pathSeparator + secondary_name
+	}
+
+	Logger.warn(backupDataName)
+	canUseBackupLocation = await isExist(backupDataName)
+
+	if (!await isExist(backupDataLocation)) {
+	    await mkdir(backupDataLocation)
+	}
+
+	if (await isExist(localDataLocation)) {
+	    canUseBackupLocation = canUseBackupLocation || (await readDir(localDataLocation)).length !== 0
+	}
+    } else {
+	for (const e of WARN_GENERIC_DATA_PATHS) {
+	    if (renpySaveDataLocation.endsWith(e)) {
+		await sendAlertAsync("This mod uses a generic save folder name '" + e + "'. Mod data will be shared across mods with the same generic config folder. Consider making a profile with that name and loading it every time you play.")
+	    }
+	}
+    }
+
+    Logger.log(renpySaveDataLocation, canUseBackupLocation)
+
+    if (!STRINGS.isBlank(renpySaveDataLocation) || canUseBackupLocation) {
+	const finalSaveDataLocation = STRINGS.isBlank(renpySaveDataLocation) ? backupDataName : renpySaveDataLocation
+
+	if (!await isExist(finalSaveDataLocation)) {
+	    await mkdir(finalSaveDataLocation)
+	}
+
+	Hud.show("profile-blur")
+	await updateProfiles(finalSaveDataLocation)
+    } else {
+	Hud.hide("profile-blur")
+	await sendAlertAsync("Unknown Save Data Location!")
+    }
+}
+
 /**
  * Called During Loading Stage;
  * Loads all connections between front-end and rust
@@ -2259,7 +2460,7 @@ async function setupIPCListeners(onLoadStartTime) {
 
 	Logger.log("Imported: " + alertPath + " AT: " + goal + " with URL: " + url)
 
-	Hud.ofId("modlist").appendChild(await addMod(goal))
+	Hud.ofId("modlist").appendChild(await addMod(goal, undefined, true))
 
 	Hud.hide("loader")
 	Hud.show("main")
@@ -2288,7 +2489,7 @@ async function setupIPCListeners(onLoadStartTime) {
 	Hud.ofId("language-list").classList.add("language-list-hide");
 
 	DownloadsManager.startDownload(url, path)
-	sendAlertAsync("Close Other Windows?").then(async (e) => {
+	sendConfirmationAsync("Close Other Windows?").then(async (e) => {
 	    if (e) {
 		await invoke("goto_main")
 	    }
@@ -2456,15 +2657,15 @@ async function setupIPCListeners(onLoadStartTime) {
 
 	    Logger.log("DDLC Check (" + (Date.now() - onLoadStartTime) + "ms).")
 
-	    if (!await isDir(localPath + fileTerminator + "store" + fileTerminator + "ddlc")) {
+	    if (!await isDir(localPath + pathSeparator + "store" + pathSeparator + "ddlc")) {
 		Hud.unsafe_setLoadingSubtitle(linkify(TranslationUtil.of("select_zip")))
 		Hud.show("select-zip")
 
 		let listener = async (e) => {
 		    e.preventDefault();
-			if (getOSType() === OS.TYPE.MAC) {
-				await sendAlertAsync("Make sure you have 'Open safe files after downloading' off if you are using Safari!")
-			}
+		    if (getOSType() === OS.TYPE.MAC) {
+			await sendAlertAsync("Make sure you have 'Open safe files after downloading' off if you are using Safari!")
+		    }
 		    await openUrl("https://ddlc.moe")
 		};
 
@@ -2501,7 +2702,7 @@ async function setupIPCListeners(onLoadStartTime) {
 			    if (!supportedModPackage(path) || !(await isExist(path))) return;
 
 			    const data = await metadata(path);
-			    const split = terminatePath(path).split(fileTerminator)
+			    const split = terminatePath(path).split(pathSeparator)
 
 			    if (data.size === 0) {
 				return;
@@ -2552,7 +2753,7 @@ async function setupIPCListeners(onLoadStartTime) {
     });
 
     await listen('popup', async (event) => {
-	await confirm(event.payload.text)
+	await sendAlertAsync(event.payload.text);
     });
 
     await listen('substring', async (event) => {
@@ -2574,15 +2775,26 @@ async function setupIPCListeners(onLoadStartTime) {
     // Listens For Rename Finishing
 
     await listen("rename_done", async (event) => {
-	const value = event.payload.text;
+	const oldName = event.payload.text;
+	const newName = event.payload.text2;
 
-	await requestDirectory(selectedPath);
-	while (Hud.isHidden("loader")) {
-	}
+	Logger.log(oldName + " renamed to " + newName)
 
-	Logger.log(value)
-	if (getLauncher(value)) {
-	    await getLauncher(value).getFunctions().leftClick();
+	removeLauncher(oldName)
+	await addMod(newName)
+	    .then(async (e) => {
+		if (e === undefined) return
+		Hud.ofId("modlist").appendChild(e)
+	    })
+	    .catch(err => {
+		Logger.warn("Failed To Add Mod: " + newName + "\n" + err)
+	    })
+
+	Hud.hide("loader")
+	Hud.show("main")
+
+	if (getLauncher(newName)) {
+	    await getLauncher(newName).getFunctions().leftClick();
 	}
     })
 
@@ -2600,8 +2812,8 @@ async function setupIPCListeners(onLoadStartTime) {
 		Hud.show("downloads-list")
 		await importMod(path)
 	    } else if (regexImageName(path)) {
-		let dir = await readDir(localPath + fileTerminator + terminatePath("store\\images") + fileTerminator)
-		await writeFile(localPath + fileTerminator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(fileTerminator).pop().split(".").pop(), await readFile(path))
+		let dir = await readDir(localPath + pathSeparator + terminatePath("store\\images") + pathSeparator)
+		await writeFile(localPath + pathSeparator + terminatePath("store\\images\\z_image-") + (dir.length + 1) + dir.length + "." + path.split(pathSeparator).pop().split(".").pop(), await readFile(path))
 	    } else {
 		await sendAlertAsync("Unsupported Format '" + (path.includes("\.") ? path.split("\.").pop() : "None") + "' (Supported Formats: zip, rar, rpa)")
 	    }
@@ -2640,19 +2852,39 @@ async function setupHTMListeners(onLoadStartTime) {
 	})
     })
 
+    Hud.onClick("sortlist-drop", () => {
+	Hud.toggle("sortlist-menu")
+    })
+
+    DOMBatch.batchRender("sortlist-menu", (frag) => {
+	for (const item in SORT_TYPE) {
+	    const elem = document.createElement("header")
+	    elem.classList.add("sortlist-menu-item")
+	    elem.textContent = item.replaceAll("_", " ")
+	    elem.addEventListener("mouseup", async () => {
+		Hud.ofId("sortlist-type").textContent = elem.textContent
+		activeSortingMethod = SORT_TYPE[item]
+		AssetsManager.Sound.play(AssetsManager.Sound.BOOP_SOUND)
+		resetModOrder()
+	    })
+	    frag.appendChild(elem)
+	}
+    })
+
+
     Hud.onClick("backup-profile", async () => {
 	Hud.hide("profile-bg")
 	Hud.hide("profile-bg")
 	await saveProfile();
 
 	Hud.hide("profile-blur")
-	if (!await isDir(localPath + fileTerminator + terminatePath("store\\backup"))) {
-	    await mkdir(localPath + fileTerminator + terminatePath("store\\backup"));
+	if (!await isDir(localPath + pathSeparator + terminatePath("store\\backup"))) {
+	    await mkdir(localPath + pathSeparator + terminatePath("store\\backup"));
 	}
 
-	await writeTextFile(localPath + fileTerminator + terminatePath("store\\backup") + fileTerminator + profilePath.replaceAll("\\\\", STRINGS.EMPTY).replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profilePath), null, "\t"));
+	await writeTextFile(localPath + pathSeparator + terminatePath("store\\backup") + pathSeparator + profilePath.replaceAll("\\\\", STRINGS.EMPTY).replaceAll(pathSeparator, "/").replaceAll(pathSeparator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profilePath), null, "\t"));
 	await invoke("open_path", {
-	    path: localPath + fileTerminator + terminatePath("store\\backup")
+	    path: localPath + pathSeparator + terminatePath("store\\backup")
 	})
     })
 
@@ -2670,19 +2902,19 @@ async function setupHTMListeners(onLoadStartTime) {
 		extensions: ['json']
 	    }],
 	    title: 'Select Backup File',
-	    defaultPath: localPath + fileTerminator + terminatePath("store\\backup") + fileTerminator
+	    defaultPath: localPath + pathSeparator + terminatePath("store\\backup") + pathSeparator
 	});
 
 	Hud.hide("profile-bg")
 	await saveProfile();
 	if (backupSelector !== null && backupSelector !== undefined) {
-	    if (!await isDir(localPath + fileTerminator + terminatePath("store\\backup"))) {
-		await mkdir(localPath + fileTerminator + terminatePath("store\\backup"));
+	    if (!await isDir(localPath + pathSeparator + terminatePath("store\\backup"))) {
+		await mkdir(localPath + pathSeparator + terminatePath("store\\backup"));
 	    }
-	    if (!await isDir(localPath + fileTerminator + terminatePath("store\\backup\\autosave"))) {
-		await mkdir(localPath + fileTerminator + terminatePath("store\\backup\\autosave"));
+	    if (!await isDir(localPath + pathSeparator + terminatePath("store\\backup\\autosave"))) {
+		await mkdir(localPath + pathSeparator + terminatePath("store\\backup\\autosave"));
 	    }
-	    await writeTextFile(localPath + fileTerminator + terminatePath("store\\backup\\autosave") + fileTerminator + profilePath.replaceAll("\\\\", "\\").replaceAll(fileTerminator, "/").replaceAll(fileTerminator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profilePath), null, "\t"));
+	    await writeTextFile(localPath + pathSeparator + terminatePath("store\\backup\\autosave") + pathSeparator + profilePath.replaceAll("\\\\", "\\").replaceAll(pathSeparator, "/").replaceAll(pathSeparator, "/").split("/").pop() + "-_at-" + getFormattedDate() + ".ddmm.backup.json", JSON.stringify(await saveCurrentGamePath(profilePath), null, "\t"));
 	    await delDir(profilePath);
 	    await loadProfileData(JSON.parse(await readTextFile(backupSelector)), profilePath);
 	    Logger.log(currentGameDataPath)
@@ -2908,7 +3140,7 @@ async function setupHTMListeners(onLoadStartTime) {
 	    Hud.hide("alert")
 	    showContainers(true)
 	    await Logger.sendEvent("auto_download", {
-		name: alertPath.split(fileTerminator).pop()
+		name: alertPath.split(pathSeparator).pop()
 	    })
 	    Hud.show("downloads-list")
 	    await importMod(alertPath)
@@ -2927,7 +3159,7 @@ async function setupHTMListeners(onLoadStartTime) {
     })
 
     Hud.ofId("play").addEventListener("mouseup", async () => {
-	if (currentEntry !== STRINGS.EMPTY && Hud.isHidden("delete-prompt")) {
+	if (currentEntry !== STRINGS.EMPTY) {
 	    await getLauncher(currentEntry).getFunctions().open();
 	}
     })
@@ -2958,7 +3190,7 @@ async function setupHTMListeners(onLoadStartTime) {
 
     Hud.ofId("delete").addEventListener("mouseup", async () => {
 	if (currentEntry !== STRINGS.EMPTY) {
-	    let confirmed = await sendAlertAsync("Are you sure you want to delete '" + getLauncher(currentEntry).getFunctions().location + "' and its data?")
+	    let confirmed = await sendConfirmationAsync("Are you sure you want to delete '" + getLauncher(currentEntry).getFunctions().location + "' and its data?")
 	    if (confirmed) {
 		showContainers(false)
 		await invoke("delete_path", {
@@ -2987,9 +3219,9 @@ async function setupHTMListeners(onLoadStartTime) {
     Hud.ofId("reset-save").addEventListener("mouseup", async () => {
 	if (currentEntry !== STRINGS.EMPTY) {
 	    let final = getLauncher(currentEntry).getFunctions().absolute_location;
-	    let path = final + fileTerminator + terminatePath(terminatePath("game\\scripts.rpa"));
+	    let path = final + pathSeparator + terminatePath(terminatePath("game\\scripts.rpa"));
 	    if (!await isExist(path)) {
-		path = final + fileTerminator + terminatePath(terminatePath("game\\options.rpyc"));
+		path = final + pathSeparator + terminatePath(terminatePath("game\\options.rpyc"));
 		if (!await isExist(path)) {
 		    Logger.warn("No save found!")
 		    await sendAlertAsync("No save found!")
@@ -3001,14 +3233,16 @@ async function setupHTMListeners(onLoadStartTime) {
 		out: final,
 		option: "save_directory"
 	    })
-	    let loc2 = final + fileTerminator + "game" + fileTerminator + "saves"
+	    let loc2 = final + pathSeparator + "game" + pathSeparator + "saves"
 	    let data = false
 	    if (await isExist(loc2)) {
 		data = (await readDir(loc2)).length !== 0
 	    }
 	    if (loc !== STRINGS.EMPTY || data) {
-		Hud.show("delete-prompt")
-		Hud.ofId("delete-context").textContent = "Are you sure you want to delete\n" + loc + (data ? " & " + loc2 : STRINGS.EMPTY) + "?"
+		let confirmation = await sendConfirmationAsync("Are you sure you want to delete your save (" + loc + (data ? " & " + loc2 : STRINGS.EMPTY) + ")? This will delete all your progress and will not restore it.")
+		if (confirmation) {
+		    await resetModData(loc)
+		}
 		currentSavePath = loc + "|" + (data ? loc2 : STRINGS.EMPTY);
 	    } else {
 		await sendAlertAsync("Unknown Save Data Location!")
@@ -3016,94 +3250,6 @@ async function setupHTMListeners(onLoadStartTime) {
 
 	}
 
-    })
-
-    Hud.ofId("delete-save").addEventListener("mouseup", async () => {
-	if (getOSType() === OS.TYPE.MAC) {
-	    await sendAlertAsync("Profiles are not supported in the current OS! OS.TYPE-" + getOSType().toUpperCase())
-	    return
-	}
-	if (currentEntry !== STRINGS.EMPTY) {
-	    Hud.show("profile-blur")
-
-	    let absoluteLocation = getLauncher(currentEntry).getFunctions().absolute_location;
-	    let scriptsPath = absoluteLocation + fileTerminator + terminatePath("game\\scripts.rpa");
-	    if (!await isExist(scriptsPath)) {
-		scriptsPath = absoluteLocation + fileTerminator + terminatePath("game\\options.rpyc");
-		if (!await isExist(scriptsPath)) {
-		    Logger.warn("No save found!")
-		    await sendAlertAsync("No save found!")
-		    return;
-		}
-	    }
-
-	    /**
-	     * @type {string}
-	     */
-	    const renpySaveDataLocation = await invoke("rpa_data", {
-		path: scriptsPath,
-		out: absoluteLocation,
-		option: "save_directory"
-	    })
-
-	    const modName = await invoke("rpa_data", {
-		path: scriptsPath,
-		out: absoluteLocation,
-		option: "config.name"
-	    })
-
-	    const localDataLocation = absoluteLocation + fileTerminator + "game" + fileTerminator + "saves"
-	    const backupDataLocation = localPath + fileTerminator + terminatePath("store\\save_data_secondary")
-	    let backupDataName = STRINGS.isBlank(modName) ? backupDataLocation + fileTerminator + currentEntry : modName + "_DDMM_data"
-	    let canUseBackupLocation = false
-
-	    Logger.log(localDataLocation, backupDataLocation, renpySaveDataLocation, modName)
-
-	    if (STRINGS.isBlank(renpySaveDataLocation)) {
-		let secondary_name = backupDataName.split(fileTerminator).pop()
-		if (secondary_name.match(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/g) || secondary_name.match(/^(con|prn|aux|nul|com\d|lpt\d)$/i)) {
-		    secondary_name = secondary_name.replace(/[<>:"/\\|?*\u0000-\u001F]|[. ]$/gi, STRINGS.EMPTY)
-		    secondary_name = secondary_name.replace(/^(con|prn|aux|nul|com\d|lpt\d)$/gi, STRINGS.EMPTY)
-		    let comps = backupDataName.split(fileTerminator)
-		    comps.pop()
-		    backupDataName = comps.join(fileTerminator) + fileTerminator + secondary_name
-		}
-
-		Logger.warn(backupDataName)
-		canUseBackupLocation = await isExist(backupDataName)
-
-		if (!await isExist(backupDataLocation)) {
-		    await mkdir(backupDataLocation)
-		}
-
-		if (await isExist(localDataLocation)) {
-		    canUseBackupLocation = canUseBackupLocation || (await readDir(localDataLocation)).length !== 0
-		}
-	    } else {
-		for (const e of WARN_GENERIC_DATA_PATHS) {
-		    if (renpySaveDataLocation.endsWith(e)) {
-			await sendAlertAsync("This mod uses a generic save folder name '" + e + "'. Mod data will be shared across mods with the same generic config folder. Consider making a profile with that name and loading it every time you play.")
-		    }
-		}
-	    }
-
-	    Logger.log(renpySaveDataLocation, canUseBackupLocation)
-
-	    if (!STRINGS.isBlank(renpySaveDataLocation) || canUseBackupLocation) {
-		const finalSaveDataLocation = STRINGS.isBlank(renpySaveDataLocation) ? backupDataName : renpySaveDataLocation
-
-		if (!await isExist(finalSaveDataLocation)) {
-		    await mkdir(finalSaveDataLocation)
-		}
-
-		Hud.show("profile-blur")
-		await updateProfiles(finalSaveDataLocation)
-	    } else {
-		Hud.hide("profile-blur")
-		await sendAlertAsync("Unknown Save Data Location!")
-	    }
-
-	}
     })
 
     Hud.ofId("modlist").addEventListener("click", async (e) => {
@@ -3131,7 +3277,7 @@ async function setupHTMListeners(onLoadStartTime) {
 	    return
 	}
 	if (currentEntry !== STRINGS.EMPTY) {
-	    let final = getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + terminatePath("game\\scripts.rpa");
+	    let final = getLauncher(currentEntry).getFunctions().absolute_location + pathSeparator + terminatePath("game\\scripts.rpa");
 	    Logger.log(final)
 	    Hud.setLoadingSubtitle("Extracting (This will take 20-40s)")
 	    Hud.show("loader")
@@ -3139,10 +3285,10 @@ async function setupHTMListeners(onLoadStartTime) {
 	    if (await isExist(final)) {
 		await invoke("extract_game_script", {
 		    path: final,
-		    out: getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "deobf"
+		    out: getLauncher(currentEntry).getFunctions().absolute_location + pathSeparator + "deobf"
 		})
 		await invoke("open_path", {
-		    path: getLauncher(currentEntry).getFunctions().absolute_location + fileTerminator + "deobf"
+		    path: getLauncher(currentEntry).getFunctions().absolute_location + pathSeparator + "deobf"
 		})
 	    } else {
 		await sendAlertAsync("No game script found!")
@@ -3152,22 +3298,6 @@ async function setupHTMListeners(onLoadStartTime) {
 	    Hud.hide("loader")
 	    Hud.show("main")
 	}
-    })
-
-    Hud.ofId("delete-yes").addEventListener("mouseup", async () => {
-	Hud.hide("delete-prompt")
-	if (STRINGS.isBlank(currentSavePath)) return;
-	for (const p of currentSavePath.split("|")) {
-	    if (STRINGS.isEmpty(p)) continue
-	    await invoke("delete_path", {
-		path: p
-	    });
-	}
-    })
-
-    Hud.ofId("delete-no").addEventListener("mouseup", async () => {
-	currentSavePath = STRINGS.EMPTY;
-	Hud.hide("delete-prompt")
     })
 
     Hud.ofId("modtitle").addEventListener("focusin", async () => {
@@ -3253,13 +3383,13 @@ async function setupHTMListeners(onLoadStartTime) {
 	await requestDirectory();
     })
 
+    /**
+     * Search Feature
+     */
+
     Hud.ofId("search").addEventListener("input", async (event) => {
 	if (STRINGS.isBlank(event.target.value) && lastInputLength > 0) {
-	    for (const index in getLaunchers()) {
-		const element = getLauncher(index).getFunctions();
-		element.item.classList.remove("hide2");
-		element.resetOrder()
-	    }
+	    resetModOrder()
 	    lastInputLength = 0;
 	    return;
 	} else if (STRINGS.isEmpty(event.target.value)) {
@@ -3285,9 +3415,7 @@ async function setupHTMListeners(onLoadStartTime) {
 	const fzf_list = new Fzf(names)
 	const entries = fzf_list.find(lowercaseInput)
 
-	entries.forEach(e => {
-	    getLauncher(e.item).getFunctions().item.classList.remove("hide2")
-	})
+	entries.forEach(e => getLauncher(e.item).getFunctions().item.classList.remove("hide2"))
 
 	lastInputLength = inputLength;
     })
@@ -3471,7 +3599,7 @@ async function setupHTMListeners(onLoadStartTime) {
 
     Hud.ofId("importimage").addEventListener("mouseup", async () => {
 	await invoke("open_path", {
-	    path: localPath + fileTerminator + terminatePath("store\\images")
+	    path: localPath + pathSeparator + terminatePath("store\\images")
 	})
     })
 
@@ -3538,14 +3666,14 @@ async function setupHTMListeners(onLoadStartTime) {
 
     document.addEventListener("keydown", async (input) => {
 	if (input.key === "L" && input.shiftKey && input.ctrlKey) {
-	    const logsPath = localPath + fileTerminator + "store" + fileTerminator + "logs"
+	    const logsPath = localPath + pathSeparator + "store" + pathSeparator + "logs"
 	    const logs = await Optional.readDir(logsPath)
 	    if (logs.isSome()) {
 		const files = await logs.getResult()
 		const file = files[files.length - 1]
 		Logger.log("Latest log file: " + file.name)
 		await invoke("open_path", {
-		    path: logsPath + fileTerminator + file.name
+		    path: logsPath + pathSeparator + file.name
 		})
 	    } else {
 		Logger.warn("No logs found.")
@@ -3606,11 +3734,17 @@ function sendAlert(alertText, header = "Hey!") {
 function sendAlertAsync(alertText, header = "Hey!") {
     let notification = new Notification(header, alertText);
     return new Promise((resolve) => {
-	notification.kiterface.onClose(() => {
-	    resolve()
-	})
+	notification.listen((v) => resolve(v))
     })
 }
+
+function sendConfirmationAsync(alertText, header = "Hey!") {
+    let notification = new Notification(header, alertText, true);
+    return new Promise((resolve) => {
+	notification.listen((v) => resolve(v))
+    })
+}
+
 
 /**
  * Called Upon DOM On-Load
@@ -3647,7 +3781,6 @@ async function onLoad() {
     });
 
     Logger.log("Finished Loading PT. 1 (" + (Date.now() - onLoadStartTime) + "ms).")
-    Hud.ofId("load-title-version").textContent = "/ " + CLIENT_VERSION
     Hud.setLoadingSubtitle("Waiting For Backend Response")
     await invoke("request_path")
 

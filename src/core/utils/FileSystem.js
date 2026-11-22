@@ -1,6 +1,6 @@
 import { getOSType, OS } from "./OSUtil";
 
-export let fileTerminator = getOSType() === OS.TYPE.WINDOWS ? "\\" : "/";
+export let pathSeparator = getOSType() === OS.TYPE.WINDOWS ? "\\" : "/";
 export const INVALID_FOLDER_CHARACTERS = {
   windows: /[<>:"/\\|?*\u0000-\u001F]|[. ]$/,
   linux: /[/\u0000]/,
@@ -12,6 +12,10 @@ export const INVALID_FOLDER_NAMES = {
   macos: /^(?:\.{1,2})?$/
 }
 const archiveRegex = /\.(zip|rar|tar|7z|gz)$/i;
+const PATH_TEST = {
+  unix: /\//g,
+  windows: /\\/
+}
 const encoder = new TextEncoder()
 
 /**
@@ -39,7 +43,11 @@ export function validateName(name) {
  */
 
 export function terminatePath(path) {
-  return path.replace(/\\/g, fileTerminator);
+  if (PATH_TEST.windows.test(path)) {
+    return path.replace(/\\/g, pathSeparator)
+  } else {
+    return path.replace(PATH_TEST.unix, pathSeparator)
+  }
 }
 
 export function supportedModPackage(selectedPath) {

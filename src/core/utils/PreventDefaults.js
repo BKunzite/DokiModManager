@@ -1,3 +1,5 @@
+import {event} from "@tauri-apps/api";
+
 class PreventDefaultsObject {
     init() {
         /*

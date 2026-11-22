@@ -1,6 +1,7 @@
 import Hud from "../../utils/HTMLHelper";
 import DOMBatch from "../../fragment/DOMBatch";
 import {TranslationUtil} from "../../utils/TranslationUtil";
+import InterfaceUtil from "../InterfaceUtil";
 
 export class UIKitInterface {
     #id = ""
@@ -8,9 +9,6 @@ export class UIKitInterface {
      * @type {HTMLDivElement}
      */
     #panel = null
-    /**
-     * @type {HTMLDivElement}
-     */
     #scrollarea = null
     /**
      * @type {HTMLDivElement}
@@ -170,6 +168,9 @@ export class UIKitInterface {
         }
 
         this.#panel.classList.add("hide");
+
+        InterfaceUtil.unregisterInterface(this)
+
         setTimeout(() => {
             this.#panel.remove();
         }, 1000)

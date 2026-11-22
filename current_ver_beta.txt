@@ -13,9 +13,14 @@ Changes
 
 Bug Fixes
 - Fixed "Invalid Name" For Every Name
+    - Invalid Names Will Now Be Checked Based On OS
+    - Rename Failure Will No Return To Main Screen
+    - Rename Will No Longer Reload All Mods
+- Fixed odd transition when Favorting/Pinning a mod
 - Fixed Set Install Directory on Home Page Ignoring Input
 - Mod Descriptions Now Are Properly Formatted
 - Fixed Reset Data
+- Fixed Weird Google Drive Bug Causing Drive To Not Load
 
 Routine Linux Patches
 - Properly fixed linux builds

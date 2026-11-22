@@ -10,6 +10,8 @@ export const CURRENT = {
 };
 
 export const PROGRAM_NAME = "Doki Doki Mod Manager";
+export const PROGRAM_NAME_TITLE_COLORED = PROGRAM_NAME.split(" ").splice(0,2).join(" ")
+export const PROGRAM_NAME_TITLE_UNCOLORED = PROGRAM_NAME.split(" ").splice(2).join(" ");
 export const PROGRAM_DISCORD = "https://discord.gg/gCJgyUrvjY";
 
 /*

@@ -31,16 +31,16 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::task;
 
 #[cfg(target_os = "linux")]
-use tauri::{PhysicalSize, PixelUnit, WindowSizeConstraints, Size};
-#[cfg(target_os = "linux")]
 use tauri::webview::Color;
+#[cfg(target_os = "linux")]
+use tauri::{PhysicalSize, PixelUnit, Size, WindowSizeConstraints};
 #[cfg(target_os = "linux")]
 use tokio::sync::oneshot;
 
+use humansize::{format_size, DECIMAL};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 use std::thread::sleep;
-use humansize::{format_size, DECIMAL};
 #[cfg(target_os = "windows")]
 use window_vibrancy::apply_acrylic;
 
@@ -54,8 +54,8 @@ mod hash;
 mod simple_logger;
 mod unarc_extractor;
 
-use crate::unarc_extractor::*;
 use crate::hash::get_file_hash;
+use crate::unarc_extractor::*;
 use constants::*;
 use simple_logger::*;
 
@@ -627,24 +627,17 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
 
         stamp("\n\nChecking For Executables That Require chmod +x.\n");
 
-        let lib_folder = PathBuf::from(&path)
-            .parent()
-            .unwrap()
-            .join("lib");
+        let lib_folder = PathBuf::from(&path).parent().unwrap().join("lib");
 
         for path in LINUX_DDLC_LIB_PATHS {
             let final_location = lib_folder.join(path);
-            if is_dir(
-                final_location.clone()
-            )
-                .await
-            {
+            if is_dir(final_location.clone()).await {
                 stamp(
                     format!(
                         "[+] Executables Found In Path: {}",
                         &final_location.to_str().unwrap(),
                     )
-                        .as_str(),
+                    .as_str(),
                 );
                 chmod_x_directory(&final_location);
             } else {
@@ -653,7 +646,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
                         "[-] No Executables Found In Path: {}",
                         &final_location.to_str().unwrap(),
                     )
-                        .as_str(),
+                    .as_str(),
                 );
             }
         }
@@ -699,7 +692,7 @@ async fn launch(app: AppHandle, path: &str, id: &str, renpy: &str) -> Result<(),
     }
 
     #[cfg(windows)]
-    if try_admin && Instant::now().duration_since(launch_time).as_secs() < 60 {
+    if try_admin && Instant::now().duration_since(launch_time).as_secs() < 20 {
         app.emit("popup", StringData { text: "Running as normal user failed; re-running as admin. Do not give 'random mods' admin privileges. (3s)" }).expect("Popup Error");
         tokio::time::sleep(Duration::from_millis(3000)).await;
         launch_time = Instant::now();
@@ -865,7 +858,9 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     let mut source_file = PathBuf::from(&path);
     let raw_rpa = path.ends_with(".rpa");
 
-    if let Some(nest) = is_archive_nested(&source_file, "").expect("failed to check for nest archive") {
+    if let Some(nest) =
+        is_archive_nested(&source_file, "").expect("failed to check for nest archive")
+    {
         stamp("Nested archive found!");
         let temp_extract = get_current_dir().join("store/temp");
         create_dir_all(temp_extract.clone()).expect("failed to create temp directory");
@@ -933,7 +928,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
     post_status(
         &app,
-        &format!("Extracting - Cloning DDLC|ppathIdentifier|{}", path),
+        &format!("Extracting — Cloning DDLC|ppathIdentifier|{}", path),
     );
 
     app.emit(
@@ -976,7 +971,12 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
         create_dir_all(&macos_contents).expect("Failed to create temp extract");
         create_dir_all(&regular_contents).expect("Failed to create temp extract");
 
-        if source_file.as_path().to_str().expect("failed to get path as str").ends_with(".rpa") {
+        if source_file
+            .as_path()
+            .to_str()
+            .expect("failed to get path as str")
+            .ends_with(".rpa")
+        {
             // ToDo: MacOS .rpa support
         } else {
             let nest_check = detect_nest(&source_file).expect("Failed to get nest");
@@ -984,7 +984,8 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
 
             is_archive = true;
 
-            if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder") {
+            if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder")
+            {
                 regular_contents = regular_contents.join("game");
                 is_game = true;
             }
@@ -1003,13 +1004,17 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
                 extract_archive(&source_file, &regular_contents).map_err(|e| e.to_string())?;
             }
 
-            for entry in WalkDir::new(&regular_contents).into_iter().filter_map(|e| e.ok()) {
+            for entry in WalkDir::new(&regular_contents)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
                 if entry.file_name().to_string_lossy().ends_with(".app") {
                     stamp("Found Executable!");
                     stamp(&entry.path().to_string_lossy());
                     let entry_contents = entry.path().join("Contents");
                     if entry_contents.exists() {
-                        copy_dir_recursive(&entry_contents, &app_contents).expect("Failed to copy dir");
+                        copy_dir_recursive(&entry_contents, &app_contents)
+                            .expect("Failed to copy dir");
                         break;
                     }
                 }
@@ -1025,7 +1030,7 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
                 )),
                 &file_content,
             )
-                .unwrap();
+            .unwrap();
         } else {
             let nest_check = detect_nest(&source_file).expect("Failed to get nest");
             let mut is_game = false;
@@ -1039,7 +1044,8 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
                 remove_dir_all(&linux_lib_path).expect("Failed to remove temp lib");
             }
 
-            if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder") {
+            if is_archive_game_folder(&source_file, "").expect("Failed to get archive game folder")
+            {
                 target_dir = target_dir.join("game");
                 is_game = true;
             }
@@ -1140,7 +1146,8 @@ async fn import_mod(app: AppHandle, path: &str) -> Result<(), String> {
     app.emit(
         "import_done",
         DoubleStringData {
-            text: initial_target_dir.to_path_buf()
+            text: initial_target_dir
+                .to_path_buf()
                 .file_name()
                 .expect("Could not get file name")
                 .to_str()
@@ -1247,6 +1254,10 @@ fn goto_main(app: AppHandle) {
 }
 
 async fn download_file(app: &AppHandle, url: String, save_path: String) -> Result<(), String> {
+    if is_file(PathBuf::from(&save_path)).await {
+        remove_dir_all(PathBuf::from(&save_path)).unwrap();
+    }
+
     let response = reqwest::get(url.clone()).await.unwrap();
     let total = response.content_length().unwrap_or(0);
     let url_clone = url.clone();
@@ -1267,7 +1278,7 @@ async fn download_file(app: &AppHandle, url: String, save_path: String) -> Resul
                 "download_percent",
                 StringData {
                     text: &format!(
-                        "{} | {} of {} ({:.1} MB/s) - {:.1}% | {}",
+                        "{} | {} of {} ({:.1} MB/s) — {:.1}% | {}",
                         url_clone,
                         format_size(downloaded, DECIMAL),
                         format_size(total, DECIMAL),
@@ -1303,7 +1314,43 @@ fn is_archive_url(url: &Url) -> bool {
         matches!(extension.to_ascii_lowercase().as_str(), "zip" | "rar")
     })
 }
+#[tauri::command]
+fn send_kill(mod_name: &str) {
+    let mut proper_mod_name = mod_name.to_lowercase();
+    if proper_mod_name.contains(".") {
+        let split = proper_mod_name.split(".").collect::<Vec<&str>>();
+        let first_elm = split.get(0).unwrap();
+        let name = first_elm.to_string();
+        proper_mod_name = name;
+    }
+    let sys = System::new_all();
+    let mut killed = 0;
 
+    for (pid, process) in sys.processes() {
+        let name = process.name().to_str().unwrap().to_lowercase();
+        let exe = process
+            .exe()
+            .map(|p| p.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+        let cmd = process
+            .cmd()
+            .join(OsStr::new(" "))
+            .to_str()
+            .unwrap()
+            .to_lowercase();
+
+        let is_target = ["ddlc", &proper_mod_name]
+            .iter()
+            .any(|key| name.contains(key) || exe.contains(key) || cmd.contains(key));
+
+        if is_target && process.kill() {
+            println!("Killed {} (pid {})", process.name().to_str().unwrap(), pid);
+            killed += 1;
+        }
+    }
+}
+
+#[tauri::command]
 async fn run_download(app: AppHandle, url: String, path: PathBuf) {
     let path_string = path.to_string_lossy().into_owned();
 
@@ -1334,6 +1381,38 @@ fn download_state() -> &'static Mutex<HashMap<String, bool>> {
 #[cfg(target_os = "linux")]
 fn pending_fallbacks() -> &'static Mutex<HashMap<String, oneshot::Sender<()>>> {
     PENDING_FALLBACKS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[tauri::command]
+async fn get_creation_date(
+    path_str: String,
+) -> Result<std::collections::BTreeMap<String, u64>, String> {
+    tokio::task::spawn_blocking(move || -> Result<std::collections::BTreeMap<String, u64>, String> {
+        let mut out = std::collections::BTreeMap::new();
+
+        for entry in std::fs::read_dir(&path_str).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+
+            if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                continue;
+            }
+
+            let ms = entry
+                .metadata()
+                .ok()
+                .and_then(|m| m.created().ok())
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_millis() as u64);
+
+            if let Some(ms) = ms {
+                out.insert(entry.file_name().to_string_lossy().into_owned(), ms);
+            }
+        }
+
+        Ok(out)
+    })
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -1371,11 +1450,7 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
         .inner_size(1200.0, 600.0)
         .title(name.replace('_', " "))
         .initialization_script(script)
-        .user_agent(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
-             AppleWebKit/537.36 (KHTML, like Gecko) \
-             Chrome/146.0.0.0 Safari/537.36",
-        )
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/154.0.0.0")
         .on_navigation(move |navigation_url| {
             // println!("Navigation received: {navigation_url}");
             if navigation_url.domain() == Some("econventa.com") {
@@ -1546,9 +1621,15 @@ async fn open_webview(app: AppHandle, url: &str, name: &str) -> Result<(), Strin
 }
 
 #[tauri::command]
-fn rename_dir(app: AppHandle, path: &str, new_name: &str, id: &str) {
+fn rename_dir(app: AppHandle, path: &str, new_name: &str, id: &str) -> Result<(), String> {
     let dir = PathBuf::from(path);
-    if dir.is_dir() {
+    let target_dir = PathBuf::from(new_name);
+
+    if !dir.is_absolute() || !target_dir.is_absolute() {
+        return Err("Both paths must be absolute".to_string());
+    }
+
+    if dir.is_dir() && !target_dir.exists() {
         fs::rename(path, new_name).unwrap_or_else(|_| {
             create_dir_all(new_name).unwrap();
             copy_dir_recursive(&dir, &PathBuf::from(new_name)).unwrap();
@@ -1557,7 +1638,20 @@ fn rename_dir(app: AppHandle, path: &str, new_name: &str, id: &str) {
             });
         });
     }
-    app.emit("rename_done", StringData { text: id }).unwrap();
+
+    app.emit(
+        "rename_done",
+        DoubleStringData {
+            text: id,
+            text2: target_dir
+                .file_name()
+                .expect("Failed to get file name")
+                .to_str()
+                .expect("Failed to convert OsStr to str"),
+        },
+    )
+    .unwrap();
+    Ok(())
 }
 
 fn get_pool() -> &'static ThreadPool {
@@ -1906,7 +2000,9 @@ fn make_config() {
 
 async fn update_unrpyc() {
     push_stamp("UnRPYC Update");
-    let resp = reqwest::get(UN_RPYC).await.expect("Failed to download latest");
+    let resp = reqwest::get(UN_RPYC)
+        .await
+        .expect("Failed to download latest");
     let path = if cfg!(target_os = "windows") {
         get_current_dir().join("unrpyc.exe")
     } else {
@@ -1934,9 +2030,13 @@ async fn update_unrpyc() {
 
 pub fn get_current_dir() -> PathBuf {
     if cfg!(target_os = "windows") {
-        CURRENT_DIR.lock().expect("Failed to get current_dir").to_path_buf()
+        CURRENT_DIR
+            .lock()
+            .expect("Failed to get current_dir")
+            .to_path_buf()
     } else {
-        CURRENT_DIR.lock()
+        CURRENT_DIR
+            .lock()
             .expect("Failed to get current_dir")
             .join(".dokimodmanager")
             .to_path_buf()
@@ -1976,27 +2076,59 @@ fn stamp_system_info() {
     stamp("");
     stamp("- RAM Info -");
 
-    let bytes_to_gb = 1f32/1024f32/1024f32/1024f32;
+    let bytes_to_gb = 1f32 / 1024f32 / 1024f32 / 1024f32;
 
-    stamp(format!("    Physical Ram Size - {:.2} GB", system.total_memory() as f32 * bytes_to_gb).as_str());
-    stamp(format!("    Swap Ram Size - {:.2} GB", system.total_swap() as f32 * bytes_to_gb).as_str());
-    stamp(format!("    Used Physical Ram Size - {:.2} GB", system.used_memory() as f32 * bytes_to_gb).as_str());
-    stamp(format!("    Used Swap Ram Size - {:.2} GB", system.used_swap() as f32 * bytes_to_gb).as_str());
+    stamp(
+        format!(
+            "    Physical Ram Size - {:.2} GB",
+            system.total_memory() as f32 * bytes_to_gb
+        )
+        .as_str(),
+    );
+    stamp(
+        format!(
+            "    Swap Ram Size - {:.2} GB",
+            system.total_swap() as f32 * bytes_to_gb
+        )
+        .as_str(),
+    );
+    stamp(
+        format!(
+            "    Used Physical Ram Size - {:.2} GB",
+            system.used_memory() as f32 * bytes_to_gb
+        )
+        .as_str(),
+    );
+    stamp(
+        format!(
+            "    Used Swap Ram Size - {:.2} GB",
+            system.used_swap() as f32 * bytes_to_gb
+        )
+        .as_str(),
+    );
 }
 
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    *CURRENT_DIR.lock().expect("Failed to lock") = if cfg!(target_os = "macos") && !cfg!(debug_assertions) {
-        app.path().data_dir().expect("Could Not Get Data Directory")
-    } else {
-        env::current_dir().expect("Could Not Get Current Directory")
-    };
+    *CURRENT_DIR.lock().expect("Failed to lock") =
+        if cfg!(target_os = "macos") && !cfg!(debug_assertions) {
+            app.path().data_dir().expect("Could Not Get Data Directory")
+        } else {
+            env::current_dir().expect("Could Not Get Current Directory")
+        };
 
     setup_logs().unwrap_or_else(|_| {
-        *CURRENT_DIR.lock().expect("Failed to lock") = app.path().data_dir().expect("Could Not Get Data Directory");
+        *CURRENT_DIR.lock().expect("Failed to lock") =
+            app.path().data_dir().expect("Could Not Get Data Directory");
         setup_logs().unwrap();
     });
     push_stamp("<INIT>");
-    stamp(format!("Running at {:?}", CURRENT_DIR.lock().expect("Failed to get current dir")).as_str());
+    stamp(
+        format!(
+            "Running at {:?}",
+            CURRENT_DIR.lock().expect("Failed to get current dir")
+        )
+        .as_str(),
+    );
 
     let handle = app.handle();
     let window = app.get_webview_window("main").unwrap();
@@ -2022,8 +2154,8 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
         push_stamp("UnRPYC Hash");
         if !exists(get_current_dir().join(&exec_name)).unwrap()
             || get_file_hash(&get_current_dir().join(&exec_name).display().to_string())
-            .expect("Unable to get hash on UNRPYC")
-            != UN_RPYC_HASH
+                .expect("Unable to get hash on UNRPYC")
+                != UN_RPYC_HASH
         {
             stamp("UnRPYC Update Required");
             update_unrpyc().await;
@@ -2041,7 +2173,6 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
         make_config();
         pop_stamp();
     });
-
 
     app.track_event("app_started", None).unwrap();
     #[cfg(target_os = "linux")]
@@ -2102,7 +2233,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
                     data.url.to_string(),
                     downloads_dir.join(data.file_name).display().to_string(),
                 )
-                    .await;
+                .await;
             }
         });
     });
@@ -2121,7 +2252,8 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
                 command.url,
                 &command.name.replace(" ", "_").to_lowercase(),
             )
-                .await.expect("Failed to open webview");
+            .await
+            .expect("Failed to open webview");
         });
     });
 
@@ -2158,6 +2290,8 @@ pub async fn run() {
             delete_path,
             rename_dir,
             set_ddlc_zip,
+            run_download,
+            send_kill,
             update_exe,
             tracker,
             rpa_data,
@@ -2165,7 +2299,8 @@ pub async fn run() {
             get_host_name,
             open_webview,
             goto_main,
-            sync_log
+            sync_log,
+            get_creation_date
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

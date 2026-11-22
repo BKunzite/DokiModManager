@@ -15,7 +15,7 @@ class HTMLHelperObject {
      * @param {string} elementId
      */
     hide(elementId) {
-        document.getElementById(elementId).classList.add("hide")
+        this.ofId(elementId).classList.add("hide")
     }
 
     setPinned(pinned) {
@@ -82,7 +82,7 @@ class HTMLHelperObject {
      * @param {string} elementId
      */
     show(elementId) {
-        document.getElementById(elementId).classList.remove("hide")
+        this.ofId(elementId).classList.remove("hide")
     }
 
     /**
@@ -95,10 +95,10 @@ class HTMLHelperObject {
 
     /**
      * Removes 'Hide' From ClassList
-     * @param {string} elementId
+     * @param {HTMLElement} element
      */
-    showElement(elementId) {
-        this.ofId(elementId).classList.remove("hide")
+    showElement(element) {
+        element.classList.remove("hide")
     }
 
     /**

@@ -1,4 +1,5 @@
 import Christmas from "./Seasons/Christmas";
+import programData from "../utils/ConfigDataHelper";
 
 class SeasonsManager {
     SEASON = {
@@ -25,6 +26,7 @@ class SeasonsManager {
     }
 
     focus(season = this.SEASON.NONE) {
+        if (programData.getOr("seasons", true) === false) return;
         switch (season) {
             case this.SEASON.CHRISTMAS:
                 Christmas.focus();
