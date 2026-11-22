@@ -7,7 +7,10 @@ const SHOULD_ESCAPE_HTML_PATTERN_FANCY = /["&'<>\n]/;
 const replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
 const replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
 const replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
-const nameFormatRegex = /\b(?:ddlc|renpy7mod|renpy8mod)\b[\s\-_+]*|[-_+]+|\s+/gi;
+const nameFormatRegex = /\b(?:ddlc|renpy7mod|renpy8mod|renpy8-ddlcmod)\b[\s\-_+]*|[\s\-_+]+/gi;
+const spaceCamelCaseRegex = /([\p{Ll}\p{Nd}])(?=\p{Lu})|(\p{Lu})(?=\p{Lu}\p{Ll})/gu;
+const spaceCamelCaseTestRegex = /([\p{Ll}\p{Nd}])(?=\p{Lu})|(\p{Lu})(?=\p{Lu}\p{Ll})/u;
+
 export const STRINGS = {
     SPACE: " ",
     EMPTY: "",
@@ -153,7 +156,9 @@ export function getTextWidth(text, font) {
 }
 
 export function formatModName(text) {
-    return text.replace(nameFormatRegex, " ").trim();
+    const returnText = text.replace(nameFormatRegex, " ");
+    if (spaceCamelCaseTestRegex.test(returnText) === false) return returnText.trim();
+    return returnText.replace(spaceCamelCaseRegex, '$1$2 ').trim();
 }
 
 /**

@@ -1363,12 +1363,12 @@ async function addMod(name, creation_dates = undefined, install = false) {
 	    }
 
 	    modDescription =
-		(escapedModCredits !== undefined ? escapedModCredits : "No credits.")
+		(!Hud.isVoid(escapedModCredits) ? escapedModCredits : "No credits.")
 		+ "<span style='color: rgb(150,150,150); font-size: 0.75rem'>"
 		+ "<br><br>"
 		+ "<div style='width: 100%; height: 1px; background-color: rgba(150,150,150, 0.5); border: none'></div>"
 		+ "<br>"
-		+ "Folder: " + name
+		+ "Folder: " + name + " (" + shorthand + ")"
 		+ "<br>Ren'Py: "
 		+ escapedDescription
 		+ "<br>Installed: "
@@ -1393,7 +1393,7 @@ async function addMod(name, creation_dates = undefined, install = false) {
 		    let data = await metadata(selectedPath + pathSeparator + name);
 		    configData.size = data.size;
 		    if (currentEntry === name) {
-			updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), name + "<br>Renpy: " + escapedDescription + "<br>Custom Exe: " + ((gameExePath !== undefined && gameExePath !== STRINGS.EMPTY && !gameExePath.toString().endsWith(OS.EXECUTABLE.WINDOWS)) ? "Yes | " + gameExePath : "No") + "<br><br>Credits: <br>" + (escapedModCredits !== undefined ? escapedModCredits : "None Found!"), lastPlayed)
+			updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, lastPlayed)
 		    }
 		    data = null
 		}, 0)
@@ -2865,7 +2865,7 @@ async function setupHTMListeners(onLoadStartTime) {
 		Hud.ofId("sortlist-type").textContent = elem.textContent
 		activeSortingMethod = SORT_TYPE[item]
 		AssetsManager.Sound.play(AssetsManager.Sound.BOOP_SOUND)
-		resetModOrder()
+		if (Hud.ofId("search").value === STRINGS.EMPTY) resetModOrder()
 	    })
 	    frag.appendChild(elem)
 	}
