@@ -2048,6 +2048,7 @@ body {
     position: absolute;
     top: 25px;
     width: auto;
+    min-width: 100%;
     height: auto;
     right: 0;
     background-color: rgb(var(--primary-color-saturated), 0.5);
@@ -2055,27 +2056,24 @@ body {
     box-shadow: 0 0 5px rgba(var(--primary-color-saturated), 0.5);
     display: flex;
     flex-direction: column;
+    padding-top: 2px;
 }
 
 .sortlist-menu-item {
     font-family: "Aller", sans-serif;
     color: white;
     font-size: 10px;
-    line-height: 12px;
+    line-height: 8px;
     border-radius: 5px;
     width: auto;
-    height: 12px;
-    padding: 10px;
-    transition: background-color 0.1s ease-out;
-    text-align: right;
-}
-
-.sortlist-menu-item:not(:first-child) {
-    margin-top: -11px;
+    height: 8px;
+    padding: 8px;
+    transition: background-color 0.1s ease-out, scale 0.3s ease-out;
+    text-align: center;
 }
 
 .sortlist-menu-item:hover {
-    background-color: rgb(var(--primary-color), 0.75);
+    background-color: rgb(var(--primary-color), 0.9);
     cursor: pointer;
     scale: 1.05;
 }

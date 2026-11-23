@@ -10,6 +10,10 @@ Changes
 - Added Discord Invite Button
 - Settings Panel
     - Toggle On/Off Sound, Seasons, And Performance Mode
+- Option To Sort Mods
+    - ALSO First Load Will Likely Take A Second Or Two Longer
+    - This Is Because It Needs To Fetch
+      Creation Date Of Mod Folders
 
 Bug Fixes
 - Fixed "Invalid Name" For Every Name

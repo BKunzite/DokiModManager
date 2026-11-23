@@ -138,11 +138,8 @@ async function getImageEager(id) {
 		import: "default",
 	    },
 	);
-	if (cover !== undefined) {
-	    return images["../../assets/" + cover];
-	} else {
-	    return images["../../assets/" + id];
-	}
+
+	return cover === undefined ? images["../../assets/" + id] : images["../../assets/" + cover];
     }
 }
 
@@ -219,6 +216,7 @@ export async function preloadImageObject(src) {
     return img;
 }
 
+
 /**
  * Get An Image Based On A List Of Covers
  *
@@ -241,6 +239,12 @@ export async function getImage(id, eager = false) {
 	return await getImageEager(id, localCovers);
     }
 }
+
+/**
+ *
+ * @param {String} path
+ * @return {String}
+ */
 
 export function lazyDeref(url) {
     _internal_deref(url);

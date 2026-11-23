@@ -27,7 +27,7 @@ class ProgramData {
     }
 
     /**
-     * @param {"coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name", "seasons", "sound", "performant"} id
+     * @param {"cached_install_dates", "coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name", "seasons", "sound", "performant"} id
      * @returns {*}
      */
     get(id) {
@@ -35,7 +35,7 @@ class ProgramData {
     }
 
     /**
-     * @param {"coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name", "seasons", "sound", "performant"} id
+     * @param {"cached_install_dates", "coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name", "seasons", "sound", "performant"} id
      * @param {*} defaultV
      * @returns {*}
      */
@@ -44,7 +44,7 @@ class ProgramData {
     }
 
     /**
-     * @param {"coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name", "seasons", "sound", "performant"} id
+     * @param {"cached_install_dates", "coverId", "totalTime", "tutorial", "theme", "language", "version", "bg_offset", "user_name", "seasons", "sound", "performant"} id
      * @param val
      * @returns {ProgramData}
      */

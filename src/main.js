@@ -49,7 +49,8 @@ import {
     getIsLaunchedFlag,
     getLauncher,
     getLaunchers,
-    LauncherAbstract, removeLauncher,
+    LauncherAbstract,
+    removeLauncher,
     removeModLaunchedFlag,
     updateModCount
 } from "./core/Launchers"
@@ -95,7 +96,6 @@ import {Fzf} from 'fzf';
 import {OptionsPanel} from "./core/interface/uikit/Options";
 import TestSuite from "./core/manager/TestSuite";
 import SORT_TYPE from "./core/enum/SORT_TYPE";
-import {formatDate} from "@vueuse/core";
 
 //// Profile Data
 
@@ -223,65 +223,44 @@ async function syncCovers() {
     )
 
     preloadCovers.reset()
-    let imageLoaded = 0
-    let imagePrepared = 0
-
-    for (const cover of covers.asList()) {
-	imagePrepared++
-	coverIdToShortMap.set(covers.indexOf(cover), cover)
-	shortToCoverIdMap.set(cover, covers.indexOf(cover))
-
-	new Promise(async (resolve, reject) => {
-	    try {
-		const img = await preloadImageObject(cover)
-		preloadCovers.set(cover, img, cover)
-		resolve()
-	    } catch (e) {
-		reject(e)
-	    }
-	}).then(() => {
-	    imageLoaded++
-	}).catch(() => {
-	    imageLoaded++
-	})
-    }
-
+    let imagesToPrepare = []
     const pathPrefix = localPath + imageLocation;
     const pathOptional = await Optional.readDir(pathPrefix)
 
+    for (const cover of covers.asList()) {
+	imagesToPrepare.push(
+	    new Promise(async (resolve) => {
+		const coverInd = covers.indexOf(cover)
+		coverIdToShortMap.set(coverInd, cover)
+		shortToCoverIdMap.set(cover, coverInd)
+		const img = await preloadImageObject(cover)
+		preloadCovers.set(cover, img, cover)
+		resolve()
+	    })
+	)
+
+    }
+
     if (pathOptional.isSome()) {
 	for (const image of await pathOptional.getResult()) {
-	    if (regexImageName(image.name)) {
-		const path = localPath + imageLocation + pathSeparator + image.name;
-		covers.add(path)
-		coverIdToShortMap.set(covers.indexOf(path), image.name)
-		shortToCoverIdMap.set(image.name, covers.indexOf(path))
-		imagePrepared++
-		new Promise(async (resolve, reject) => {
-		    try {
+	    imagesToPrepare.push(
+		new Promise(async (resolve) => {
+		    if (regexImageName(image.name)) {
+			const path = localPath + imageLocation + pathSeparator + image.name;
+			covers.add(path)
+			const ind = covers.indexOf(path)
+			coverIdToShortMap.set(ind, image.name)
+			shortToCoverIdMap.set(image.name, ind)
 			const img = await preloadImageObject(path)
 			preloadCovers.set(path, img, image.name)
-			resolve()
-		    } catch (e) {
-			reject(e)
 		    }
-		}).then(() => {
-		    imageLoaded++
-		}).catch(() => {
-		    imageLoaded++
+		    resolve()
 		})
-	    }
+	    )
 	}
     }
 
-    await new Promise(resolve => {
-	WaitInterval.waitFor((resolve2) => {
-	    if (imageLoaded === imagePrepared) {
-		resolve2()
-		resolve()
-	    }
-	}, 50)
-    })
+    await Promise.all(imagesToPrepare);
 }
 
 function onWindowFocusChanged(focus) {
@@ -790,37 +769,61 @@ async function requestDirectory(directoryPath = undefined) {
 	let finished_mods = 0;
 	let mods_to_complete = 0;
 	let finished = []
+	let promiseEntry = []
 	let working_mods_count = 0
 	let docFrag = DOMBatch.inline("modlist")
 	const startTime = Date.now()
-	const creation_dates = await TestSuite.timeFunction("get_creation_dates", async () => {
-	    await invoke("get_creation_date", {
-		pathStr: selectedPath
-	    })
-	})
+	let isConsumingCreationDates = false;
+	let creationDates = undefined;
+
+	const getCreationDates = async () => {
+	    if (creationDates === undefined && !isConsumingCreationDates) {
+		const creation_dates = await TestSuite.timeFunction("get_creation_dates", async () => await invoke("get_creation_date", {
+		    pathStr: selectedPath
+		}))
+		creationDates = creation_dates;
+		return creation_dates;
+	    } else {
+		await WaitInterval.waitForPromise(async (resolve2) => {
+		    if (creationDates !== undefined) {
+			resolve2()
+		    }
+		}, 100)
+		Logger.info(creationDates, "Cache")
+
+		return creationDates;
+	    }
+	}
+
+	if (!programData.getOr("cached_install_dates", false)) {
+	    await programData.set("cached_install_dates", true).save()
+	    await getCreationDates()
+	}
 
 	for (const entry of files) {
 	    if (entry.isDirectory) {
 		mods_to_complete++;
-		addMod(entry.name, creation_dates)
-		    .then((val) => {
-			finished_mods++;
-			if (val === undefined) return
-			finished.push(entry.name)
-			working_mods_count++;
-			docFrag.append(val)
-		    })
-		    .catch(err => {
-			finished_mods++;
-			Logger.warn("Failed To Add Mod: " + entry.name + "\n" + err)
-		    })
+		promiseEntry.push(
+		    addMod(entry.name, getCreationDates)
+			.then((val) => {
+			    finished_mods++;
+			    if (val === undefined) return
+			    finished.push(entry.name)
+			    working_mods_count++;
+			    docFrag.append(val)
+			})
+			.catch(err => {
+			    finished_mods++;
+			    Logger.warn("Failed To Add Mod: " + entry.name + "\n" + err)
+			})
+		)
 	    }
 	}
 
 	return new Promise(async (resolve) => {
-	    WaitInterval.waitFor(async (resolve2) => {
-		if (finished_mods === mods_to_complete) {
-		    resolve2()
+	    Promise
+		.all(promiseEntry)
+		.then(() => {
 		    docFrag.finalize()
 
 		    Hud.setLoadingBar(100)
@@ -836,6 +839,11 @@ async function requestDirectory(directoryPath = undefined) {
 		    }, 500)
 
 		    resolve()
+		})
+
+	    WaitInterval.waitFor(async (resolve2) => {
+		if (finished_mods === mods_to_complete) {
+		    resolve2()
 		} else {
 		    Hud.setLoadingBar((finished_mods / mods_to_complete) * 100)
 		    Hud.setLoadingSubtitle("Loaded " + finished_mods + "/" + mods_to_complete + " Mods -> " + finished.join(" | "))
@@ -866,12 +874,12 @@ function formatTimeSince(time) {
 /**
  * Add Mods to List
  * @param {string} name Name Of Mod To Add
- * @param {{}} creation_dates
+ * @param {() => Promise<{}>} getCreationDates
  * @param {boolean} install
  * @returns {Promise<HTMLElement | undefined>}
  */
 
-async function addMod(name, creation_dates = undefined, install = false) {
+async function addMod(name, getCreationDates = undefined, install = false) {
     let modDirectory = selectedPath + pathSeparator + name;
     let isValidMod = false;
 
@@ -1023,6 +1031,7 @@ async function addMod(name, creation_dates = undefined, install = false) {
     if (hasConfig) {
 	let contents = await readTextFile(configPath);
 	let migrateCover = false;
+
 	try {
 	    let c = JSON.parse(contents);
 	    for (const key in c) {
@@ -1058,10 +1067,15 @@ async function addMod(name, creation_dates = undefined, install = false) {
 	await saveModData();
     }
 
-    if (configData.install_date === -1 && creation_dates !== undefined && !Hud.isVoid(creation_dates[name])) {
-	Logger.log("Setting install date for " + name)
-	configData.install_date = creation_dates[name]
-	await saveModData();
+    if (configData.install_date === -1 && getCreationDates !== undefined) {
+	const creation_dates = await getCreationDates();
+	if (creation_dates[name] === undefined) {
+	    Logger.warn("Failed To Get Creation Date For Mod: " + name)
+	} else {
+	    Logger.log("Setting install date for " + name)
+	    configData.install_date = creation_dates[name]
+	    await saveModData();
+	}
     }
 
     if (configData.executable === undefined || configData.executable.length === 0 || !await isExist(modDirectory + pathSeparator + configData.executable)) {
@@ -1115,11 +1129,15 @@ async function addMod(name, creation_dates = undefined, install = false) {
 		case SORT_TYPE.Alphabetical:
 		    return configData.pinned ? prefixCharacterIndex - 244 : (configData.favorite ? prefixCharacterIndex - 122 : prefixCharacterIndex)
 		case SORT_TYPE.Size:
-		    return configData.size === 0 ? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER - configData.size;
+		    return configData.size === 0 ? 2147483647 : 2147483647 - Math.round(configData.size/1000);
+		case SORT_TYPE.Play_Time:
+		    return configData.time === 0 ? 2147483647 : 2147483647 - Math.round(configData.time/1000);
 		case SORT_TYPE.Install_Date:
-		    return configData.install_date === -1 ? Number.MAX_SAFE_INTEGER : Math.round((Date.now() - configData.install_date)/10_000);
+		    return configData.install_date === -1 ? 2147483647 : Math.round((Date.now() - configData.install_date) / 10_000);
 		case SORT_TYPE.Last_Played:
-		    return configData.last_played === -1 ? Number.MAX_SAFE_INTEGER : Math.round((Date.now() - configData.last_played)/10_000);
+		    return configData.last_played === -1 ? 2147483647 : Math.round((Date.now() - configData.last_played) / 10_000);
+		case SORT_TYPE.Suprise_Me:
+		    return Math.round(Math.random() * 10000)
 	    }
 	},
 	preloadImages: async () => {
@@ -1377,7 +1395,7 @@ async function addMod(name, creation_dates = undefined, install = false) {
 		(hasCustomExecutable ?
 		    TranslationUtil.of("yes") + " — " + (getOSType() === OS.TYPE.MAC && gameExePath.includes('/') ? getLastPath() : gameExePath) :
 		    TranslationUtil.of("no"));
-	    +"</span>"
+	    	+"</span>";
 
 
 	    Hud.setHeart(configData.favorite)
@@ -1388,12 +1406,13 @@ async function addMod(name, creation_dates = undefined, install = false) {
 	    }
 
 	    if (configData.size === 0) {
+		const usedDescription = structuredClone(modDescription)
 		updateDisplayInfo(name, configData.author, "Reading...", Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, "Never")
 		setTimeout(async () => {
 		    let data = await metadata(selectedPath + pathSeparator + name);
 		    configData.size = data.size;
 		    if (currentEntry === name) {
-			updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), modDescription, lastPlayed)
+			updateDisplayInfo(name, configData.author, (configData.size / Units.ByteSizeMap.MB) > 1000 ? (Math.floor(configData.size / Units.ByteSizeMap.GB) + " GB") : (Math.floor(configData.size / Units.ByteSizeMap.MB) + " MB"), Math.floor(playTimeMinutes / 60) + TranslationUtil.sub("timeUnits").of("h") + STRINGS.SPACE + Math.floor(playTimeMinutes % 60) + TranslationUtil.sub("timeUnits").of("m"), usedDescription, lastPlayed)
 		    }
 		    data = null
 		}, 0)
@@ -1692,13 +1711,14 @@ async function syncTestSuite() {
     if (TestSuite.isActive()) {
 	TestSuite.setActive(false)
 	setTimeout(async () => {
+	    let startTime = Date.now()
 	    let downloads = TestSuite.getModDownloadList()
 	    let folder = localPath + pathSeparator + "store" + pathSeparator + "testSuite"
 	    let downloadsFolder = localPath + pathSeparator + "store" + pathSeparator + "testSuiteDownloads"
 	    let oldDirectory = selectedPath
 
 	    if (await isDir(folder)) {
-	    	await delDir(folder)
+		await delDir(folder)
 	    }
 
 	    await mkdir(folder)
@@ -1724,7 +1744,7 @@ async function syncTestSuite() {
 			    let parts = downloads[mod].split(".")
 			    let path = downloadsFolder + pathSeparator + "mod_" + mod + "." + parts[parts.length - 1]
 			    if (!await isExist(path)) {
-				await invoke("run_download",{
+				await invoke("run_download", {
 				    url: downloads[mod],
 				    path: path
 				})
@@ -1737,10 +1757,7 @@ async function syncTestSuite() {
 			}))
 		    }
 
-		    for (const promise of promises) {
-			promise.then(() => {})
-		    }
-
+		    await Promise.all(promises)
 		    await WaitInterval.wait(1, Units.MillisMap.SECOND)
 		    WaitInterval.waitFor(async (resolve) => {
 			let size = DownloadsManager.getSize()
@@ -1748,19 +1765,22 @@ async function syncTestSuite() {
 			if (size <= 0) {
 			    resolve()
 			    await WaitInterval.wait(1, Units.MillisMap.SECOND)
+			    let passed = []
+			    let failed = []
+
 			    for (const launcher in getLaunchers()) {
 				await getLauncher(launcher).getFunctions().leftClick();
 				await getLauncher(launcher).getFunctions().open();
 				await WaitInterval.wait(40, Units.MillisMap.SECOND)
 				const exec = await getLauncher(launcher).getFunctions().getExecutable()
 				if (getIsLaunchedFlag()) {
-				    Logger.log(":) Test Suite Passed For " + launcher)
-				    Logger.log("Sending Kill Signal For " + exec)
-				    await invoke("send_kill",{
+				    await invoke("send_kill", {
 					modName: exec
 				    })
+				    passed.push(launcher)
 				} else {
 				    Logger.log(">:( Test Suite Failed For " + launcher)
+				    failed.push(launcher)
 				}
 
 				await WaitInterval.wait(10, Units.MillisMap.SECOND)
@@ -1771,6 +1791,9 @@ async function syncTestSuite() {
 			    })
 			    requestDirectory(oldDirectory).then(() => {
 				gotoHomePage()
+				Logger.warn("Test Suite Finished! Took " + (Date.now() - startTime) + "ms")
+				Logger.info("Passed (" + passed.length + "): \n\t" + passed.join(",\n\t"))
+				Logger.info("Failed (" + failed.length + "): \n\t" + failed.join(",\n\t"))
 			    })
 			}
 
@@ -2460,7 +2483,8 @@ async function setupIPCListeners(onLoadStartTime) {
 
 	Logger.log("Imported: " + alertPath + " AT: " + goal + " with URL: " + url)
 
-	Hud.ofId("modlist").appendChild(await addMod(goal, undefined, true))
+	Hud.ofId("modlist").appendChild(await addMod(goal, () => {
+	}, true))
 
 	Hud.hide("loader")
 	Hud.show("main")
