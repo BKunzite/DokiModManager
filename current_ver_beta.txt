@@ -1,12 +1,11 @@
 1.8.2-beta
 
-
 I have not been pushing out updates at the rate that I should be,
-I will try to push out a few more updates before Christmas comes.
+I will try to push out a couple more updates before Christmas comes.
 
 Changes
 - Changed to Christmas Theme
-- Removed Old Report System
+- Removed Old Report System (Create a ticket in the discord)
 - Added Discord Invite Button
 - Settings Panel
     - Toggle On/Off Sound, Seasons, And Performance Mode

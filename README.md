@@ -75,10 +75,8 @@ The macOS build will go outside of beta once 2.1.0 (26.xx.xx/27.xx.xx) comes out
 - Downloads Randomly Not Starting (WebGTK Issue)
   - You might have to just import the mod ZIP file
     downloaded from your browser
-- There is no Update System for MacOS, Update Manually Via GitHub
-- Some Mods May Not Load (Not all mods support linux)
-- Non-Resizeable Window (A full UI update would have to be done)
-  - This may cause an issue for tiling managers
+- There is no Update System for macOS, Update Manually Via GitHub
+- Some Mods May Not Load (Not all mods support macOS)
 
 ### Linux-Based Operating Systems
 The linux build is currently in beta. Expect bugs to come from this version.
@@ -98,16 +96,18 @@ The linux build will go outside of beta once 2.0.0 (26.xx.xx/27.xx.xx) comes out
 
 # Roadmap
 
+1.8.2 Is Planned To Release **November 26**.
+
 1.8.2 Alpha <br>
-**_1.8.2 Beta ⇒ Current Development Cycle_** <br>
-1.8.2 Release Candidate <br>
+1.8.2 Beta <br>
+**_1.8.2 Release Candidate ⇒ Current Development Cycle_** <br>
 1.8.2 Release <br>
 
 | Tasks (Descending Importance For 1.8.2 / 27.1.0) | Time Required | Completed? |
 |--------------------------------------------------|---------------|------------|
 | Settings Builder (1.8.5)                         | 1 Day(s)      | ☑          |
 | Opt-Out Christmas Theme (1.8.5)                  | 1 Day(s)      | ☑          |
-| Search Options (1.8.5)                           | 1 Day(s)      | &#9744;    |
+| Search Options (1.8.5)                           | 1 Day(s)      | ☑    |
 | Resizing                                         | 1 - 2 Week(s) | &#9744;    |
 
 # Credits
